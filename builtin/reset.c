@@ -25,6 +25,8 @@
 #include "cache-tree.h"
 #include "submodule.h"
 #include "submodule-config.h"
+#include "dir.h"
+#include "entry.h"
 
 #define REFRESH_INDEX_DELAY_WARNING_IN_MS (2 * 1000)
 
@@ -130,11 +132,27 @@ static void update_index_from_diff(struct diff_queue_struct *q,
 	int intent_to_add = *(int *)data;
 
 	for (i = 0; i < q->nr; i++) {
+		int pos;
 		struct diff_filespec *one = q->queue[i]->one;
-		int is_missing = !(one->mode && !is_null_oid(&one->oid));
+		struct diff_filespec *two = q->queue[i]->two;
+		int is_in_reset_tree = one->mode && !is_null_oid(&one->oid);
 		struct cache_entry *ce;
 
-		if (is_missing && !intent_to_add) {
+		/*
+		 * If the file being reset has `skip-worktree` enabled, we need
+		 * to check it out to prevent the file from being hard reset.
+		 */
+		pos = cache_name_pos(two->path, strlen(two->path));
+		if (pos >= 0 && ce_skip_worktree(active_cache[pos])) {
+			struct checkout state = CHECKOUT_INIT;
+			state.force = 1;
+			state.refresh_cache = 1;
+			state.istate = &the_index;
+
+			checkout_entry(active_cache[pos], &state, NULL, NULL);
+		}
+
+		if (!is_in_reset_tree && !intent_to_add) {
 			remove_file_from_cache(one->path);
 			continue;
 		}
@@ -144,7 +162,7 @@ static void update_index_from_diff(struct diff_queue_struct *q,
 		if (!ce)
 			die(_("make_cache_entry failed for path '%s'"),
 			    one->path);
-		if (is_missing) {
+		if (!is_in_reset_tree) {
 			ce->ce_flags |= CE_INTENT_TO_ADD;
 			set_object_name_for_intent_to_add_entry(ce);
 		}
