@@ -97,6 +97,8 @@ int run_diff_files(struct rev_info *revs, unsigned int option)
 
 	diff_set_mnemonic_prefix(&revs->diffopt, "i/", "w/");
 
+	refresh_fsmonitor(istate);
+
 	if (diff_unmerged_stage < 0)
 		diff_unmerged_stage = 2;
 	entries = istate->cache_nr;
@@ -197,8 +199,19 @@ int run_diff_files(struct rev_info *revs, unsigned int option)
 		if (ce_uptodate(ce) || ce_skip_worktree(ce))
 			continue;
 
-		/* If CE_VALID is set, don't look at workdir for file removal */
-		if (ce->ce_flags & CE_VALID) {
+		/*
+		 * If CE_VALID is set, the user has promised us that the workdir
+		 * hasn't changed compared to index, so don't stat workdir
+		 * for file removal
+		 *  eg - via git udpate-index --assume-unchanged
+		 *  eg - via core.ignorestat=true
+		 *
+		 * When using FSMONITOR:
+		 * If CE_FSMONITOR_VALID is set, then we know the metadata on disk
+		 * has not changed since the last refresh, and we can skip the
+		 * file-removal checks without doing the stat in check_removed.
+		 */
+		if (ce->ce_flags & CE_VALID || ce->ce_flags & CE_FSMONITOR_VALID) {
 			changed = 0;
 			newmode = ce->ce_mode;
 		} else {
