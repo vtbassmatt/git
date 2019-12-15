@@ -238,7 +238,7 @@ cache_miss () {
 }
 
 check_parents () {
-	missed=$(cache_miss "$1")
+	missed=$(cache_miss $1)
 	local indent=$(($2 + 1))
 	for miss in $missed
 	do
