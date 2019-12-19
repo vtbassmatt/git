@@ -9,13 +9,15 @@ then
 	set -- -h
 fi
 OPTS_SPEC="\
-git subtree add   --prefix=<prefix> <commit>
-git subtree add   --prefix=<prefix> <repository> <ref>
-git subtree merge --prefix=<prefix> <commit>
-git subtree pull  --prefix=<prefix> <repository> <ref>
-git subtree push  --prefix=<prefix> <repository> <ref>
-git subtree split --prefix=<prefix> <commit>
-git subtree map   --prefix=<prefix> <mainline> <subtree>
+git subtree add    --prefix=<prefix> <commit>
+git subtree add    --prefix=<prefix> <repository> <ref>
+git subtree merge  --prefix=<prefix> <commit>
+git subtree pull   --prefix=<prefix> <repository> <ref>
+git subtree push   --prefix=<prefix> <repository> <ref>
+git subtree split  --prefix=<prefix> <commit>
+git subtree map    --prefix=<prefix> <mainline> <subtree>
+git subtree ignore --prefix=<prefix> <commit>
+git subtree use    --prefix=<prefix> <commit>
 --
 h,help        show the help
 q             quiet
@@ -162,7 +164,7 @@ command="$1"
 shift
 
 case "$command" in
-add|merge|pull|map)
+add|merge|pull|map|ignore|use)
 	default=
 	;;
 split|push)
@@ -429,6 +431,18 @@ find_mainline_ref () {
 			;;
 		esac
 	done
+}
+
+exclude_processed_refs () {
+		if test -r "$cachedir/processed"
+		then
+			cat "$cachedir/processed" |
+			while read rev
+			do
+				debug "read $rev"
+				echo "^$rev"
+			done
+		fi
 }
 
 copy_commit () {
@@ -796,18 +810,58 @@ cmd_add_commit () {
 }
 
 cmd_map () {
-	oldrev="$1"
-	newrev="$2"
 
-	if test -z "$oldrev"
+	if test -z "$1"
 	then
 		die "You must provide a revision to map"
+	fi
+
+	oldrev=$(git rev-parse --revs-only "$1") || exit $?
+	newrev=
+
+	if test -n "$2"
+	then
+		newrev=$(git rev-parse --revs-only "$2") || exit $?
 	fi
 
 	cache_setup || exit $?
 	cache_set "$oldrev" "$newrev"
 
 	say "Mapped $oldrev => $newrev"
+}
+
+cmd_ignore () {
+	revs=$(git rev-parse $default --revs-only "$@") || exit $?
+	ensure_single_rev $revs
+
+	say "Ignoring $revs"
+
+	cache_setup || exit $?
+
+	git rev-list $revs |
+	while read rev
+	do
+		cache_set "$rev" ""
+	done
+
+	echo "$revs" >>"$cachedir/processed"
+}
+
+cmd_use () {
+	revs=$(git rev-parse $default --revs-only "$@") || exit $?
+	ensure_single_rev $revs
+
+	say "Using existing subtree $revs"
+
+	cache_setup || exit $?
+
+	git rev-list $revs |
+	while read rev
+	do
+		cache_set "$rev" "$rev"
+	done
+
+	echo "$revs" >>"$cachedir/processed"
 }
 
 cmd_split () {
@@ -827,7 +881,7 @@ cmd_split () {
 		done
 	fi
 
-	unrevs="$(find_existing_splits "$dir" "$revs")"
+	unrevs="$(find_existing_splits "$dir" "$revs") $(exclude_processed_refs)"
 
 	mainline="$(find_mainline_ref "$dir" "$revs")"
 	if test -n "$mainline"
