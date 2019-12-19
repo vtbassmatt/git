@@ -15,6 +15,7 @@ git subtree merge --prefix=<prefix> <commit>
 git subtree pull  --prefix=<prefix> <repository> <ref>
 git subtree push  --prefix=<prefix> <repository> <ref>
 git subtree split --prefix=<prefix> <commit>
+git subtree map   --prefix=<prefix> <mainline> <subtree>
 --
 h,help        show the help
 q             quiet
@@ -161,7 +162,7 @@ command="$1"
 shift
 
 case "$command" in
-add|merge|pull)
+add|merge|pull|map)
 	default=
 	;;
 split|push)
@@ -192,7 +193,8 @@ dir="$(dirname "$prefix/.")"
 
 if test "$command" != "pull" &&
 		test "$command" != "add" &&
-		test "$command" != "push"
+		test "$command" != "push" &&
+		test "$command" != "map"
 then
 	revs=$(git rev-parse $default --revs-only "$@") || exit $?
 	dirs=$(git rev-parse --no-revs --no-flags "$@") || exit $?
@@ -791,6 +793,21 @@ cmd_add_commit () {
 	git reset "$commit" || exit $?
 
 	say "Added dir '$dir'"
+}
+
+cmd_map () {
+	oldrev="$1"
+	newrev="$2"
+
+	if test -z "$oldrev"
+	then
+		die "You must provide a revision to map"
+	fi
+
+	cache_setup || exit $?
+	cache_set "$oldrev" "$newrev"
+
+	say "Mapped $oldrev => $newrev"
 }
 
 cmd_split () {
