@@ -224,8 +224,6 @@ cache_setup () {
 	fi
 	mkdir -p "$cachedir" ||
 		die "Can't create new cachedir: $cachedir"
-	mkdir -p "$cachedir/notree" ||
-		die "Can't create new cachedir: $cachedir/notree"
 	debug "Using cachedir: $cachedir" >&2
 }
 
@@ -255,16 +253,9 @@ check_parents () {
 	local indent=$(($2 + 1))
 	for miss in $missed
 	do
-		if ! test -r "$cachedir/notree/$miss"
-		then
-			debug "  unprocessed parent commit: $miss ($indent)"
-			process_split_commit "$miss" "" "$indent"
-		fi
+		debug "  unprocessed parent commit: $miss ($indent)"
+		process_split_commit "$miss" "" "$indent"
 	done
-}
-
-set_notree () {
-	echo "1" > "$cachedir/notree/$1"
 }
 
 cache_set () {
@@ -719,11 +710,18 @@ process_split_commit () {
 	# vs. a mainline commit?  Does it matter?
 	if test -z "$tree"
 	then
-		set_notree "$rev"
 		if test -n "$newparents"
 		then
-			cache_set "$rev" "$rev"
+			if test "$newparents" = "$parents"
+			then
+				# if all parents were subtrees, this can be a subtree commit
+				cache_set "$rev" "$rev"
+			else
+				# a mainline commit with tree missing is equivalent to the initial commit
+				cache_set "$rev" ""
+			fi
 		else
+			# no parents with valid subtree mappings means a commit prior to subtree add
 			cache_set "$rev" ""
 		fi
 		return
