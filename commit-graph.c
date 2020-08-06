@@ -605,6 +605,21 @@ static struct commit_graph *load_commit_graph_chain(struct repository *r,
 	return graph_chain;
 }
 
+static void validate_mixed_generation_chain(struct commit_graph *g)
+{
+	int read_generation_data;
+
+	if (!g)
+		return;
+
+	read_generation_data = !!g->chunk_generation_data;
+
+	while (g) {
+		g->read_generation_data = read_generation_data;
+		g = g->base_graph;
+	}
+}
+
 struct commit_graph *read_commit_graph_one(struct repository *r,
 					   struct object_directory *odb)
 {
@@ -612,6 +627,8 @@ struct commit_graph *read_commit_graph_one(struct repository *r,
 
 	if (!g)
 		g = load_commit_graph_chain(r, odb);
+
+	validate_mixed_generation_chain(g);
 
 	return g;
 }
@@ -782,7 +799,7 @@ static void fill_commit_graph_info(struct commit *item, struct commit_graph *g, 
 	date_low = get_be32(commit_data + g->hash_len + 12);
 	item->date = (timestamp_t)((date_high << 32) | date_low);
 
-	if (g->chunk_generation_data) {
+	if (g->chunk_generation_data && g->read_generation_data) {
 		offset = (timestamp_t) get_be32(g->chunk_generation_data + sizeof(uint32_t) * lex_index);
 
 		if (offset & CORRECTED_COMMIT_DATE_OFFSET_OVERFLOW) {
@@ -2030,6 +2047,9 @@ static void split_graph_merge_strategy(struct write_commit_graph_context *ctx)
 		}
 	}
 
+	if (!ctx->write_generation_data && g->chunk_generation_data)
+		ctx->write_generation_data = 1;
+
 	if (flags != COMMIT_GRAPH_SPLIT_REPLACE)
 		ctx->new_base_graph = g;
 	else if (ctx->num_commit_graphs_after != 1)
@@ -2274,6 +2294,7 @@ int write_commit_graph(struct object_directory *odb,
 		struct commit_graph *g = ctx->r->objects->commit_graph;
 
 		while (g) {
+			g->read_generation_data = 1;
 			g->topo_levels = &topo_levels;
 			g = g->base_graph;
 		}
@@ -2300,6 +2321,9 @@ int write_commit_graph(struct object_directory *odb,
 
 		g = ctx->r->objects->commit_graph;
 
+		if (g && !g->chunk_generation_data)
+			ctx->write_generation_data = 0;
+
 		while (g) {
 			ctx->num_commit_graphs_before++;
 			g = g->base_graph;
@@ -2318,6 +2342,9 @@ int write_commit_graph(struct object_directory *odb,
 
 		if (ctx->opts)
 			replace = ctx->opts->split_flags & COMMIT_GRAPH_SPLIT_REPLACE;
+
+		if (replace)
+			ctx->write_generation_data = 1;
 	}
 
 	ctx->approx_nr_objects = approximate_object_count();
