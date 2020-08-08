@@ -89,13 +89,19 @@ struct commit_graph *read_commit_graph_one(struct repository *r,
 struct commit_graph *parse_commit_graph(struct repository *r,
 					void *graph_map, size_t graph_size);
 
+struct bloom_filter_settings *get_bloom_filter_settings(struct repository *r);
+
 /*
  * Return 1 if and only if the repository has a commit-graph
  * file and generation numbers are computed in that file.
  */
 int generation_numbers_enabled(struct repository *r);
 
-struct bloom_filter_settings *get_bloom_filter_settings(struct repository *r);
+/*
+ * Return 1 if and only if the repository has a commit-graph
+ * file and generation data chunk has been written for the file.
+ */
+int corrected_commit_dates_enabled(struct repository *r);
 
 enum commit_graph_write_flags {
 	COMMIT_GRAPH_WRITE_APPEND     = (1 << 0),
