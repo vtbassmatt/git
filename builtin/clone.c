@@ -53,7 +53,8 @@ static int option_shallow_submodules;
 static int deepen;
 static char *option_template, *option_depth, *option_since;
 static char *option_origin = NULL;
-static char *remote_name = "origin";
+static char *default_remote_name = "origin";
+static char *remote_name = NULL;
 static char *option_branch = NULL;
 static struct string_list option_not = STRING_LIST_INIT_NODUP;
 static const char *real_git_dir;
@@ -854,6 +855,11 @@ static int checkout(int submodule_progress)
 
 static int git_clone_config(const char *k, const char *v, void *cb)
 {
+	if (!strcmp(k, "clone.defaultremotename")) {
+		if (remote_name != default_remote_name)
+			free(remote_name);
+		remote_name = xstrdup(v);
+	}
 	return git_default_config(k, v, cb);
 }
 
@@ -976,6 +982,7 @@ int cmd_clone(int argc, const char **argv, const char *prefix)
 	int submodule_progress;
 
 	struct strvec ref_prefixes = STRVEC_INIT;
+	remote_name = default_remote_name;
 
 	packet_trace_identity("clone");
 
@@ -1008,12 +1015,6 @@ int cmd_clone(int argc, const char **argv, const char *prefix)
 			die(_("--bare and --separate-git-dir are incompatible."));
 		option_no_checkout = 1;
 	}
-
-	if (option_origin)
-		remote_name = option_origin;
-
-	if (!valid_remote_name(remote_name))
-		die(_("'%s' is not a valid remote name"), remote_name);
 
 	repo_name = argv[0];
 
@@ -1153,9 +1154,19 @@ int cmd_clone(int argc, const char **argv, const char *prefix)
 
 	/*
 	 * re-read config after init_db and write_config to pick up any config
-	 * injected by --template and --config, respectively
+	 * injected by --template and --config, respectively.
 	 */
 	git_config(git_clone_config, NULL);
+
+	/*
+	 * apply the remote name provided by --origin only after this second
+	 * call to git_config, to ensure it overrides all config-based values.
+	 */
+	if (option_origin)
+		remote_name = option_origin;
+
+	if (!valid_remote_name(remote_name))
+		die(_("'%s' is not a valid remote name"), remote_name);
 
 	if (option_bare) {
 		if (option_mirror)
