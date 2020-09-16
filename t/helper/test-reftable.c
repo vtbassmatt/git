@@ -3,6 +3,7 @@
 
 int cmd__reftable(int argc, const char **argv)
 {
+	record_test_main(argc, argv);
 	strbuf_test_main(argc, argv);
 	return 0;
 }
