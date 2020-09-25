@@ -43,8 +43,11 @@ set(CMAKE_SOURCE_DIR ${CMAKE_CURRENT_LIST_DIR}/../..)
 
 find_program(SH_EXE sh)
 if(NOT SH_EXE)
-	message(FATAL_ERROR "sh: shell interpreter was not found in your path, please install one."
-			"On Windows, you can get it as part of 'Git for Windows' install at https://gitforwindows.org/")
+	set(SH_EXE "C:/Program Files/Git/bin/sh.exe")
+	if(NOT EXISTS ${SH_EXE})
+		message(FATAL_ERROR "sh: shell interpreter was not found in your path, please install one."
+				"On Windows, you can get it as part of 'Git for Windows' install at https://gitforwindows.org/")
+	endif()
 endif()
 
 #Create GIT-VERSION-FILE using GIT-VERSION-GEN
