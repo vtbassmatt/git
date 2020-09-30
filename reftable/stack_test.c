@@ -579,11 +579,11 @@ static void test_sizes_to_segments(void)
 
 static void test_sizes_to_segments_empty(void)
 {
-	uint64_t sizes[0];
+	uint64_t sizes[1];
 
 	int seglen = 0;
 	struct segment *segs =
-		sizes_to_segments(&seglen, sizes, ARRAY_SIZE(sizes));
+		sizes_to_segments(&seglen, sizes, 0);
 	EXPECT(seglen == 0);
 	reftable_free(segs);
 }
