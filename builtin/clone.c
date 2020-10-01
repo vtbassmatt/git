@@ -1011,6 +1011,9 @@ int cmd_clone(int argc, const char **argv, const char *prefix)
 	if (!option_origin)
 		option_origin = "origin";
 
+	if (!valid_remote_name(option_origin))
+		die(_("'%s' is not a valid remote name"), option_origin);
+
 	repo_name = argv[0];
 
 	path = get_repo_path(repo_name, &is_bundle);
