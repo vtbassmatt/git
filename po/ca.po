@@ -8593,10 +8593,10 @@ msgstr "error en executar l'exportació ràpida"
 #, fuzzy, c-format
 msgid ""
 "No refs in common and none specified; doing nothing.\n"
-"Perhaps you should specify a branch such as 'master'.\n"
+"Perhaps you should specify a branch.\n"
 msgstr ""
 "No hi ha referències en comú i no n'hi ha cap especificat. Potser hauríeu "
-"d'especificar una branca com ara «master»."
+"d'especificar una branca."
 
 #: transport-helper.c:1121
 #, fuzzy, c-format

@@ -6948,7 +6948,7 @@ msgstr ""
 #, c-format
 msgid ""
 "No refs in common and none specified; doing nothing.\n"
-"Perhaps you should specify a branch such as 'master'.\n"
+"Perhaps you should specify a branch.\n"
 msgstr ""
 
 #: transport-helper.c:1085

@@ -8790,10 +8790,10 @@ msgstr "грешка при изпълнението на командата з�
 #, c-format
 msgid ""
 "No refs in common and none specified; doing nothing.\n"
-"Perhaps you should specify a branch such as 'master'.\n"
+"Perhaps you should specify a branch.\n"
 msgstr ""
 "Няма общи указатели, не са указани никакви указатели — нищо няма да бъде\n"
-"направено.  Пробвайте да укажете клон, напр. “master“.\n"
+"направено.  Пробвайте да укажете клон.\n"
 
 #: transport-helper.c:1121
 #, c-format
