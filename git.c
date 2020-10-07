@@ -641,6 +641,19 @@ static void list_builtins(struct string_list *out, unsigned int exclude_option)
 	}
 }
 
+void load_builtin_commands(const char *prefix, struct cmdnames *cmds)
+{
+	const char *name;
+	int i;
+
+	if (!skip_prefix(prefix, "git-", &prefix))
+		return;
+
+	for (i = 0; i < ARRAY_SIZE(commands); i++)
+		if (skip_prefix(commands[i].cmd, prefix, &name))
+			add_cmdname(cmds, name, strlen(name));
+}
+
 #ifdef STRIP_EXTENSION
 static void strip_extension(const char **argv)
 {
