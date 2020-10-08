@@ -440,4 +440,16 @@ test_expect_success '--split=replace with partial Bloom data' '
 	verify_chain_files_exist $graphdir
 '
 
+test_expect_success 'prevent regression for duplicate commits across layers' '
+	git init dup &&
+	git -C dup config core.commitGraph false &&
+	git -C dup commit --allow-empty -m one &&
+	git -C dup commit-graph write --split=no-merge --reachable &&
+	git -C dup commit --allow-empty -m two &&
+	git -C dup commit-graph write --split=no-merge --reachable &&
+	git -C dup commit --allow-empty -m three &&
+	git -C dup commit-graph write --split --reachable &&
+	git -C dup commit-graph verify
+'
+
 test_done
