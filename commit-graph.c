@@ -2009,6 +2009,7 @@ static int commit_compare(const void *_a, const void *_b)
 static void sort_and_scan_merged_commits(struct write_commit_graph_context *ctx)
 {
 	uint32_t i;
+	struct packed_commit_list deduped_commits = { NULL, 0, 0 };
 
 	if (ctx->report_progress)
 		ctx->progress = start_delayed_progress(
@@ -2016,6 +2017,8 @@ static void sort_and_scan_merged_commits(struct write_commit_graph_context *ctx)
 					ctx->commits.nr);
 
 	QSORT(ctx->commits.list, ctx->commits.nr, commit_compare);
+	deduped_commits.alloc = ctx->commits.nr;
+	ALLOC_ARRAY(deduped_commits.list, deduped_commits.alloc);
 
 	ctx->num_extra_edges = 0;
 	for (i = 0; i < ctx->commits.nr; i++) {
@@ -2023,16 +2026,29 @@ static void sort_and_scan_merged_commits(struct write_commit_graph_context *ctx)
 
 		if (i && oideq(&ctx->commits.list[i - 1]->object.oid,
 			  &ctx->commits.list[i]->object.oid)) {
-			die(_("unexpected duplicate commit id %s"),
-			    oid_to_hex(&ctx->commits.list[i]->object.oid));
+			/*
+			 * Silently ignore duplicates. These were likely
+			 * created due to a commit appearing in multiple
+			 * layers of the chain, which is unexpected but
+			 * not invalid. We should make sure there is a
+			 * unique copy in the new layer.
+			 */
 		} else {
 			unsigned int num_parents;
+
+			deduped_commits.list[deduped_commits.nr] = ctx->commits.list[i];
+			deduped_commits.nr++;
 
 			num_parents = commit_list_count(ctx->commits.list[i]->parents);
 			if (num_parents > 2)
 				ctx->num_extra_edges += num_parents - 1;
 		}
 	}
+
+	free(ctx->commits.list);
+	ctx->commits.list = deduped_commits.list;
+	ctx->commits.nr = deduped_commits.nr;
+	ctx->commits.alloc = deduped_commits.alloc;
 
 	stop_progress(&ctx->progress);
 }
