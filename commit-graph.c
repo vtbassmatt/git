@@ -2160,6 +2160,11 @@ int write_commit_graph(struct object_directory *odb,
 	int replace = 0;
 	struct bloom_filter_settings bloom_settings = DEFAULT_BLOOM_FILTER_SETTINGS;
 
+	prepare_repo_settings(the_repository);
+	if (!the_repository->settings.core_commit_graph) {
+		warning(_("attempting to write a commit-graph, but 'core.commitGraph' is disabled"));
+		return 0;
+	}
 	if (!commit_graph_compatible(the_repository))
 		return 0;
 
