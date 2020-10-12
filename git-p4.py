@@ -1977,8 +1977,11 @@ class P4Submit(Command, P4UserMap):
                 newdiff += "+%s\n" % os.readlink(newFile)
             else:
                 f = open(newFile, "r")
-                for line in f.readlines():
-                    newdiff += "+" + line
+                try:
+                    for line in f.readlines():
+                        newdiff += "+" + line
+                except UnicodeDecodeError:
+                    pass # Fond non-text data
                 f.close()
 
         return (diff + newdiff).replace('\r\n', '\n')
