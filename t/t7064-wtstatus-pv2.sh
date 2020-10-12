@@ -483,7 +483,7 @@ test_expect_success 'create and add submodule, submodule appears clean (A. S...)
 	)
 '
 
-test_expect_success 'untracked changes in added submodule (AM S..U)' '
+test_expect_success 'untracked changes in added submodule (A. S...))' '
 	(	cd super_repo &&
 		## create untracked file in the submodule.
 		(	cd sub1 &&
@@ -500,7 +500,7 @@ test_expect_success 'untracked changes in added submodule (AM S..U)' '
 		# branch.upstream origin/master
 		# branch.ab +0 -0
 		1 A. N... 000000 100644 100644 $ZERO_OID $HMOD .gitmodules
-		1 AM S..U 000000 160000 160000 $ZERO_OID $HSUB sub1
+		1 A. S... 000000 160000 160000 $ZERO_OID $HSUB sub1
 		EOF
 
 		git status --porcelain=v2 --branch --untracked-files=all >actual &&
@@ -560,7 +560,7 @@ test_expect_success 'staged and unstaged changes in added (AM S.M.)' '
 	)
 '
 
-test_expect_success 'staged and untracked changes in added submodule (AM S.MU)' '
+test_expect_success 'staged and untracked changes in added submodule (AM S.M.)' '
 	(	cd super_repo &&
 		(	cd sub1 &&
 			## stage new changes in tracked file.
@@ -579,7 +579,7 @@ test_expect_success 'staged and untracked changes in added submodule (AM S.MU)' 
 		# branch.upstream origin/master
 		# branch.ab +0 -0
 		1 A. N... 000000 100644 100644 $ZERO_OID $HMOD .gitmodules
-		1 AM S.MU 000000 160000 160000 $ZERO_OID $HSUB sub1
+		1 AM S.M. 000000 160000 160000 $ZERO_OID $HSUB sub1
 		EOF
 
 		git status --porcelain=v2 --branch --untracked-files=all >actual &&
