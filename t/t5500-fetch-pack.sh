@@ -400,7 +400,20 @@ test_expect_success 'in_vain not triggered before first ACK' '
 	test_commit -C myserver bar &&
 
 	git -C myclient fetch --progress origin 2>log &&
-	test_i18ngrep "remote: Total 3 " log
+	if ! test_i18ngrep "remote: Total 3 " log
+	then
+		# It is possible that the "Total 3" line is delivered in
+		# multiple sideband packets, and that a primary packet is
+		# delivered in between. When that happens, the line will be
+		# presented on multiple "remote:" lines.
+		sed "/^remote: T/{
+			:a
+			N
+			s/\nremote: //
+			ba
+		}" log >log.unsplit &&
+		test_i18ngrep "remote: Total 3 " log.unsplit
+	fi
 '
 
 test_expect_success 'in_vain resetted upon ACK' '
