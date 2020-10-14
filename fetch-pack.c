@@ -809,6 +809,7 @@ static int get_pack(struct fetch_pack_args *args,
 	int pass_header = 0;
 	struct child_process cmd = CHILD_PROCESS_INIT;
 	int ret;
+	const char *ph_error;
 
 	memset(&demux, 0, sizeof(demux));
 	if (use_sideband) {
@@ -828,8 +829,9 @@ static int get_pack(struct fetch_pack_args *args,
 
 	if (!args->keep_pack && unpack_limit) {
 
-		if (read_pack_header(demux.out, &header))
-			die(_("protocol error: bad pack header"));
+		ph_error = pack_header_error(read_pack_header(demux.out, &header));
+		if (ph_error)
+			die(_("protocol error: bad pack header: %s"), ph_error);
 		pass_header = 1;
 		if (ntohl(header.hdr_entries) < unpack_limit)
 			do_keep = 0;

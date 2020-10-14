@@ -2100,26 +2100,6 @@ static void read_push_options(struct packet_reader *reader,
 	}
 }
 
-static const char *parse_pack_header(struct pack_header *hdr)
-{
-	switch (read_pack_header(0, hdr)) {
-	case PH_ERROR_EOF:
-		return "eof before pack header was fully read";
-
-	case PH_ERROR_PACK_SIGNATURE:
-		return "protocol error (pack signature mismatch detected)";
-
-	case PH_ERROR_PROTOCOL:
-		return "protocol error (pack version unsupported)";
-
-	default:
-		return "unknown error in parse_pack_header";
-
-	case 0:
-		return NULL;
-	}
-}
-
 static const char *pack_lockfile;
 
 static void push_header_arg(struct strvec *args, struct pack_header *hdr)
@@ -2140,7 +2120,7 @@ static const char *unpack(int err_fd, struct shallow_info *si)
 			    ? transfer_fsck_objects
 			    : 0);
 
-	hdr_err = parse_pack_header(&hdr);
+	hdr_err = pack_header_error(read_pack_header(0, &hdr));
 	if (hdr_err) {
 		if (err_fd > 0)
 			close(err_fd);

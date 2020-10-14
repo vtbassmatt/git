@@ -2252,6 +2252,27 @@ int read_pack_header(int fd, struct pack_header *header)
 	return 0;
 }
 
+const char *pack_header_error(int err)
+{
+	switch (err) {
+	case PH_ERROR_EOF:
+		return "eof before pack header was fully read";
+
+	case PH_ERROR_PACK_SIGNATURE:
+		return "protocol error (pack signature mismatch detected)";
+
+	case PH_ERROR_PROTOCOL:
+		return "protocol error (pack version unsupported)";
+
+	default:
+		// Should not occur - all errors should be handled
+		die("unknown error in parse_pack_header %d", err);
+
+	case 0:
+		return NULL;
+	}
+}
+
 void assert_oid_type(const struct object_id *oid, enum object_type expect)
 {
 	enum object_type type = oid_object_info(the_repository, oid, NULL);
