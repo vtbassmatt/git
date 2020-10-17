@@ -142,6 +142,14 @@ test_perf "status -uall (fsmonitor=$INTEGRATION_SCRIPT)" '
 	git status -uall
 '
 
+if test -n "$GIT_PERF_7519_DROP_CACHE"; then
+	test-tool drop-caches
+fi
+
+test_perf "diff (fsmonitor=$INTEGRATION_SCRIPT)" '
+	git diff
+'
+
 test_expect_success "setup without fsmonitor" '
 	unset INTEGRATION_SCRIPT &&
 	git config --unset core.fsmonitor &&
@@ -170,6 +178,14 @@ fi
 
 test_perf "status -uall (fsmonitor=$INTEGRATION_SCRIPT)" '
 	git status -uall
+'
+
+if test -n "$GIT_PERF_7519_DROP_CACHE"; then
+	test-tool drop-caches
+fi
+
+test_perf "diff (fsmonitor=$INTEGRATION_SCRIPT)" '
+	git diff
 '
 
 if test_have_prereq WATCHMAN
