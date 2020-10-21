@@ -77,6 +77,10 @@ Merge made by the 'recursive' strategy.
 EOF
 
 test_expect_success 'merge reduces irrelevant remote heads' '
+	if test "$GIT_TEST_MERGE_ALGORITHM" = ort
+	then
+		sed -i'' s/recursive/ort/ expected
+	fi &&
 	GIT_MERGE_VERBOSITY=0 git merge c4 c5 >actual &&
 	test_i18ncmp expected actual
 '
