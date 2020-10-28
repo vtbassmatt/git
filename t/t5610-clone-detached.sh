@@ -15,6 +15,7 @@ test_expect_success 'setup' '
 	echo two >file &&
 	git commit -a -m two &&
 	git tag two &&
+	git tag four $(git rev-parse :file) &&
 	echo three >file &&
 	git commit -a -m three
 '
@@ -71,6 +72,10 @@ test_expect_success 'cloned HEAD matches' '
 '
 test_expect_success 'cloned HEAD is detached' '
 	head_is_detached detached-orphan
+'
+test_expect_success 'cloning invalid tag' '
+	test_must_fail git clone "file://$PWD" -b four 2>err &&
+	test_i18ngrep "does not point to a commit." err
 '
 
 test_done
