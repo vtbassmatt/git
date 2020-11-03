@@ -379,7 +379,8 @@ test_expect_success 'push with http:// using protocol v1 and --base' '
 
 	# Push to another branch, as the target repository has the
 	# master branch checked out and we cannot push into it.
-	GIT_TRACE_PACKET=1 test_might_fail git -C http_child -c protocol.version=1 \
+	test_might_fail env GIT_TRACE_PACKET=1 \
+		git -C http_child -c protocol.version=1 \
 		push --base=three origin HEAD:client_branch_four 2>log &&
 
 	# Server responded using protocol v1
