@@ -1318,7 +1318,8 @@ static void fill_ssh_args(struct child_process *conn, const char *ssh_host,
  * the connection failed).
  */
 struct child_process *git_connect(int fd[2], const char *url,
-				  const char *prog, int flags)
+				  const char *prog, int flags,
+				  const char *other_extra_parameters)
 {
 	char *hostandport, *path;
 	struct child_process *conn;
@@ -1369,6 +1370,11 @@ struct child_process *git_connect(int fd[2], const char *url,
 
 		if (version > 0)
 			strbuf_addf(&extra_parameters, "version=%d", version);
+		if (other_extra_parameters) {
+			if (extra_parameters.len)
+				strbuf_addch(&extra_parameters, ':');
+			strbuf_addstr(&extra_parameters, other_extra_parameters);
+		}
 
 		conn->use_shell = 1;
 		conn->in = conn->out = -1;
