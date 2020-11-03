@@ -367,7 +367,7 @@ test_expect_success 'register and unregister' '
 	test_cmp before actual
 '
 
-test_expect_success !MACOS_MAINTENANCE 'start from empty cron table' '
+test_expect_success !MACOS_MAINTENANCE,!MINGW 'start from empty cron table' '
 	GIT_TEST_CRONTAB="test-tool crontab cron.txt" git maintenance start &&
 
 	# start registers the repo
@@ -378,7 +378,7 @@ test_expect_success !MACOS_MAINTENANCE 'start from empty cron table' '
 	grep "for-each-repo --config=maintenance.repo maintenance run --schedule=weekly" cron.txt
 '
 
-test_expect_success !MACOS_MAINTENANCE 'stop from existing schedule' '
+test_expect_success !MACOS_MAINTENANCE,!MINGW 'stop from existing schedule' '
 	GIT_TEST_CRONTAB="test-tool crontab cron.txt" git maintenance stop &&
 
 	# stop does not unregister the repo
@@ -389,7 +389,7 @@ test_expect_success !MACOS_MAINTENANCE 'stop from existing schedule' '
 	test_must_be_empty cron.txt
 '
 
-test_expect_success !MACOS_MAINTENANCE 'start preserves existing schedule' '
+test_expect_success !MACOS_MAINTENANCE,!MINGW 'start preserves existing schedule' '
 	echo "Important information!" >cron.txt &&
 	GIT_TEST_CRONTAB="test-tool crontab cron.txt" git maintenance start &&
 	grep "Important information!" cron.txt
@@ -437,6 +437,40 @@ test_expect_success MACOS_MAINTENANCE 'start and stop macOS maintenance' '
 		PLIST="$HOME/Library/LaunchAgents/org.git-scm.git.$frequency.plist" &&
 		grep schedule=$frequency "$PLIST" &&
 		echo "bootout gui/$UID $PLIST" >>expect || return 1
+	done &&
+	test_cmp expect args
+'
+
+test_expect_success MINGW 'start and stop Windows maintenance' '
+	echo "echo \$@ >>args" >print-args &&
+	chmod a+x print-args &&
+
+	rm -f args &&
+	GIT_TEST_CRONTAB="/bin/sh print-args" git maintenance start &&
+	cat args &&
+
+	# start registers the repo
+	git config --get --global maintenance.repo "$(pwd)" &&
+
+	rm expect &&
+	for frequency in hourly daily weekly
+	do
+		echo "/create /tn Git Maintenance ($frequency) /f /xml .git/objects/schedule-$frequency.xml" >>expect \
+			|| return 1
+	done &&
+	test_cmp expect args &&
+
+	rm -f args &&
+	GIT_TEST_CRONTAB="/bin/sh print-args"  git maintenance stop &&
+
+	# stop does not unregister the repo
+	git config --get --global maintenance.repo "$(pwd)" &&
+
+	rm expect &&
+	for frequency in hourly daily weekly
+	do
+		echo "/delete /tn Git Maintenance ($frequency) /f" >>expect \
+			|| return 1
 	done &&
 	test_cmp expect args
 '
