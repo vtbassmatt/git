@@ -59,11 +59,8 @@ static void strmap_free_entries_(struct strmap *map, int free_values)
 	hashmap_for_each_entry(&map->map, &iter, e, ent) {
 		if (free_values)
 			free(e->value);
-		if (!map->pool) {
-			if (map->strdup_strings)
-				free((char*)e->key);
+		if (!map->pool)
 			free(e);
-		}
 	}
 }
 
@@ -82,26 +79,34 @@ void strmap_partial_clear(struct strmap *map, int free_values)
 void *strmap_put(struct strmap *map, const char *str, void *data)
 {
 	struct strmap_entry *entry = find_strmap_entry(map, str);
-	void *old = NULL;
 
 	if (entry) {
-		old = entry->value;
+		void *old = entry->value;
 		entry->value = data;
-	} else {
-		const char *key = str;
-
-		entry = map->pool ? mem_pool_alloc(map->pool, sizeof(*entry))
-				  : xmalloc(sizeof(*entry));
-		hashmap_entry_init(&entry->ent, strhash(str));
-
-		if (map->strdup_strings)
-			key = map->pool ? mem_pool_strdup(map->pool, str)
-					: xstrdup(str);
-		entry->key = key;
-		entry->value = data;
-		hashmap_add(&map->map, &entry->ent);
+		return old;
 	}
-	return old;
+
+	if (map->strdup_strings) {
+		if (!map->pool) {
+			FLEXPTR_ALLOC_STR(entry, key, str);
+		} else {
+			size_t len = st_add(strlen(str), 1); /* include NUL */
+			entry = mem_pool_alloc(map->pool,
+					       st_add(sizeof(*entry), len));
+			memcpy(entry + 1, str, len);
+			entry->key = (void *)(entry + 1);
+		}
+	} else if (!map->pool) {
+		entry = xmalloc(sizeof(*entry));
+	} else {
+		entry = mem_pool_alloc(map->pool, sizeof(*entry));
+	}
+	hashmap_entry_init(&entry->ent, strhash(str));
+	if (!map->strdup_strings)
+		entry->key = str;
+	entry->value = data;
+	hashmap_add(&map->map, &entry->ent);
+	return NULL;
 }
 
 struct strmap_entry *strmap_get_entry(struct strmap *map, const char *str)
@@ -130,11 +135,8 @@ void strmap_remove(struct strmap *map, const char *str, int free_value)
 		return;
 	if (free_value)
 		free(ret->value);
-	if (!map->pool) {
-		if (map->strdup_strings)
-			free((char*)ret->key);
+	if (!map->pool)
 		free(ret);
-	}
 }
 
 void strintmap_incr(struct strintmap *map, const char *str, intptr_t amt)
