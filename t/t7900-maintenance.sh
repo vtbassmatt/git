@@ -453,6 +453,46 @@ test_expect_success !MINGW 'start and stop macOS maintenance' '
 	test_line_count = 0 actual
 '
 
+test_expect_success 'start and stop Windows maintenance' '
+	write_script print-args <<-\EOF &&
+	echo $* >>args
+	while test $# -gt 0
+	do
+		case "$1" in
+		/xml) shift; xmlfile=$1; break ;;
+		*) shift ;;
+		esac
+	done
+	test -z "$xmlfile" || cp "$xmlfile" .
+	EOF
+
+	rm -f args &&
+	GIT_TEST_MAINT_SCHEDULER="schtasks:./print-args" git maintenance start &&
+
+	# start registers the repo
+	git config --get --global maintenance.repo "$(pwd)" &&
+
+	printf "/create /tn Git Maintenance (%s) /f /xml .git/objects/schedule-%s.xml\n" \
+		hourly hourly daily daily weekly weekly >expect &&
+	test_cmp expect args &&
+
+	for frequency in hourly daily weekly
+	do
+		test_xmllint "schedule-$frequency.xml"
+	done &&
+
+	rm -f args &&
+	GIT_TEST_MAINT_SCHEDULER="schtasks:./print-args" git maintenance stop &&
+
+	# stop does not unregister the repo
+	git config --get --global maintenance.repo "$(pwd)" &&
+
+	rm expect &&
+	printf "/delete /tn Git Maintenance (%s) /f\n" \
+		hourly daily weekly >expect &&
+	test_cmp expect args
+'
+
 test_expect_success 'register preserves existing strategy' '
 	git config maintenance.strategy none &&
 	git maintenance register &&
