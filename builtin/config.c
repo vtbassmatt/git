@@ -34,6 +34,7 @@ static int respect_includes_opt = -1;
 static struct config_options config_options;
 static int show_origin;
 static int show_scope;
+static int literal;
 
 #define ACTION_GET (1<<0)
 #define ACTION_GET_ALL (1<<1)
@@ -51,6 +52,16 @@ static int show_scope;
 #define ACTION_GET_COLOR (1<<13)
 #define ACTION_GET_COLORBOOL (1<<14)
 #define ACTION_GET_URLMATCH (1<<15)
+
+#define ACTION_LITERAL_ALLOWED (\
+	ACTION_GET |\
+	ACTION_GET_ALL |\
+	ACTION_GET_REGEXP |\
+	ACTION_REPLACE_ALL |\
+	ACTION_UNSET |\
+	ACTION_UNSET_ALL |\
+	ACTION_SET_ALL\
+)
 
 /*
  * The actions "ACTION_LIST | ACTION_GET_*" which may produce more than
@@ -141,6 +152,7 @@ static struct option builtin_config_options[] = {
 	OPT_BIT(0, "rename-section", &actions, N_("rename section: old-name new-name"), ACTION_RENAME_SECTION),
 	OPT_BIT(0, "remove-section", &actions, N_("remove a section: name"), ACTION_REMOVE_SECTION),
 	OPT_BIT('l', "list", &actions, N_("list all"), ACTION_LIST),
+	OPT_BOOL(0, "literal-value", &literal, N_("use literal equality when matching values")),
 	OPT_BIT('e', "edit", &actions, N_("open an editor"), ACTION_EDIT),
 	OPT_BIT(0, "get-color", &actions, N_("find the color configured: slot [default]"), ACTION_GET_COLOR),
 	OPT_BIT(0, "get-colorbool", &actions, N_("find the color setting: slot [stdout-is-tty]"), ACTION_GET_COLORBOOL),
@@ -742,6 +754,11 @@ int cmd_config(int argc, const char **argv, const char *prefix)
 
 	if (default_value && !(actions & ACTION_GET)) {
 		error(_("--default is only applicable to --get"));
+		usage_builtin_config();
+	}
+
+	if (literal && !(actions & ACTION_LITERAL_ALLOWED)) {
+		error(_("--literal only applies with 'value_regex'"));
 		usage_builtin_config();
 	}
 

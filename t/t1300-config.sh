@@ -1965,4 +1965,17 @@ test_expect_success '--replace-all and value_regex' '
 	test_cmp expect .git/config
 '
 
+test_expect_success 'refuse --literal-value for incompatible actions' '
+	git config dev.null bogus &&
+	test_must_fail git config --literal-value --add dev.null bogus &&
+	test_must_fail git config --literal-value --get-urlmatch dev.null bogus &&
+	test_must_fail git config --literal-value --get-urlmatch dev.null bogus &&
+	test_must_fail git config --literal-value --rename-section dev null &&
+	test_must_fail git config --literal-value --remove-section dev &&
+	test_must_fail git config --literal-value --list &&
+	test_must_fail git config --literal-value --get-color dev.null &&
+	test_must_fail git config --literal-value --get-colorbool dev.null &&
+	test_must_fail git config --literal-value --edit
+'
+
 test_done
