@@ -340,20 +340,39 @@ static void fill_bitmap_tree(struct bitmap *bitmap,
 
 static void fill_bitmap_commit(struct bb_commit *ent,
 			       struct commit *commit,
-			       struct prio_queue *queue)
+			       struct prio_queue *queue,
+			       struct prio_queue *tree_queue,
+			       struct bitmap_index *old_bitmap,
+			       const uint32_t *mapping)
 {
 	if (!ent->bitmap)
 		ent->bitmap = bitmap_new();
 
-	bitmap_set(ent->bitmap, find_object_pos(&commit->object.oid));
 	prio_queue_put(queue, commit);
 
 	while (queue->nr) {
 		struct commit_list *p;
 		struct commit *c = prio_queue_get(queue);
 
+		/*
+		 * If this commit has an old bitmap, then translate that
+		 * bitmap and add its bits to this one. No need to walk
+		 * parents or the tree for this commit.
+		 */
+		if (old_bitmap && mapping) {
+			struct ewah_bitmap *old;
+
+			old = bitmap_for_commit(old_bitmap, c);
+			if (old && !rebuild_bitmap(mapping, old, ent->bitmap))
+				continue;
+		}
+
+		/*
+		 * Mark ourselves and queue our tree. The commit
+		 * walk ensures we cover all parents.
+		 */
 		bitmap_set(ent->bitmap, find_object_pos(&c->object.oid));
-		fill_bitmap_tree(ent->bitmap, get_commit_tree(c));
+		prio_queue_put(tree_queue, get_commit_tree(c));
 
 		for (p = c->parents; p; p = p->next) {
 			int pos = find_object_pos(&p->item->object.oid);
@@ -363,6 +382,9 @@ static void fill_bitmap_commit(struct bb_commit *ent,
 			}
 		}
 	}
+
+	while (tree_queue->nr)
+		fill_bitmap_tree(ent->bitmap, prio_queue_get(tree_queue));
 }
 
 static void store_selected(struct bb_commit *ent, struct commit *commit)
@@ -386,6 +408,9 @@ void bitmap_writer_build(struct packing_data *to_pack)
 	size_t i;
 	int nr_stored = 0; /* for progress */
 	struct prio_queue queue = { compare_commits_by_gen_then_commit_date };
+	struct prio_queue tree_queue = { NULL };
+	struct bitmap_index *old_bitmap;
+	uint32_t *mapping;
 
 	writer.bitmaps = kh_init_oid_map();
 	writer.to_pack = to_pack;
@@ -395,6 +420,12 @@ void bitmap_writer_build(struct packing_data *to_pack)
 	trace2_region_enter("pack-bitmap-write", "building_bitmaps_total",
 		the_repository);
 
+	old_bitmap = prepare_bitmap_git(to_pack->repo);
+	if (old_bitmap)
+		mapping = create_bitmap_mapping(old_bitmap, to_pack);
+	else
+		mapping = NULL;
+
 	bitmap_builder_init(&bb, &writer);
 	for (i = bb.commits_nr; i > 0; i--) {
 		struct commit *commit = bb.commits[i-1];
@@ -402,7 +433,8 @@ void bitmap_writer_build(struct packing_data *to_pack)
 		struct commit *child;
 		int reused = 0;
 
-		fill_bitmap_commit(ent, commit, &queue);
+		fill_bitmap_commit(ent, commit, &queue, &tree_queue,
+				   old_bitmap, mapping);
 
 		if (ent->selected) {
 			store_selected(ent, commit);
@@ -428,7 +460,9 @@ void bitmap_writer_build(struct packing_data *to_pack)
 		ent->bitmap = NULL;
 	}
 	clear_prio_queue(&queue);
+	clear_prio_queue(&tree_queue);
 	bitmap_builder_clear(&bb);
+	free(mapping);
 
 	stop_progress(&writer.progress);
 
