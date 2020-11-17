@@ -39,7 +39,9 @@ static void bitmap_grow(struct bitmap *self, size_t word_alloc)
 {
 	if (word_alloc > self->word_alloc) {
 		size_t old_size = self->word_alloc;
-		self->word_alloc = word_alloc * 2;
+		self->word_alloc = old_size * 3 / 2;
+		if (word_alloc > self->word_alloc)
+			self->word_alloc = word_alloc;
 		REALLOC_ARRAY(self->words, self->word_alloc);
 		memset(self->words + old_size, 0x0,
 			(self->word_alloc - old_size) * sizeof(eword_t));
