@@ -195,7 +195,8 @@ struct bitmap_builder {
 };
 
 static void bitmap_builder_init(struct bitmap_builder *bb,
-				struct bitmap_writer *writer)
+				struct bitmap_writer *writer,
+				struct bitmap_index *old_bitmap)
 {
 	struct rev_info revs;
 	struct commit *commit;
@@ -234,11 +235,25 @@ static void bitmap_builder_init(struct bitmap_builder *bb,
 
 		c_ent = bb_data_at(&bb->data, commit);
 
+		if (old_bitmap && bitmap_for_commit(old_bitmap, commit)) {
+			/*
+			 * This commit has an existing bitmap, so we can
+			 * get its bits immediately without an object
+			 * walk. There is no need to continue walking
+			 * beyond this commit.
+			 */
+			c_ent->maximal = 1;
+			p = NULL;
+		}
+
 		if (c_ent->maximal) {
 			num_maximal++;
 			ALLOC_GROW(bb->commits, bb->commits_nr + 1, bb->commits_alloc);
 			bb->commits[bb->commits_nr++] = commit;
 		}
+
+		if (!c_ent->commit_mask)
+			continue;
 
 		if (p) {
 			struct bb_commit *p_ent = bb_data_at(&bb->data, p->item);
@@ -422,7 +437,7 @@ void bitmap_writer_build(struct packing_data *to_pack)
 	else
 		mapping = NULL;
 
-	bitmap_builder_init(&bb, &writer);
+	bitmap_builder_init(&bb, &writer, old_bitmap);
 	for (i = bb.commits_nr; i > 0; i--) {
 		struct commit *commit = bb.commits[i-1];
 		struct bb_commit *ent = bb_data_at(&bb.data, commit);
