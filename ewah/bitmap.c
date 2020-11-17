@@ -200,6 +200,30 @@ int bitmap_equals(struct bitmap *self, struct bitmap *other)
 	return 1;
 }
 
+int bitmap_diff_nonzero(struct bitmap *self, struct bitmap *other)
+{
+	struct bitmap *small;
+	size_t i;
+
+	if (self->word_alloc < other->word_alloc) {
+		small = self;
+	} else {
+		small = other;
+
+		for (i = other->word_alloc; i < self->word_alloc; i++) {
+			if (self->words[i] != 0)
+				return 1;
+		}
+	}
+
+	for (i = 0; i < small->word_alloc; i++) {
+		if ((self->words[i] & ~other->words[i]))
+			return 1;
+	}
+
+	return 0;
+}
+
 void bitmap_reset(struct bitmap *bitmap)
 {
 	memset(bitmap->words, 0x0, bitmap->word_alloc * sizeof(eword_t));
