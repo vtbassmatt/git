@@ -1384,7 +1384,7 @@ static const char *push_to_checkout(unsigned char *hash,
 				    const char *work_tree)
 {
 	strvec_pushf(env, "GIT_WORK_TREE=%s", absolute_path(work_tree));
-	if (run_hook_le(env->v, push_to_checkout_hook,
+	if (run_hook_le(env->v, 0, push_to_checkout_hook,
 			hash_to_hex(hash), NULL))
 		return "push-to-checkout hook declined";
 	else

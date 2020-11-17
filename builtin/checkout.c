@@ -104,7 +104,7 @@ struct branch_info {
 static int post_checkout_hook(struct commit *old_commit, struct commit *new_commit,
 			      int changed)
 {
-	return run_hook_le(NULL, "post-checkout",
+	return run_hook_le(NULL, 0, "post-checkout",
 			   oid_to_hex(old_commit ? &old_commit->object.oid : &null_oid),
 			   oid_to_hex(new_commit ? &new_commit->object.oid : &null_oid),
 			   changed ? "1" : "0", NULL);
