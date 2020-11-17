@@ -1343,7 +1343,7 @@ const char *find_hook(const char *name)
 	return path.buf;
 }
 
-int run_hook_ve(const char *const *env, const char *name, va_list args)
+int run_hook_ve(const char *const *env, int opt, const char *name, va_list args)
 {
 	struct child_process hook = CHILD_PROCESS_INIT;
 	const char *p;
@@ -1356,20 +1356,21 @@ int run_hook_ve(const char *const *env, const char *name, va_list args)
 	while ((p = va_arg(args, const char *)))
 		strvec_push(&hook.args, p);
 	hook.env = env;
-	hook.no_stdin = 1;
+	if (!(opt & RUN_HOOK_ALLOW_STDIN))
+		hook.no_stdin = 1;
 	hook.stdout_to_stderr = 1;
 	hook.trace2_hook_name = name;
 
 	return run_command(&hook);
 }
 
-int run_hook_le(const char *const *env, const char *name, ...)
+int run_hook_le(const char *const *env, int opt, const char *name, ...)
 {
 	va_list args;
 	int ret;
 
 	va_start(args, name);
-	ret = run_hook_ve(env, name, args);
+	ret = run_hook_ve(env, opt, name, args);
 	va_end(args);
 
 	return ret;

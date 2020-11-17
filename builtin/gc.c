@@ -385,7 +385,7 @@ static int need_to_gc(void)
 	else
 		return 0;
 
-	if (run_hook_le(NULL, "pre-auto-gc", NULL))
+	if (run_hook_le(NULL, 0, "pre-auto-gc", NULL))
 		return 0;
 	return 1;
 }
