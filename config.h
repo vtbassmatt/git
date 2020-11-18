@@ -71,6 +71,13 @@ enum config_event_t {
 };
 
 /*
+ * When CONFIG_FLAGS_MULTI_REPLACE is specified, all matching key/values
+ * are removed before a new pair is written. If the flag is not present,
+ * then set operations replace only the first match.
+ */
+#define CONFIG_FLAGS_MULTI_REPLACE (1 << 0)
+
+/*
  * The parser event function (if not NULL) is called with the event type and
  * the begin/end offsets of the parsed elements.
  *
@@ -276,13 +283,15 @@ int git_config_set_multivar_in_file_gently(const char *, const char *, const cha
  * - the value regex, as a string. It will disregard key/value pairs where value
  *   does not match.
  *
- * - a multi_replace value, as an int. If value is equal to zero, nothing or only
- *   one matching key/value is replaced, else all matching key/values (regardless
- *   how many) are removed, before the new pair is written.
+ * - a flags value with bits corresponding to the CONFIG_FLAG_* macros.
  *
  * It returns 0 on success.
  */
-void git_config_set_multivar_in_file(const char *, const char *, const char *, const char *, int);
+void git_config_set_multivar_in_file(const char *config_filename,
+				     const char *key,
+				     const char *value,
+				     const char *value_regex,
+				     int flags);
 
 /**
  * rename or remove sections in the config file
