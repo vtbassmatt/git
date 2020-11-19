@@ -1949,4 +1949,20 @@ test_expect_success 'set all config with value_regex' '
 	test_cmp expect .git/config
 '
 
+test_expect_success '--replace-all and value_regex' '
+	q_to_tab >.git/config <<-\EOF &&
+	[abc]
+	Qkey = one
+	Qkey = two
+	Qkey = three
+	EOF
+	q_to_tab >expect <<-\EOF &&
+	[abc]
+	Qkey = four
+	Qkey = three
+	EOF
+	git config --replace-all abc.key four "o+" &&
+	test_cmp expect .git/config
+'
+
 test_done
