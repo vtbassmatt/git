@@ -2040,4 +2040,26 @@ test_expect_success '--fixed-value uses exact string matching' '
 	test_cmp expect actual
 '
 
+test_expect_success '--get and --get-all with --fixed-value' '
+	GLOB="a+b*c?d[e]f.g" &&
+	rm -f config &&
+	git config --file=config fixed.test bogus &&
+	git config --file=config --add fixed.test "$GLOB" &&
+
+	git config --file=config --get fixed.test bogus &&
+	test_must_fail git config --file=config --get fixed.test "$GLOB" &&
+	git config --file=config --get --fixed-value fixed.test "$GLOB" &&
+	test_must_fail git config --file=config --get --fixed-value fixed.test non-existent &&
+
+	git config --file=config --get-all fixed.test bogus &&
+	test_must_fail git config --file=config --get-all fixed.test "$GLOB" &&
+	git config --file=config --get-all --fixed-value fixed.test "$GLOB" &&
+	test_must_fail git config --file=config --get-all --fixed-value fixed.test non-existent &&
+
+	git config --file=config --get-regexp fixed+ bogus &&
+	test_must_fail git config --file=config --get-regexp fixed+ "$GLOB" &&
+	git config --file=config --get-regexp --fixed-value fixed+ "$GLOB" &&
+	test_must_fail git config --file=config --get-regexp --fixed-value fixed+ non-existent
+'
+
 test_done
