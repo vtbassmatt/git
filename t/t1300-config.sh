@@ -1914,4 +1914,39 @@ test_expect_success '--replace-all does not invent newlines' '
 	test_cmp expect .git/config
 '
 
+test_expect_success 'set all config with value_regex' '
+	q_to_tab >initial <<-\EOF &&
+	[abc]
+	Qkey = one
+	EOF
+
+	cp initial .git/config &&
+	git config abc.key two a+ &&
+	q_to_tab >expect <<-\EOF &&
+	[abc]
+	Qkey = one
+	Qkey = two
+	EOF
+	test_cmp expect .git/config &&
+
+	test_must_fail git config abc.key three o+ 2>err &&
+	test_i18ngrep "has multiple values" err &&
+	git config abc.key three a+ &&
+	q_to_tab >expect <<-\EOF &&
+	[abc]
+	Qkey = one
+	Qkey = two
+	Qkey = three
+	EOF
+	test_cmp expect .git/config &&
+
+	cp initial .git/config &&
+	git config abc.key three o+ &&
+	q_to_tab >expect <<-\EOF &&
+	[abc]
+	Qkey = three
+	EOF
+	test_cmp expect .git/config
+'
+
 test_done
