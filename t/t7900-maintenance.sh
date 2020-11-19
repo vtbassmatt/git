@@ -367,6 +367,18 @@ test_expect_success 'register and unregister' '
 	test_cmp before actual
 '
 
+test_expect_success !MINGW 'register and unregister with glob characters' '
+	GLOB="a+b*c" &&
+	git init "$GLOB" &&
+	git -C "$GLOB" maintenance register &&
+	git config --get-all --show-origin maintenance.repo &&
+	git config --get-all --global --fixed-value \
+		maintenance.repo "$(pwd)/$GLOB" &&
+	git -C "$GLOB" maintenance unregister &&
+	test_must_fail git config --get-all --global --fixed-value \
+		maintenance.repo "$(pwd)/$GLOB"
+'
+
 test_expect_success 'start from empty cron table' '
 	GIT_TEST_CRONTAB="test-tool crontab cron.txt" git maintenance start &&
 
