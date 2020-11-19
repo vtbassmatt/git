@@ -616,6 +616,7 @@ int cmd_config(int argc, const char **argv, const char *prefix)
 {
 	int nongit = !startup_info->have_repository;
 	char *value;
+	int flags = 0;
 
 	given_config_source.file = xstrdup_or_null(getenv(CONFIG_ENVIRONMENT));
 
@@ -769,6 +770,8 @@ int cmd_config(int argc, const char **argv, const char *prefix)
 			error(_("--fixed-value only applies with 'value_regex'"));
 			usage_builtin_config();
 		}
+
+		flags = CONFIG_FLAGS_FIXED_VALUE;
 	}
 
 	if (actions & PAGING_ACTIONS)
@@ -832,7 +835,8 @@ int cmd_config(int argc, const char **argv, const char *prefix)
 		value = normalize_value(argv[0], argv[1]);
 		UNLEAK(value);
 		return git_config_set_multivar_in_file_gently(given_config_source.file,
-							      argv[0], value, argv[2], 0);
+							      argv[0], value, argv[2],
+							      flags);
 	}
 	else if (actions == ACTION_ADD) {
 		check_write();
@@ -841,7 +845,8 @@ int cmd_config(int argc, const char **argv, const char *prefix)
 		UNLEAK(value);
 		return git_config_set_multivar_in_file_gently(given_config_source.file,
 							      argv[0], value,
-							      CONFIG_REGEX_NONE, 0);
+							      CONFIG_REGEX_NONE,
+							      flags);
 	}
 	else if (actions == ACTION_REPLACE_ALL) {
 		check_write();
@@ -850,7 +855,7 @@ int cmd_config(int argc, const char **argv, const char *prefix)
 		UNLEAK(value);
 		return git_config_set_multivar_in_file_gently(given_config_source.file,
 							      argv[0], value, argv[2],
-							      CONFIG_FLAGS_MULTI_REPLACE);
+							      flags | CONFIG_FLAGS_MULTI_REPLACE);
 	}
 	else if (actions == ACTION_GET) {
 		check_argc(argc, 1, 2);
@@ -877,7 +882,8 @@ int cmd_config(int argc, const char **argv, const char *prefix)
 		check_argc(argc, 1, 2);
 		if (argc == 2)
 			return git_config_set_multivar_in_file_gently(given_config_source.file,
-								      argv[0], NULL, argv[1], 0);
+								      argv[0], NULL, argv[1],
+								      flags);
 		else
 			return git_config_set_in_file_gently(given_config_source.file,
 							     argv[0], NULL);
@@ -887,7 +893,7 @@ int cmd_config(int argc, const char **argv, const char *prefix)
 		check_argc(argc, 1, 2);
 		return git_config_set_multivar_in_file_gently(given_config_source.file,
 							      argv[0], NULL, argv[1],
-							      CONFIG_FLAGS_MULTI_REPLACE);
+							      flags | CONFIG_FLAGS_MULTI_REPLACE);
 	}
 	else if (actions == ACTION_RENAME_SECTION) {
 		int ret;
