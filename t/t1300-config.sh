@@ -2026,4 +2026,28 @@ test_expect_success '--literal-value uses exact string matching' '
 	test_cmp_config bogus literal.test
 '
 
+test_expect_success '--get and --get-all with --literal-value' '
+	GLOB="a+b*c?d[e]f.g" &&
+	q_to_tab >.git/config <<-EOF &&
+	[literal]
+	Qtest = bogus
+	Qtest = $GLOB
+	EOF
+
+	git config --get literal.test bogus &&
+	test_must_fail git config --get literal.test "$GLOB" &&
+	git config --get --literal-value literal.test "$GLOB" &&
+	test_must_fail git config --get --literal-value literal.test non-existent &&
+
+	git config --get-all literal.test bogus &&
+	test_must_fail git config --get-all literal.test "$GLOB" &&
+	git config --get-all --literal-value literal.test "$GLOB" &&
+	test_must_fail git config --get-all --literal-value literal.test non-existent &&
+
+	git config --get-regexp literal+ bogus &&
+	test_must_fail git config  --get-regexp literal+ "$GLOB" &&
+	git config --get-regexp --literal-value literal+ "$GLOB" &&
+	test_must_fail git config --get-regexp --literal-value literal+ non-existent
+'
+
 test_done
