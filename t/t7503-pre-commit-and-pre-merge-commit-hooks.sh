@@ -292,7 +292,7 @@ test_expect_success 'with user input' '
 	test_cmp user_input hook_input
 '
 
-test_expect_failure 'with user input combined with -F -' '
+test_expect_success 'with user input combined with -F -' '
 	test_when_finished "rm -f \"$PRECOMMIT\" user_input hook_input" &&
 	cp "$HOOKDIR/user-input.sample" "$PRECOMMIT" &&
 	echo "user input" >user_input &&
