@@ -78,6 +78,13 @@ enum config_event_t {
 #define CONFIG_FLAGS_MULTI_REPLACE (1 << 0)
 
 /*
+ * When CONFIG_FLAGS_LITERAL_VALUE is specified, match key/value pairs
+ * by string comparison (not regex match) to the provided value_regex
+ * parameter.
+ */
+#define CONFIG_FLAGS_LITERAL_VALUE (1 << 1)
+
+/*
  * The parser event function (if not NULL) is called with the event type and
  * the begin/end offsets of the parsed elements.
  *

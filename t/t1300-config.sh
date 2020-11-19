@@ -1978,4 +1978,52 @@ test_expect_success 'refuse --literal-value for incompatible actions' '
 	test_must_fail git config --literal-value --edit
 '
 
+test_expect_success '--literal-value uses exact string matching' '
+	GLOB="a+b*c?d[e]f.g" &&
+	q_to_tab >initial <<-EOF &&
+	[literal]
+	Qtest = $GLOB
+	EOF
+
+	cp initial .git/config &&
+	git config literal.test bogus "$GLOB" &&
+	q_to_tab >expect <<-EOF &&
+	[literal]
+	Qtest = $GLOB
+	Qtest = bogus
+	EOF
+	test_cmp expect .git/config &&
+	cp initial .git/config &&
+	git config --literal-value literal.test bogus "$GLOB" &&
+	q_to_tab >expect <<-EOF &&
+	[literal]
+	Qtest = bogus
+	EOF
+	test_cmp expect .git/config &&
+
+	cp initial .git/config &&
+	test_must_fail git config --unset literal.test "$GLOB" &&
+	git config --literal-value --unset literal.test "$GLOB" &&
+	test_must_fail git config literal.test &&
+
+	cp initial .git/config &&
+	test_must_fail git config --unset-all literal.test "$GLOB" &&
+	git config --literal-value --unset-all literal.test "$GLOB" &&
+	test_must_fail git config literal.test &&
+
+	cp initial .git/config &&
+	git config --replace-all literal.test bogus "$GLOB" &&
+	q_to_tab >expect <<-EOF &&
+	[literal]
+	Qtest = $GLOB
+	Qtest = bogus
+	EOF
+	test_cmp expect .git/config &&
+
+	cp initial .git/config &&
+	git config --replace-all literal.test bogus "$GLOB" &&
+	git config --literal-value --replace-all literal.test bogus "$GLOB" &&
+	test_cmp_config bogus literal.test
+'
+
 test_done
