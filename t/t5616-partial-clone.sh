@@ -341,6 +341,12 @@ test_expect_success 'partial clone with sparse filter succeeds' '
 	)
 '
 
+test_expect_success '--filter=tree:0 sets fetch.recurseSubmodules=no' '
+	rm -rf dst &&
+	git clone --filter=tree:0 "file://$(pwd)/src" dst &&
+	test_config -C dst fetch.recursesubmodules no
+'
+
 test_expect_success 'partial clone with unresolvable sparse filter fails cleanly' '
 	rm -rf dst.git &&
 	test_must_fail git clone --no-local --bare \

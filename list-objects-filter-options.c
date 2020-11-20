@@ -376,6 +376,10 @@ void partial_clone_register(
 		       expand_list_objects_filter_spec(filter_options));
 	free(filter_name);
 
+	if (filter_options->choice == LOFC_TREE_DEPTH &&
+	    !filter_options->tree_exclude_depth)
+		git_config_set("fetch.recursesubmodules", "no");
+
 	/* Make sure the config info are reset */
 	promisor_remote_reinit();
 }
