@@ -331,12 +331,22 @@ static void unstage_changes_unless_new(struct object_id *cache_tree)
 	 * When we enter this function, there has been a clean merge of
 	 * relevant trees, and the merge logic always stages whatever merges
 	 * cleanly.  We want to unstage those changes, unless it corresponds
-	 * to a file that didn't exist as of cache_tree.
+	 * to a file that didn't exist as of cache_tree.  However, if any
+	 * SKIP_WORKTREE path is modified relative to cache_tree, then we
+	 * want to clear the SKIP_WORKTREE bit and write it to the worktree
+	 * before unstaging.
 	 */
 
+	struct checkout state = CHECKOUT_INIT;
 	struct diff_options diff_opts;
 	struct lock_file lock = LOCK_INIT;
 	int i;
+
+	/* If any entries have skip_worktree set, we'll have to check 'em out */
+	state.force = 1;
+	state.quiet = 1;
+	state.refresh_cache = 1;
+	state.istate = &the_index;
 
 	diff_setup(&diff_opts);
 	diff_opts.flags.recursive = 1;
@@ -367,6 +377,30 @@ static void unstage_changes_unless_new(struct object_id *cache_tree)
 			continue;
 		}
 		ce = active_cache[pos];
+		if (ce_skip_worktree(ce)) {
+			struct stat st;
+			if (!lstat(ce->name, &st)) {
+				struct strbuf new_path = STRBUF_INIT;
+				int fd;
+
+				strbuf_addf(&new_path,
+					    "%s.stash.XXXXXX", ce->name);
+				fd = xmkstemp(new_path.buf);
+				close(fd);
+				printf(_("WARNING: Untracked file in way of "
+					 "tracked file!  Renaming\n "
+					 "           %s -> %s\n"
+					 "         to make room.\n"),
+				       ce->name, new_path.buf);
+				if (rename(ce->name, new_path.buf))
+					die("Failed to move %s to %s\n",
+					    ce->name, new_path.buf);
+				strbuf_release(&new_path);
+			}
+			checkout_entry(ce, &state, NULL, NULL);
+		}
+
+		ce->ce_flags &= ~CE_SKIP_WORKTREE;
 		if (p->one->oid_valid) {
 			ce = make_cache_entry(&the_index,
 					      p->one->mode,
