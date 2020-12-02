@@ -33,4 +33,17 @@ void write_table_of_contents(struct hashfile *f,
 			     struct chunk_info *chunks,
 			     int nr);
 
+/*
+ * Write the data for the given chunk list using the provided
+ * write_fn values. The given 'data' parameter is passed to those
+ * methods.
+ *
+ * The data that is written by each write_fn is checked to be of
+ * the expected size, and a BUG() is thrown if not specified correctly.
+ */
+int write_chunks(struct hashfile *f,
+		 struct chunk_info *chunks,
+		 int nr,
+		 void *data);
+
 #endif

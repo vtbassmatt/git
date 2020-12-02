@@ -24,3 +24,26 @@ void write_table_of_contents(struct hashfile *f,
 	hashwrite_be32(f, 0);
 	hashwrite_be64(f, cur_offset);
 }
+
+int write_chunks(struct hashfile *f,
+		 struct chunk_info *chunks,
+		 int nr,
+		 void *data)
+{
+	int i;
+
+	for (i = 0; i < nr; i++) {
+		uint64_t start_offset = f->total + f->offset;
+		int result = chunks[i].write_fn(f, data);
+
+		if (result)
+			return result;
+
+		if (f->total + f->offset != start_offset + chunks[i].size)
+			BUG("expected to write %"PRId64" bytes to chunk %"PRIx32", but wrote %"PRId64" instead",
+			    chunks[i].size, chunks[i].id,
+			    f->total + f->offset - start_offset);
+	}
+
+	return 0;
+}

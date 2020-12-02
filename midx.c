@@ -957,8 +957,7 @@ static int write_midx_internal(const char *object_dir, struct multi_pack_index *
 
 	write_table_of_contents(f, header_size, chunks, num_chunks);
 
-	for (i = 0; i < num_chunks; i++)
-		chunks[i].write_fn(f, &ctx);
+	result = write_chunks(f, chunks, num_chunks, &ctx);
 
 	finalize_hashfile(f, NULL, CSUM_FSYNC | CSUM_HASH_IN_STREAM);
 	commit_lock_file(&lk);
