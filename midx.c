@@ -946,12 +946,12 @@ static int write_midx_internal(const char *object_dir, struct multi_pack_index *
 	chunks[2].write_fn = write_midx_oid_lookup;
 
 	chunks[3].id = MIDX_CHUNKID_OBJECTOFFSETS;
-	chunks[3].size = ctx.entries_nr * MIDX_CHUNK_OFFSET_WIDTH;
+	chunks[3].size = (uint64_t)ctx.entries_nr * MIDX_CHUNK_OFFSET_WIDTH;
 	chunks[3].write_fn = write_midx_object_offsets;
 
 	if (ctx.large_offsets_needed) {
 		chunks[4].id = MIDX_CHUNKID_LARGEOFFSETS;
-		chunks[4].size = ctx.num_large_offsets * MIDX_CHUNK_LARGE_OFFSET_WIDTH;
+		chunks[4].size = (uint64_t)ctx.num_large_offsets * MIDX_CHUNK_LARGE_OFFSET_WIDTH;
 		chunks[4].write_fn = write_midx_large_offsets;
 	}
 
