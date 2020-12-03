@@ -46,4 +46,24 @@ int write_chunks(struct hashfile *f,
 		 int nr,
 		 void *data);
 
+/*
+ * When reading a table of contents, we find the chunk with matching 'id'
+ * then call its read_fn to populate the necessary 'data' based on the
+ * chunk start and size.
+ */
+typedef int (*chunk_read_fn)(const unsigned char *chunk_start,
+			     size_t chunk_size, void *data);
+struct read_chunk_info {
+	uint32_t id;
+	chunk_read_fn read_fn;
+};
+
+int read_table_of_contents(const unsigned char *mfile,
+			   size_t mfile_size,
+			   uint64_t toc_offset,
+			   int toc_length,
+			   struct read_chunk_info *chunks,
+			   int nr,
+			   void *data);
+
 #endif

@@ -54,6 +54,74 @@ static char *get_midx_filename(const char *object_dir)
 	return xstrfmt("%s/pack/multi-pack-index", object_dir);
 }
 
+static int midx_read_pack_names(const unsigned char *chunk_start,
+				size_t chunk_size, void *data)
+{
+	struct multi_pack_index *m = (struct multi_pack_index *)data;
+	m->chunk_pack_names = chunk_start;
+	return 0;
+}
+
+static int midx_read_oid_fanout(const unsigned char *chunk_start,
+				size_t chunk_size, void *data)
+{
+	struct multi_pack_index *m = (struct multi_pack_index *)data;
+	m->chunk_oid_fanout = (uint32_t *)chunk_start;
+
+	if (chunk_size != 4 * 256) {
+		error(_("multi-pack-index OID fanout is of the wrong size"));
+		return 1;
+	}
+	return 0;
+}
+
+static int midx_read_oid_lookup(const unsigned char *chunk_start,
+				size_t chunk_size, void *data)
+{
+	struct multi_pack_index *m = (struct multi_pack_index *)data;
+	m->chunk_oid_lookup = chunk_start;
+	return 0;
+}
+
+static int midx_read_offsets(const unsigned char *chunk_start,
+			     size_t chunk_size, void *data)
+{
+	struct multi_pack_index *m = (struct multi_pack_index *)data;
+	m->chunk_object_offsets = chunk_start;
+	return 0;
+}
+
+static int midx_read_large_offsets(const unsigned char *chunk_start,
+				   size_t chunk_size, void *data)
+{
+	struct multi_pack_index *m = (struct multi_pack_index *)data;
+	m->chunk_large_offsets = chunk_start;
+	return 0;
+}
+
+static struct read_chunk_info read_chunks[] = {
+	[0] = {
+		MIDX_CHUNKID_PACKNAMES,
+		midx_read_pack_names
+	},
+	[1] = {
+		MIDX_CHUNKID_OIDFANOUT,
+		midx_read_oid_fanout
+	},
+	[2] = {
+		MIDX_CHUNKID_OIDLOOKUP,
+		midx_read_oid_lookup
+	},
+	[3] = {
+		MIDX_CHUNKID_OBJECTOFFSETS,
+		midx_read_offsets
+	},
+	[4] = {
+		MIDX_CHUNKID_LARGEOFFSETS,
+		midx_read_large_offsets
+	}
+};
+
 struct multi_pack_index *load_multi_pack_index(const char *object_dir, int local)
 {
 	struct multi_pack_index *m = NULL;
@@ -114,48 +182,10 @@ struct multi_pack_index *load_multi_pack_index(const char *object_dir, int local
 
 	m->num_packs = get_be32(m->data + MIDX_BYTE_NUM_PACKS);
 
-	for (i = 0; i < m->num_chunks; i++) {
-		uint32_t chunk_id = get_be32(m->data + MIDX_HEADER_SIZE +
-					     MIDX_CHUNKLOOKUP_WIDTH * i);
-		uint64_t chunk_offset = get_be64(m->data + MIDX_HEADER_SIZE + 4 +
-						 MIDX_CHUNKLOOKUP_WIDTH * i);
-
-		if (chunk_offset >= m->data_len)
-			die(_("invalid chunk offset (too large)"));
-
-		switch (chunk_id) {
-			case MIDX_CHUNKID_PACKNAMES:
-				m->chunk_pack_names = m->data + chunk_offset;
-				break;
-
-			case MIDX_CHUNKID_OIDFANOUT:
-				m->chunk_oid_fanout = (uint32_t *)(m->data + chunk_offset);
-				break;
-
-			case MIDX_CHUNKID_OIDLOOKUP:
-				m->chunk_oid_lookup = m->data + chunk_offset;
-				break;
-
-			case MIDX_CHUNKID_OBJECTOFFSETS:
-				m->chunk_object_offsets = m->data + chunk_offset;
-				break;
-
-			case MIDX_CHUNKID_LARGEOFFSETS:
-				m->chunk_large_offsets = m->data + chunk_offset;
-				break;
-
-			case 0:
-				die(_("terminating multi-pack-index chunk id appears earlier than expected"));
-				break;
-
-			default:
-				/*
-				 * Do nothing on unrecognized chunks, allowing future
-				 * extensions to add optional chunks.
-				 */
-				break;
-		}
-	}
+	if (read_table_of_contents(m->data, midx_size, MIDX_HEADER_SIZE,
+				   m->num_chunks, read_chunks,
+				   MIDX_MAX_CHUNKS, m))
+		goto cleanup_fail;
 
 	if (!m->chunk_pack_names)
 		die(_("multi-pack-index missing required pack-name chunk"));
