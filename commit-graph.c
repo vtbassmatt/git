@@ -289,10 +289,20 @@ static int verify_commit_graph_lite(struct commit_graph *g)
 	return 0;
 }
 
+static int report_duplicate(void)
+{
+	warning(_("duplicate chunk detected"));
+	return 1;
+}
+
 static int graph_read_oid_fanout(const unsigned char *chunk_start,
 				 size_t chunk_size, void *data)
 {
 	struct commit_graph *g = (struct commit_graph *)data;
+
+	if (g->chunk_oid_fanout)
+		return report_duplicate();
+
 	g->chunk_oid_fanout = (uint32_t*)chunk_start;
 	return 0;
 }
@@ -301,6 +311,10 @@ static int graph_read_oid_lookup(const unsigned char *chunk_start,
 				 size_t chunk_size, void *data)
 {
 	struct commit_graph *g = (struct commit_graph *)data;
+
+	if (g->chunk_oid_lookup)
+		return report_duplicate();
+
 	g->chunk_oid_lookup = chunk_start;
 	g->num_commits = chunk_size / g->hash_len;
 	return 0;
@@ -310,6 +324,10 @@ static int graph_read_data(const unsigned char *chunk_start,
 				 size_t chunk_size, void *data)
 {
 	struct commit_graph *g = (struct commit_graph *)data;
+
+	if (g->chunk_commit_data)
+		return report_duplicate();
+
 	g->chunk_commit_data = chunk_start;
 	return 0;
 }
@@ -318,6 +336,10 @@ static int graph_read_extra_edges(const unsigned char *chunk_start,
 				  size_t chunk_size, void *data)
 {
 	struct commit_graph *g = (struct commit_graph *)data;
+
+	if (g->chunk_extra_edges)
+		return report_duplicate();
+
 	g->chunk_extra_edges = chunk_start;
 	return 0;
 }
@@ -326,6 +348,10 @@ static int graph_read_base_graphs(const unsigned char *chunk_start,
 				  size_t chunk_size, void *data)
 {
 	struct commit_graph *g = (struct commit_graph *)data;
+
+	if (g->chunk_base_graphs)
+		return report_duplicate();
+
 	g->chunk_base_graphs = chunk_start;
 	return 0;
 }
@@ -334,6 +360,10 @@ static int graph_read_bloom_indices(const unsigned char *chunk_start,
 				    size_t chunk_size, void *data)
 {
 	struct commit_graph *g = (struct commit_graph *)data;
+
+	if (g->chunk_bloom_indexes)
+		return report_duplicate();
+
 	g->chunk_bloom_indexes = chunk_start;
 	return 0;
 }
@@ -343,6 +373,10 @@ static int graph_read_bloom_data(const unsigned char *chunk_start,
 {
 	struct commit_graph *g = (struct commit_graph *)data;
 	uint32_t hash_version;
+
+	if (g->chunk_bloom_data)
+		return report_duplicate();
+
 	g->chunk_bloom_data = chunk_start;
 	hash_version = get_be32(chunk_start);
 
