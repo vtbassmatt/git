@@ -2001,10 +2001,9 @@ static int do_pick_commit(struct repository *r,
 		flags |= AMEND_MSG;
 		if (!final_fixup)
 			msg_file = rebase_path_squash_msg();
-		else if (file_exists(rebase_path_fixup_msg())) {
-			flags |= CLEANUP_MSG;
+		else if (file_exists(rebase_path_fixup_msg()))
 			msg_file = rebase_path_fixup_msg();
-		} else {
+		else {
 			const char *dest = git_path_squash_msg(r);
 			unlink(dest);
 			if (copy_file(dest, rebase_path_squash_msg(), 0666))
