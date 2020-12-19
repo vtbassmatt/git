@@ -186,4 +186,26 @@ test_expect_success "fetch --prune with negative refspec" '
 	)
 '
 
+test_expect_success "push with matching ':' refspec" '
+	test_config -C two remote.one.push : &&
+	# Fails w/ tip behind counterpart - but should not segfault
+	test_must_fail git -C two push one
+'
+
+test_expect_success "push with matching '+:' refspec" '
+	test_config -C two remote.one.push +: &&
+	# Fails w/ tip behind counterpart - but should not segfault
+	test_must_fail git -C two push one
+'
+
+test_expect_success "push with matching and negative refspec" '
+	test_config -C two --add remote.one.push : &&
+	# Fails to push master w/ tip behind counterpart
+	test_must_fail git -C two push one &&
+
+	# If master is in negative refspec, then the command will succeed
+	test_config -C two --add remote.one.push ^refs/heads/master &&
+	git -C two push one
+'
+
 test_done
