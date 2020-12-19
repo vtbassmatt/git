@@ -186,4 +186,19 @@ test_expect_success "fetch --prune with negative refspec" '
 	)
 '
 
+test_expect_success "push with matching ':' refspec" '
+	(
+		cd two &&
+		git config remote.one.push : &&
+		# Fails w/ tip behind counterpart - but should not segfault
+		test_must_fail git push one master &&
+
+		git config remote.one.push +: &&
+		# Fails w/ tip behind counterpart - but should not segfault
+		test_must_fail git push one master &&
+
+		git config --unset remote.one.push
+	)
+'
+
 test_done
