@@ -482,7 +482,7 @@ static int checkout_paths(const struct checkout_opts *opts,
 		 * properly. However, there is special logic for the HEAD case
 		 * so we mustn't replace that.
 		 */
-		if (rev && strcmp(rev, "HEAD"))
+		if (rev && new_branch_info->commit && strcmp(rev, "HEAD"))
 			rev = oid_to_hex_r(rev_oid, &new_branch_info->commit->object.oid);
 
 		if (opts->checkout_index && opts->checkout_worktree)
