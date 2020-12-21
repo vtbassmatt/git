@@ -381,6 +381,7 @@ test_unconfig () {
 		config_dir=$1
 		shift
 	fi
+	echo git ${config_dir:+-C "$config_dir"} config --unset-all "$@"
 	git ${config_dir:+-C "$config_dir"} config --unset-all "$@"
 	config_status=$?
 	case "$config_status" in
@@ -400,7 +401,13 @@ test_config () {
 		config_dir=$1
 		shift
 	fi
-	test_when_finished "test_unconfig ${config_dir:+-C '$config_dir'} '$1'" &&
+
+	first_arg=$1
+	if test "$1" = --add; then
+		first_arg=$2
+	fi
+
+	test_when_finished "test_unconfig ${config_dir:+-C '$config_dir'} '$first_arg'" &&
 	git ${config_dir:+-C "$config_dir"} config "$@"
 }
 
