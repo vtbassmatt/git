@@ -21,6 +21,21 @@ struct hook
  */
 struct list_head* hook_list(const struct strbuf *hookname);
 
+enum hookdir_opt
+{
+	HOOKDIR_NO,
+	HOOKDIR_WARN,
+	HOOKDIR_INTERACTIVE,
+	HOOKDIR_YES,
+	HOOKDIR_UNKNOWN,
+};
+
+/*
+ * Provides the hookdir_opt specified in the config without consulting any
+ * command line arguments.
+ */
+enum hookdir_opt configured_hookdir_opt(void);
+
 /* Free memory associated with a 'struct hook' */
 void free_hook(struct hook *ptr);
 /* Empties the list at 'head', calling 'free_hook()' on each entry */
