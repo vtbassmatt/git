@@ -1559,7 +1559,6 @@ static void populate_from_existing_patterns(struct unpack_trees_options *o,
 	free(sparse);
 }
 
-
 static int verify_absent(const struct cache_entry *,
 			 enum unpack_trees_error_types,
 			 struct unpack_trees_options *);
