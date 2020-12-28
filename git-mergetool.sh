@@ -334,7 +334,10 @@ merge_file () {
 	checkout_staged_file 2 "$MERGED" "$LOCAL"
 	checkout_staged_file 3 "$MERGED" "$REMOTE"
 
-	if test "$(git config --bool mergetool.autoMerge)" != "false"
+	if test "$(
+		git config --get --bool "mergetool.$merge_tool.automerge" ||
+		git config --get --bool "mergetool.automerge" ||
+		echo true)" = true
 	then
 		auto_merge
 	fi

@@ -1,3 +1,9 @@
+mergetool.<tool>.autoMerge::
+	A mergetool-specific override for the global `mergetool.autoMerge`
+	configuration flag. This allows individual mergetools to enable or
+	disable the flag regardless of the global setting. See
+	`mergetool.autoMerge` for the full description.
+
 mergetool.<tool>.cmd::
 	Specify the command to invoke the specified merge tool.  The
 	specified command is evaluated in shell with the following
@@ -41,7 +47,14 @@ mergetool.meld.useAutoMerge::
 	default value.
 
 mergetool.autoMerge::
-	Remove lines without conflicts from all the files. Defaults to `true`.
+	During a merge Git will automatically resolve as many conflicts as
+	possible and then wrap conflict markers around any conflicts that it
+	cannot resolve. This flag consolidates the non-conflicting parts into
+	the corresponding 'LOCAL' and 'REMOTE' files so that only the
+	unresolved conflicts are presented to the merge tool. Can be overriden
+	per-tool via the `mergetool.<tool>.autoMerge` configuration variable.
+	Note: individual mergetool scripts can elect to ignore user preferences
+	entirely. Defaults to `true`.
 
 mergetool.keepBackup::
 	After performing a merge, the original file with conflict markers
