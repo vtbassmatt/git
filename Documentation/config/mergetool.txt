@@ -1,7 +1,3 @@
-mergetool.<tool>.path::
-	Override the path for the given tool.  This is useful in case
-	your tool is not in the PATH.
-
 mergetool.<tool>.cmd::
 	Specify the command to invoke the specified merge tool.  The
 	specified command is evaluated in shell with the following
@@ -12,6 +8,10 @@ mergetool.<tool>.cmd::
 	file containing the contents of the file from the branch being
 	merged; 'MERGED' contains the name of the file to which the merge
 	tool should write the results of a successful merge.
+
+mergetool.<tool>.path::
+	Override the path for the given tool.  This is useful in case
+	your tool is not in the PATH.
 
 mergetool.<tool>.trustExitCode::
 	For a custom merge command, specify whether the exit code of
@@ -40,6 +40,9 @@ mergetool.meld.useAutoMerge::
 	value of `false` avoids using `--auto-merge` altogether, and is the
 	default value.
 
+mergetool.autoMerge::
+	Remove lines without conflicts from all the files. Defaults to `true`.
+
 mergetool.keepBackup::
 	After performing a merge, the original file with conflict markers
 	can be saved as a file with a `.orig` extension.  If this variable
@@ -53,14 +56,11 @@ mergetool.keepTemporaries::
 	preserved, otherwise they will be removed after the tool has
 	exited. Defaults to `false`.
 
+mergetool.prompt::
+	Prompt before each invocation of the merge resolution program.
+
 mergetool.writeToTemp::
 	Git writes temporary 'BASE', 'LOCAL', and 'REMOTE' versions of
 	conflicting files in the worktree by default.  Git will attempt
 	to use a temporary directory for these files when set `true`.
 	Defaults to `false`.
-
-mergetool.prompt::
-	Prompt before each invocation of the merge resolution program.
-
-mergetool.autoMerge::
-	Remove lines without conflicts from all the files. Defaults to `true`.
