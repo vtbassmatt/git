@@ -336,7 +336,7 @@ merge_file () {
 
 	initialize_merge_tool "$merge_tool"
 
-	if test "$(
+	if automerge_enabled && test "$(
 		git config --get --bool "mergetool.$merge_tool.automerge" ||
 		git config --get --bool "mergetool.automerge" ||
 		echo true)" = true

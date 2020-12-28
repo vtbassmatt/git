@@ -164,6 +164,10 @@ setup_tool () {
 		return 1
 	}
 
+	automerge_enabled () {
+		return 0
+	}
+
 	translate_merge_tool_path () {
 		echo "$1"
 	}
