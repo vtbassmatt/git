@@ -175,10 +175,15 @@ static int verify_cache(struct cache_entry **cache,
 	if (funny)
 		return -1;
 
-	/* Also verify that the cache does not have path and path/file
+	/*
+	 * Also verify that the cache does not have path and path/file
 	 * at the same time.  At this point we know the cache has only
-	 * stage 0 entries.
+	 * stage 0 entries. In silent mode, we do not want these messages,
+	 * and they should not exist unless a bug was introduced along
+	 * the way.
 	 */
+	if (silent)
+		return 0;
 	funny = 0;
 	for (i = 0; i < entries - 1; i++) {
 		/* path/file always comes after path because of the way
