@@ -242,7 +242,7 @@ static int mark_ce_flags(const char *path, int flag, int mark)
 			istate->cache[pos]->ce_flags &= ~flag;
 		istate->cache[pos]->ce_flags |= CE_UPDATE_IN_BASE;
 		cache_tree_invalidate_path(istate, path);
-		active_cache_changed |= CE_ENTRY_CHANGED;
+		istate->cache_changed |= CE_ENTRY_CHANGED;
 		return 0;
 	}
 	return -1;
@@ -926,7 +926,7 @@ static enum parse_opt_result unresolve_callback(
 	*has_errors = do_unresolve(ctx->argc, ctx->argv,
 				prefix, prefix ? strlen(prefix) : 0);
 	if (*has_errors)
-		active_cache_changed = 0;
+		istate->cache_changed = 0;
 
 	ctx->argv += ctx->argc - 1;
 	ctx->argc = 1;
@@ -947,7 +947,7 @@ static enum parse_opt_result reupdate_callback(
 	setup_work_tree();
 	*has_errors = do_reupdate(ctx->argc, ctx->argv, prefix);
 	if (*has_errors)
-		active_cache_changed = 0;
+		istate->cache_changed = 0;
 
 	ctx->argv += ctx->argc - 1;
 	ctx->argc = 1;
@@ -1146,7 +1146,7 @@ int cmd_update_index(int argc, const char **argv, const char *prefix)
 			    INDEX_FORMAT_LB, INDEX_FORMAT_UB);
 
 		if (istate->version != preferred_index_format)
-			active_cache_changed |= SOMETHING_CHANGED;
+			istate->cache_changed |= SOMETHING_CHANGED;
 		istate->version = preferred_index_format;
 	}
 
@@ -1234,7 +1234,7 @@ int cmd_update_index(int argc, const char **argv, const char *prefix)
 		report(_("fsmonitor disabled"));
 	}
 
-	if (active_cache_changed || force_write) {
+	if (istate->cache_changed || force_write) {
 		if (newfd < 0) {
 			if (refresh_args.flags & REFRESH_QUIET)
 				exit(128);
