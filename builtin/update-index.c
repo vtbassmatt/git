@@ -346,7 +346,7 @@ static int process_directory(const char *path, int len, struct stat *st)
 
 	/* Inexact match: is there perhaps a subdirectory match? */
 	pos = -pos-1;
-	while (pos < active_nr) {
+	while (pos < istate->cache_nr) {
 		const struct cache_entry *ce = istate->cache[pos++];
 
 		if (strncmp(ce->name, path, len))
@@ -638,7 +638,7 @@ static int unresolve_one(const char *path)
 	if (0 <= pos) {
 		/* already merged */
 		pos = unmerge_cache_entry_at(pos);
-		if (pos < active_nr) {
+		if (pos < istate->cache_nr) {
 			const struct cache_entry *ce = istate->cache[pos];
 			if (ce_stage(ce) &&
 			    ce_namelen(ce) == namelen &&
@@ -652,7 +652,7 @@ static int unresolve_one(const char *path)
 		 * want to do anything in the former case.
 		 */
 		pos = -pos-1;
-		if (pos < active_nr) {
+		if (pos < istate->cache_nr) {
 			const struct cache_entry *ce = istate->cache[pos];
 			if (ce_namelen(ce) == namelen &&
 			    !memcmp(ce->name, path, namelen)) {
@@ -748,7 +748,7 @@ static int do_reupdate(int ac, const char **av,
 		 */
 		has_head = 0;
  redo:
-	for (pos = 0; pos < active_nr; pos++) {
+	for (pos = 0; pos < istate->cache_nr; pos++) {
 		const struct cache_entry *ce = istate->cache[pos];
 		struct cache_entry *old = NULL;
 		int save_nr;
@@ -766,14 +766,14 @@ static int do_reupdate(int ac, const char **av,
 		}
 		/* Be careful.  The working tree may not have the
 		 * path anymore, in which case, under 'allow_remove',
-		 * or worse yet 'allow_replace', active_nr may decrease.
+		 * or worse yet 'allow_replace', istate->cache_nr may decrease.
 		 */
-		save_nr = active_nr;
+		save_nr = istate->cache_nr;
 		path = xstrdup(ce->name);
 		update_one(path);
 		free(path);
 		discard_cache_entry(old);
-		if (save_nr != active_nr)
+		if (save_nr != istate->cache_nr)
 			goto redo;
 	}
 	clear_pathspec(&pathspec);
