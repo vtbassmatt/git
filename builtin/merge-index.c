@@ -1,4 +1,3 @@
-#define USE_THE_INDEX_COMPATIBILITY_MACROS
 #include "builtin.h"
 #include "run-command.h"
 
@@ -6,18 +5,19 @@ static const char *pgm;
 static int one_shot, quiet;
 static int err;
 
-static int merge_entry(int pos, const char *path)
+static int merge_entry(struct index_state *istate,
+		       int pos, const char *path)
 {
 	int found;
 	const char *arguments[] = { pgm, "", "", "", path, "", "", "", NULL };
 	char hexbuf[4][GIT_MAX_HEXSZ + 1];
 	char ownbuf[4][60];
 
-	if (pos >= active_nr)
+	if (pos >= istate->cache_nr)
 		die("git merge-index: %s not in the cache", path);
 	found = 0;
 	do {
-		const struct cache_entry *ce = active_cache[pos];
+		const struct cache_entry *ce = istate->cache[pos];
 		int stage = ce_stage(ce);
 
 		if (strcmp(ce->name, path))
@@ -27,7 +27,7 @@ static int merge_entry(int pos, const char *path)
 		xsnprintf(ownbuf[stage], sizeof(ownbuf[stage]), "%o", ce->ce_mode);
 		arguments[stage] = hexbuf[stage];
 		arguments[stage + 4] = ownbuf[stage];
-	} while (++pos < active_nr);
+	} while (++pos < istate->cache_nr);
 	if (!found)
 		die("git merge-index: %s not in the cache", path);
 
@@ -43,32 +43,34 @@ static int merge_entry(int pos, const char *path)
 	return found;
 }
 
-static void merge_one_path(const char *path)
+static void merge_one_path(struct index_state *istate,
+			   const char *path)
 {
-	int pos = cache_name_pos(path, strlen(path));
+	int pos = index_name_pos(istate, path, strlen(path));
 
 	/*
 	 * If it already exists in the cache as stage0, it's
 	 * already merged and there is nothing to do.
 	 */
 	if (pos < 0)
-		merge_entry(-pos-1, path);
+		merge_entry(istate, -pos - 1, path);
 }
 
-static void merge_all(void)
+static void merge_all(struct index_state *istate)
 {
 	int i;
-	for (i = 0; i < active_nr; i++) {
-		const struct cache_entry *ce = active_cache[i];
+	for (i = 0; i < istate->cache_nr; i++) {
+		const struct cache_entry *ce = istate->cache[i];
 		if (!ce_stage(ce))
 			continue;
-		i += merge_entry(i, ce->name)-1;
+		i += merge_entry(istate, i, ce->name)-1;
 	}
 }
 
 int cmd_merge_index(int argc, const char **argv, const char *prefix)
 {
 	int i, force_file = 0;
+	struct index_state *istate;
 
 	/* Without this we cannot rely on waitpid() to tell
 	 * what happened to our children.
@@ -78,7 +80,8 @@ int cmd_merge_index(int argc, const char **argv, const char *prefix)
 	if (argc < 3)
 		usage("git merge-index [-o] [-q] <merge-program> (-a | [--] [<filename>...])");
 
-	read_cache();
+	repo_read_index(the_repository);
+	istate = the_repository->index;
 
 	i = 1;
 	if (!strcmp(argv[i], "-o")) {
@@ -98,12 +101,12 @@ int cmd_merge_index(int argc, const char **argv, const char *prefix)
 				continue;
 			}
 			if (!strcmp(arg, "-a")) {
-				merge_all();
+				merge_all(istate);
 				continue;
 			}
 			die("git merge-index: unknown option %s", arg);
 		}
-		merge_one_path(arg);
+		merge_one_path(istate, arg);
 	}
 	if (err && !quiet)
 		die("merge program failed");
