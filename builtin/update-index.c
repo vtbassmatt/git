@@ -40,6 +40,9 @@ static int ignore_skip_worktree_entries;
 #define UNMARK_FLAG 2
 static struct strbuf mtime_dir = STRBUF_INIT;
 
+static struct repository *repo;
+static struct index_state *istate;
+
 /* Untracked cache mode */
 enum uc_mode {
 	UC_UNSPECIFIED = -1,
@@ -232,13 +235,13 @@ static int mark_ce_flags(const char *path, int flag, int mark)
 	int namelen = strlen(path);
 	int pos = cache_name_pos(path, namelen);
 	if (0 <= pos) {
-		mark_fsmonitor_invalid(&the_index, active_cache[pos]);
+		mark_fsmonitor_invalid(istate, active_cache[pos]);
 		if (mark)
 			active_cache[pos]->ce_flags |= flag;
 		else
 			active_cache[pos]->ce_flags &= ~flag;
 		active_cache[pos]->ce_flags |= CE_UPDATE_IN_BASE;
-		cache_tree_invalidate_path(&the_index, path);
+		cache_tree_invalidate_path(istate, path);
 		active_cache_changed |= CE_ENTRY_CHANGED;
 		return 0;
 	}
@@ -277,14 +280,14 @@ static int add_one_path(const struct cache_entry *old, const char *path, int len
 	if (old && !ce_stage(old) && !ce_match_stat(old, st, 0))
 		return 0;
 
-	ce = make_empty_cache_entry(&the_index, len);
+	ce = make_empty_cache_entry(istate, len);
 	memcpy(ce->name, path, len);
 	ce->ce_flags = create_ce_flags(0);
 	ce->ce_namelen = len;
-	fill_stat_cache_info(&the_index, ce, st);
+	fill_stat_cache_info(istate, ce, st);
 	ce->ce_mode = ce_mode_from_stat(old, st->st_mode);
 
-	if (index_path(&the_index, &ce->oid, path, st,
+	if (index_path(istate, &ce->oid, path, st,
 		       info_only ? 0 : HASH_WRITE_OBJECT)) {
 		discard_cache_entry(ce);
 		return -1;
@@ -411,7 +414,7 @@ static int add_cacheinfo(unsigned int mode, const struct object_id *oid,
 		return error("Invalid path '%s'", path);
 
 	len = strlen(path);
-	ce = make_empty_cache_entry(&the_index, len);
+	ce = make_empty_cache_entry(istate, len);
 
 	oidcpy(&ce->oid, oid);
 	memcpy(ce->name, path, len);
@@ -603,7 +606,7 @@ static struct cache_entry *read_one_ent(const char *which,
 	struct object_id oid;
 	struct cache_entry *ce;
 
-	if (get_tree_entry(the_repository, ent, path, &oid, &mode)) {
+	if (get_tree_entry(repo, ent, path, &oid, &mode)) {
 		if (which)
 			error("%s: not in %s branch.", path, which);
 		return NULL;
@@ -613,7 +616,7 @@ static struct cache_entry *read_one_ent(const char *which,
 			error("%s: not a blob in %s branch.", path, which);
 		return NULL;
 	}
-	ce = make_empty_cache_entry(&the_index, namelen);
+	ce = make_empty_cache_entry(istate, namelen);
 
 	oidcpy(&ce->oid, &oid);
 	memcpy(ce->name, path, namelen);
@@ -751,7 +754,7 @@ static int do_reupdate(int ac, const char **av,
 		int save_nr;
 		char *path;
 
-		if (ce_stage(ce) || !ce_path_match(&the_index, ce, &pathspec, NULL))
+		if (ce_stage(ce) || !ce_path_match(istate, ce, &pathspec, NULL))
 			continue;
 		if (has_head)
 			old = read_one_ent(NULL, &head_oid,
@@ -968,7 +971,6 @@ int cmd_update_index(int argc, const char **argv, const char *prefix)
 	struct parse_opt_ctx_t ctx;
 	strbuf_getline_fn getline_fn;
 	int parseopt_state = PARSE_OPT_UNKNOWN;
-	struct repository *r = the_repository;
 	struct option options[] = {
 		OPT_BIT('q', NULL, &refresh_args.flags,
 			N_("continue refresh even when index needs update"),
@@ -1077,16 +1079,19 @@ int cmd_update_index(int argc, const char **argv, const char *prefix)
 
 	git_config(git_default_config, NULL);
 
+	repo = the_repository;
+
 	/* we will diagnose later if it turns out that we need to update it */
-	newfd = hold_locked_index(&lock_file, 0);
+	newfd = repo_hold_locked_index(repo, &lock_file, 0);
 	if (newfd < 0)
 		lock_error = errno;
 
-	entries = read_cache();
+	entries = repo_read_index(repo);
 	if (entries < 0)
 		die("cache corrupted");
 
-	the_index.updated_skipworktree = 1;
+	istate = repo->index;
+	istate->updated_skipworktree = 1;
 
 	/*
 	 * Custom copy of parse_options() because we want to handle
@@ -1140,9 +1145,9 @@ int cmd_update_index(int argc, const char **argv, const char *prefix)
 			    preferred_index_format,
 			    INDEX_FORMAT_LB, INDEX_FORMAT_UB);
 
-		if (the_index.version != preferred_index_format)
+		if (istate->version != preferred_index_format)
 			active_cache_changed |= SOMETHING_CHANGED;
-		the_index.version = preferred_index_format;
+		istate->version = preferred_index_format;
 	}
 
 	if (read_from_stdin) {
@@ -1173,28 +1178,28 @@ int cmd_update_index(int argc, const char **argv, const char *prefix)
 			warning(_("core.splitIndex is set to false; "
 				  "remove or change it, if you really want to "
 				  "enable split index"));
-		if (the_index.split_index)
-			the_index.cache_changed |= SPLIT_INDEX_ORDERED;
+		if (istate->split_index)
+			istate->cache_changed |= SPLIT_INDEX_ORDERED;
 		else
-			add_split_index(&the_index);
+			add_split_index(istate);
 	} else if (!split_index) {
 		if (git_config_get_split_index() == 1)
 			warning(_("core.splitIndex is set to true; "
 				  "remove or change it, if you really want to "
 				  "disable split index"));
-		remove_split_index(&the_index);
+		remove_split_index(istate);
 	}
 
-	prepare_repo_settings(r);
+	prepare_repo_settings(repo);
 	switch (untracked_cache) {
 	case UC_UNSPECIFIED:
 		break;
 	case UC_DISABLE:
-		if (r->settings.core_untracked_cache == UNTRACKED_CACHE_WRITE)
+		if (repo->settings.core_untracked_cache == UNTRACKED_CACHE_WRITE)
 			warning(_("core.untrackedCache is set to true; "
 				  "remove or change it, if you really want to "
 				  "disable the untracked cache"));
-		remove_untracked_cache(&the_index);
+		remove_untracked_cache(istate);
 		report(_("Untracked cache disabled"));
 		break;
 	case UC_TEST:
@@ -1202,11 +1207,11 @@ int cmd_update_index(int argc, const char **argv, const char *prefix)
 		return !test_if_untracked_cache_is_supported();
 	case UC_ENABLE:
 	case UC_FORCE:
-		if (r->settings.core_untracked_cache == UNTRACKED_CACHE_REMOVE)
+		if (repo->settings.core_untracked_cache == UNTRACKED_CACHE_REMOVE)
 			warning(_("core.untrackedCache is set to false; "
 				  "remove or change it, if you really want to "
 				  "enable the untracked cache"));
-		add_untracked_cache(&the_index);
+		add_untracked_cache(istate);
 		report(_("Untracked cache enabled for '%s'"), get_git_work_tree());
 		break;
 	default:
@@ -1218,14 +1223,14 @@ int cmd_update_index(int argc, const char **argv, const char *prefix)
 			warning(_("core.fsmonitor is unset; "
 				"set it if you really want to "
 				"enable fsmonitor"));
-		add_fsmonitor(&the_index);
+		add_fsmonitor(istate);
 		report(_("fsmonitor enabled"));
 	} else if (!fsmonitor) {
 		if (git_config_get_fsmonitor() == 1)
 			warning(_("core.fsmonitor is set; "
 				"remove it if you really want to "
 				"disable fsmonitor"));
-		remove_fsmonitor(&the_index);
+		remove_fsmonitor(istate);
 		report(_("fsmonitor disabled"));
 	}
 
@@ -1235,7 +1240,7 @@ int cmd_update_index(int argc, const char **argv, const char *prefix)
 				exit(128);
 			unable_to_lock_die(get_index_file(), lock_error);
 		}
-		if (write_locked_index(&the_index, &lock_file, COMMIT_LOCK))
+		if (write_locked_index(istate, &lock_file, COMMIT_LOCK))
 			die("Unable to write new index file");
 	}
 
