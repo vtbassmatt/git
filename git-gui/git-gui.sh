@@ -740,6 +740,12 @@ if {[is_Windows]} {
 	if {![info exists env(DISPLAY)]} {
 		set env(DISPLAY) :9999
 	}
+} elseif {[is_MacOSX]} {
+	image create photo gitlogo16  -format png -file "$oguilib/git-gui-16.png"
+	image create photo gitlogo32  -format png -file "$oguilib/git-gui-32.png"
+	image create photo gitlogo128 -format png -file "$oguilib/git-gui-128.png"
+	image create photo gitlogo256 -format png -file "$oguilib/git-gui-256.png"
+	wm iconphoto . -default gitlogo256 gitlogo128 gitlogo32 gitlogo16
 } else {
 	catch {
 		image create photo gitlogo -width 16 -height 16
