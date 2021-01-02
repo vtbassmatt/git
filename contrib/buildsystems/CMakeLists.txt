@@ -442,7 +442,7 @@ endif()
 check_c_source_compiles("
 #include <regex.h>
 #ifndef REG_STARTEND
-#error oops we dont have it
+#error oops we don't have it
 #endif
 
 int main(void)
