@@ -27,4 +27,8 @@ test_expect_success 'run based on configured value' '
 	grep again message
 '
 
+test_expect_success 'do nothing on empty config' '
+	git for-each-repo --config=bogus.config -- these args would fail
+'
+
 test_done

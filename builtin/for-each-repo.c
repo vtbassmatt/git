@@ -51,6 +51,9 @@ int cmd_for_each_repo(int argc, const char **argv, const char *prefix)
 	values = repo_config_get_value_multi(the_repository,
 					     config_key);
 
+	if (!values)
+		return result;
+
 	for (i = 0; !result && i < values->nr; i++)
 		result = run_command_on_repo(values->items[i].string, &args);
 
