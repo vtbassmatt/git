@@ -784,19 +784,21 @@ static int do_reupdate(struct repository *repo,
 	return 0;
 }
 
-struct refresh_params {
+struct callback_data {
+	struct repository *repo;
+	struct index_state *istate;
+
 	unsigned int flags;
-	int *has_errors;
+	unsigned int has_errors;
+	unsigned nul_term_line;
+	unsigned read_from_stdin;
 };
 
-static struct repository *repo;
-static struct index_state *istate;
-
-static int refresh(struct refresh_params *o, unsigned int flag)
+static int refresh(struct callback_data *cd, unsigned int flag)
 {
 	setup_work_tree();
-	repo_read_index(repo);
-	*o->has_errors |= refresh_index(istate, o->flags | flag,
+	repo_read_index(cd->repo);
+	cd->has_errors |= refresh_index(cd->istate, cd->flags | flag,
 					NULL, NULL, NULL);
 	return 0;
 }
@@ -818,7 +820,7 @@ static int really_refresh_callback(const struct option *opt,
 }
 
 static int chmod_callback(const struct option *opt,
-				const char *arg, int unset)
+			  const char *arg, int unset)
 {
 	char *flip = opt->value;
 	BUG_ON_OPT_NEG(unset);
@@ -829,11 +831,12 @@ static int chmod_callback(const struct option *opt,
 }
 
 static int resolve_undo_clear_callback(const struct option *opt,
-				const char *arg, int unset)
+				       const char *arg, int unset)
 {
+	struct callback_data *cd = opt->value;
 	BUG_ON_OPT_NEG(unset);
 	BUG_ON_OPT_ARG(arg);
-	resolve_undo_clear_index(istate);
+	resolve_undo_clear_index(cd->istate);
 	return 0;
 }
 
@@ -868,12 +871,13 @@ static enum parse_opt_result cacheinfo_callback(
 	struct object_id oid;
 	unsigned int mode;
 	const char *path;
+	struct callback_data *cd = opt->value;
 
 	BUG_ON_OPT_NEG(unset);
 	BUG_ON_OPT_ARG(arg);
 
 	if (!parse_new_style_cacheinfo(ctx->argv[1], &mode, &oid, &path)) {
-		if (add_cacheinfo(istate, mode, &oid, path, 0))
+		if (add_cacheinfo(cd->istate, mode, &oid, path, 0))
 			die("git update-index: --cacheinfo cannot add %s", path);
 		ctx->argv++;
 		ctx->argc--;
@@ -883,7 +887,7 @@ static enum parse_opt_result cacheinfo_callback(
 		return error("option 'cacheinfo' expects <mode>,<sha1>,<path>");
 	if (strtoul_ui(*++ctx->argv, 8, &mode) ||
 	    get_oid_hex(*++ctx->argv, &oid) ||
-	    add_cacheinfo(istate, mode, &oid, *++ctx->argv, 0))
+	    add_cacheinfo(cd->istate, mode, &oid, *++ctx->argv, 0))
 		die("git update-index: --cacheinfo cannot add %s", *ctx->argv);
 	ctx->argc -= 3;
 	return 0;
@@ -893,7 +897,7 @@ static enum parse_opt_result stdin_cacheinfo_callback(
 	struct parse_opt_ctx_t *ctx, const struct option *opt,
 	const char *arg, int unset)
 {
-	int *nul_term_line = opt->value;
+	struct callback_data *cd = opt->value;
 
 	BUG_ON_OPT_NEG(unset);
 	BUG_ON_OPT_ARG(arg);
@@ -901,7 +905,7 @@ static enum parse_opt_result stdin_cacheinfo_callback(
 	if (ctx->argc != 1)
 		return error("option '%s' must be the last argument", opt->long_name);
 	allow_add = allow_replace = allow_remove = 1;
-	read_index_info(istate, *nul_term_line);
+	read_index_info(cd->istate, cd->nul_term_line);
 	return 0;
 }
 
@@ -909,14 +913,14 @@ static enum parse_opt_result stdin_callback(
 	struct parse_opt_ctx_t *ctx, const struct option *opt,
 	const char *arg, int unset)
 {
-	int *read_from_stdin = opt->value;
+	struct callback_data *cd = opt->value;
 
 	BUG_ON_OPT_NEG(unset);
 	BUG_ON_OPT_ARG(arg);
 
 	if (ctx->argc != 1)
 		return error("option '%s' must be the last argument", opt->long_name);
-	*read_from_stdin = 1;
+	cd->read_from_stdin = 1;
 	return 0;
 }
 
@@ -924,17 +928,17 @@ static enum parse_opt_result unresolve_callback(
 	struct parse_opt_ctx_t *ctx, const struct option *opt,
 	const char *arg, int unset)
 {
-	int *has_errors = opt->value;
 	const char *prefix = startup_info->prefix;
+	struct callback_data *cd = opt->value;
 
 	BUG_ON_OPT_NEG(unset);
 	BUG_ON_OPT_ARG(arg);
 
 	/* consume remaining arguments. */
-	*has_errors = do_unresolve(repo, istate, ctx->argc, ctx->argv,
-				   prefix, prefix ? strlen(prefix) : 0);
-	if (*has_errors)
-		istate->cache_changed = 0;
+	cd->has_errors = do_unresolve(cd->repo, cd->istate, ctx->argc, ctx->argv,
+				      prefix, prefix ? strlen(prefix) : 0);
+	if (cd->has_errors)
+		cd->istate->cache_changed = 0;
 
 	ctx->argv += ctx->argc - 1;
 	ctx->argc = 1;
@@ -945,17 +949,18 @@ static enum parse_opt_result reupdate_callback(
 	struct parse_opt_ctx_t *ctx, const struct option *opt,
 	const char *arg, int unset)
 {
-	int *has_errors = opt->value;
 	const char *prefix = startup_info->prefix;
+	struct callback_data *cd = opt->value;
 
 	BUG_ON_OPT_NEG(unset);
 	BUG_ON_OPT_ARG(arg);
 
 	/* consume remaining arguments. */
 	setup_work_tree();
-	*has_errors = do_reupdate(repo, istate, ctx->argc, ctx->argv, prefix);
-	if (*has_errors)
-		istate->cache_changed = 0;
+	cd->has_errors = do_reupdate(cd->repo, cd->istate,
+				     ctx->argc, ctx->argv, prefix);
+	if (cd->has_errors)
+		cd->istate->cache_changed = 0;
 
 	ctx->argv += ctx->argc - 1;
 	ctx->argc = 1;
@@ -964,13 +969,13 @@ static enum parse_opt_result reupdate_callback(
 
 int cmd_update_index(int argc, const char **argv, const char *prefix)
 {
-	int newfd, entries, has_errors = 0, nul_term_line = 0;
+	struct repository *repo = the_repository;
+	struct callback_data cd;
+	int newfd, entries;
 	enum uc_mode untracked_cache = UC_UNSPECIFIED;
-	int read_from_stdin = 0;
 	int prefix_length = prefix ? strlen(prefix) : 0;
 	int preferred_index_format = 0;
 	char set_executable_bit = 0;
-	struct refresh_params refresh_args = {0, &has_errors};
 	int lock_error = 0;
 	int split_index = -1;
 	int force_write = 0;
@@ -979,11 +984,13 @@ int cmd_update_index(int argc, const char **argv, const char *prefix)
 	struct parse_opt_ctx_t ctx;
 	strbuf_getline_fn getline_fn;
 	int parseopt_state = PARSE_OPT_UNKNOWN;
+	struct index_state *istate;
+
 	struct option options[] = {
-		OPT_BIT('q', NULL, &refresh_args.flags,
+		OPT_BIT('q', NULL, &cd.flags,
 			N_("continue refresh even when index needs update"),
 			REFRESH_QUIET),
-		OPT_BIT(0, "ignore-submodules", &refresh_args.flags,
+		OPT_BIT(0, "ignore-submodules", &cd.flags,
 			N_("refresh: ignore submodules"),
 			REFRESH_IGNORE_SUBMODULES),
 		OPT_SET_INT(0, "add", &allow_add,
@@ -992,18 +999,18 @@ int cmd_update_index(int argc, const char **argv, const char *prefix)
 			N_("let files replace directories and vice-versa"), 1),
 		OPT_SET_INT(0, "remove", &allow_remove,
 			N_("notice files missing from worktree"), 1),
-		OPT_BIT(0, "unmerged", &refresh_args.flags,
+		OPT_BIT(0, "unmerged", &cd.flags,
 			N_("refresh even if index contains unmerged entries"),
 			REFRESH_UNMERGED),
-		OPT_CALLBACK_F(0, "refresh", &refresh_args, NULL,
+		OPT_CALLBACK_F(0, "refresh", &cd, NULL,
 			N_("refresh stat information"),
 			PARSE_OPT_NOARG | PARSE_OPT_NONEG,
 			refresh_callback),
-		OPT_CALLBACK_F(0, "really-refresh", &refresh_args, NULL,
+		OPT_CALLBACK_F(0, "really-refresh", &cd, NULL,
 			N_("like --refresh, but ignore assume-unchanged setting"),
 			PARSE_OPT_NOARG | PARSE_OPT_NONEG,
 			really_refresh_callback),
-		{OPTION_LOWLEVEL_CALLBACK, 0, "cacheinfo", NULL,
+		{OPTION_LOWLEVEL_CALLBACK, 0, "cacheinfo", &cd,
 			N_("<mode>,<object>,<path>"),
 			N_("add the specified entry to the index"),
 			PARSE_OPT_NOARG | /* disallow --cacheinfo=<mode> form */
@@ -1032,30 +1039,30 @@ int cmd_update_index(int argc, const char **argv, const char *prefix)
 			N_("add to index only; do not add content to object database"), 1),
 		OPT_SET_INT(0, "force-remove", &force_remove,
 			N_("remove named paths even if present in worktree"), 1),
-		OPT_BOOL('z', NULL, &nul_term_line,
+		OPT_BOOL('z', NULL, &cd.nul_term_line,
 			 N_("with --stdin: input lines are terminated by null bytes")),
-		{OPTION_LOWLEVEL_CALLBACK, 0, "stdin", &read_from_stdin, NULL,
+		{OPTION_LOWLEVEL_CALLBACK, 0, "stdin", &cd, NULL,
 			N_("read list of paths to be updated from standard input"),
 			PARSE_OPT_NONEG | PARSE_OPT_NOARG,
 			NULL, 0, stdin_callback},
-		{OPTION_LOWLEVEL_CALLBACK, 0, "index-info", &nul_term_line, NULL,
+		{OPTION_LOWLEVEL_CALLBACK, 0, "index-info", &cd, NULL,
 			N_("add entries from standard input to the index"),
 			PARSE_OPT_NONEG | PARSE_OPT_NOARG,
 			NULL, 0, stdin_cacheinfo_callback},
-		{OPTION_LOWLEVEL_CALLBACK, 0, "unresolve", &has_errors, NULL,
+		{OPTION_LOWLEVEL_CALLBACK, 0, "unresolve", &cd, NULL,
 			N_("repopulate stages #2 and #3 for the listed paths"),
 			PARSE_OPT_NONEG | PARSE_OPT_NOARG,
 			NULL, 0, unresolve_callback},
-		{OPTION_LOWLEVEL_CALLBACK, 'g', "again", &has_errors, NULL,
+		{OPTION_LOWLEVEL_CALLBACK, 'g', "again", &cd, NULL,
 			N_("only update entries that differ from HEAD"),
 			PARSE_OPT_NONEG | PARSE_OPT_NOARG,
 			NULL, 0, reupdate_callback},
-		OPT_BIT(0, "ignore-missing", &refresh_args.flags,
+		OPT_BIT(0, "ignore-missing", &cd.flags,
 			N_("ignore files missing from worktree"),
 			REFRESH_IGNORE_MISSING),
 		OPT_SET_INT(0, "verbose", &verbose,
 			N_("report actions to standard output"), 1),
-		OPT_CALLBACK_F(0, "clear-resolve-undo", NULL, NULL,
+		OPT_CALLBACK_F(0, "clear-resolve-undo", &cd, NULL,
 			N_("(for porcelains) forget saved unresolved conflicts"),
 			PARSE_OPT_NOARG | PARSE_OPT_NONEG,
 			resolve_undo_clear_callback),
@@ -1087,8 +1094,6 @@ int cmd_update_index(int argc, const char **argv, const char *prefix)
 
 	git_config(git_default_config, NULL);
 
-	repo = the_repository;
-
 	/* we will diagnose later if it turns out that we need to update it */
 	newfd = repo_hold_locked_index(repo, &lock_file, 0);
 	if (newfd < 0)
@@ -1098,8 +1103,13 @@ int cmd_update_index(int argc, const char **argv, const char *prefix)
 	if (entries < 0)
 		die("cache corrupted");
 
-	istate = repo->index;
+	cd.repo = repo;
+	cd.istate = istate = repo->index;
 	istate->updated_skipworktree = 1;
+	cd.flags = 0;
+	cd.has_errors = 0;
+	cd.nul_term_line = 0;
+	cd.read_from_stdin = 0;
 
 	/*
 	 * Custom copy of parse_options() because we want to handle
@@ -1145,7 +1155,7 @@ int cmd_update_index(int argc, const char **argv, const char *prefix)
 	}
 	argc = parse_options_end(&ctx);
 
-	getline_fn = nul_term_line ? strbuf_getline_nul : strbuf_getline_lf;
+	getline_fn = cd.nul_term_line ? strbuf_getline_nul : strbuf_getline_lf;
 	if (preferred_index_format) {
 		if (preferred_index_format < INDEX_FORMAT_LB ||
 		    INDEX_FORMAT_UB < preferred_index_format)
@@ -1158,14 +1168,14 @@ int cmd_update_index(int argc, const char **argv, const char *prefix)
 		istate->version = preferred_index_format;
 	}
 
-	if (read_from_stdin) {
+	if (cd.read_from_stdin) {
 		struct strbuf buf = STRBUF_INIT;
 		struct strbuf unquoted = STRBUF_INIT;
 
 		setup_work_tree();
 		while (getline_fn(&buf, stdin) != EOF) {
 			char *p;
-			if (!nul_term_line && buf.buf[0] == '"') {
+			if (!cd.nul_term_line && buf.buf[0] == '"') {
 				strbuf_reset(&unquoted);
 				if (unquote_c_style(&unquoted, buf.buf, NULL))
 					die("line is badly quoted");
@@ -1244,7 +1254,7 @@ int cmd_update_index(int argc, const char **argv, const char *prefix)
 
 	if (istate->cache_changed || force_write) {
 		if (newfd < 0) {
-			if (refresh_args.flags & REFRESH_QUIET)
+			if (cd.flags & REFRESH_QUIET)
 				exit(128);
 			unable_to_lock_die(get_index_file(), lock_error);
 		}
@@ -1254,5 +1264,5 @@ int cmd_update_index(int argc, const char **argv, const char *prefix)
 
 	rollback_lock_file(&lock_file);
 
-	return has_errors ? 1 : 0;
+	return cd.has_errors ? 1 : 0;
 }
