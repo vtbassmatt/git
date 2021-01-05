@@ -594,10 +594,9 @@ static const char * const update_index_usage[] = {
 static struct object_id head_oid;
 static struct object_id merge_head_oid;
 
-static struct repository *repo;
-static struct index_state *istate;
-
-static struct cache_entry *read_one_ent(const char *which,
+static struct cache_entry *read_one_ent(struct repository *repo,
+					struct index_state *istate,
+					const char *which,
 					struct object_id *ent, const char *path,
 					int namelen, int stage)
 {
@@ -625,7 +624,9 @@ static struct cache_entry *read_one_ent(const char *which,
 	return ce;
 }
 
-static int unresolve_one(const char *path)
+static int unresolve_one(struct repository *repo,
+			 struct index_state *istate,
+			 const char *path)
 {
 	int namelen = strlen(path);
 	int pos;
@@ -667,8 +668,8 @@ static int unresolve_one(const char *path)
 	 * stuff HEAD version in stage #2,
 	 * stuff MERGE_HEAD version in stage #3.
 	 */
-	ce_2 = read_one_ent("our", &head_oid, path, namelen, 2);
-	ce_3 = read_one_ent("their", &merge_head_oid, path, namelen, 3);
+	ce_2 = read_one_ent(repo, istate, "our", &head_oid, path, namelen, 2);
+	ce_3 = read_one_ent(repo, istate, "their", &merge_head_oid, path, namelen, 3);
 
 	if (!ce_2 || !ce_3) {
 		ret = -1;
@@ -707,7 +708,9 @@ static void read_head_pointers(void)
 	}
 }
 
-static int do_unresolve(int ac, const char **av,
+static int do_unresolve(struct repository *repo,
+			struct index_state *istate,
+			int ac, const char **av,
 			const char *prefix, int prefix_length)
 {
 	int i;
@@ -721,13 +724,15 @@ static int do_unresolve(int ac, const char **av,
 	for (i = 1; i < ac; i++) {
 		const char *arg = av[i];
 		char *p = prefix_path(prefix, prefix_length, arg);
-		err |= unresolve_one(p);
+		err |= unresolve_one(repo, istate, p);
 		free(p);
 	}
 	return err;
 }
 
-static int do_reupdate(int ac, const char **av,
+static int do_reupdate(struct repository *repo,
+		       struct index_state *istate,
+		       int ac, const char **av,
 		       const char *prefix)
 {
 	/* Read HEAD and run update-index on paths that are
@@ -756,7 +761,7 @@ static int do_reupdate(int ac, const char **av,
 		if (ce_stage(ce) || !ce_path_match(istate, ce, &pathspec, NULL))
 			continue;
 		if (has_head)
-			old = read_one_ent(NULL, &head_oid,
+			old = read_one_ent(repo, istate, NULL, &head_oid,
 					   ce->name, ce_namelen(ce), 0);
 		if (old && ce->ce_mode == old->ce_mode &&
 		    oideq(&ce->oid, &old->oid)) {
@@ -783,6 +788,9 @@ struct refresh_params {
 	unsigned int flags;
 	int *has_errors;
 };
+
+static struct repository *repo;
+static struct index_state *istate;
 
 static int refresh(struct refresh_params *o, unsigned int flag)
 {
@@ -923,8 +931,8 @@ static enum parse_opt_result unresolve_callback(
 	BUG_ON_OPT_ARG(arg);
 
 	/* consume remaining arguments. */
-	*has_errors = do_unresolve(ctx->argc, ctx->argv,
-				prefix, prefix ? strlen(prefix) : 0);
+	*has_errors = do_unresolve(repo, istate, ctx->argc, ctx->argv,
+				   prefix, prefix ? strlen(prefix) : 0);
 	if (*has_errors)
 		istate->cache_changed = 0;
 
@@ -945,7 +953,7 @@ static enum parse_opt_result reupdate_callback(
 
 	/* consume remaining arguments. */
 	setup_work_tree();
-	*has_errors = do_reupdate(ctx->argc, ctx->argv, prefix);
+	*has_errors = do_reupdate(repo, istate, ctx->argc, ctx->argv, prefix);
 	if (*has_errors)
 		istate->cache_changed = 0;
 
