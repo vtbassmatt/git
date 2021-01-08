@@ -302,7 +302,7 @@ static void show_files(struct repository *repo, struct dir_struct *dir)
 {
 	int i;
 	struct strbuf fullname = STRBUF_INIT;
-	const struct cache_entry *last_stage=NULL;
+	const struct cache_entry *last_stage = NULL;
 
 	/* For cached/deleted files we don't need to even do the readdir */
 	if (show_others || show_killed) {
@@ -317,7 +317,8 @@ static void show_files(struct repository *repo, struct dir_struct *dir)
 	if (show_cached || show_stage) {
 		for (i = 0; i < repo->index->cache_nr; i++) {
 			const struct cache_entry *ce = repo->index->cache[i];
-			if(show_cached && delete_dup){
+
+			if (show_cached && delete_dup) {
 				switch (ce_stage(ce)) {
 				case 0:
 				default:
@@ -328,7 +329,7 @@ static void show_files(struct repository *repo, struct dir_struct *dir)
 					if (last_stage &&
 					!strcmp(last_stage->name, ce->name))
 						continue;
-					last_stage=ce;
+					last_stage = ce;
 				}
 			}
 			construct_fullname(&fullname, repo, ce);
@@ -351,7 +352,8 @@ static void show_files(struct repository *repo, struct dir_struct *dir)
 			const struct cache_entry *ce = repo->index->cache[i];
 			struct stat st;
 			int err;
-			if(delete_dup){
+
+			if (delete_dup) {
 				switch (ce_stage(ce)) {
 				case 0:
 				default:
@@ -362,7 +364,7 @@ static void show_files(struct repository *repo, struct dir_struct *dir)
 					if (last_stage &&
 					!strcmp(last_stage->name, ce->name))
 						continue;
-					last_stage=ce;
+					last_stage = ce;
 				}
 			}
 			construct_fullname(&fullname, repo, ce);
@@ -375,10 +377,10 @@ static void show_files(struct repository *repo, struct dir_struct *dir)
 			if (ce_skip_worktree(ce))
 				continue;
 			err = lstat(fullname.buf, &st);
-			if(delete_dup && show_deleted && show_modified && err)
+			if (delete_dup && show_deleted && show_modified && err)
 				show_ce(repo, dir, ce, fullname.buf, tag_removed);
-			else{
-				if (show_deleted && err)/* you can't find it,so it's actually removed at all! */
+			else {
+				if (show_deleted && err)
 					show_ce(repo, dir, ce, fullname.buf, tag_removed);
 				if (show_modified && ie_modified(repo->index, ce, &st, 0))
 					show_ce(repo, dir, ce, fullname.buf, tag_modified);
@@ -610,7 +612,7 @@ int cmd_ls_files(int argc, const char **argv, const char *cmd_prefix)
 			N_("pretend that paths removed since <tree-ish> are still present")),
 		OPT__ABBREV(&abbrev),
 		OPT_BOOL(0, "debug", &debug_mode, N_("show debugging data")),
-		OPT_BOOL(0, "dedup", &delete_dup, N_("delete duplicate entry in index")),
+		OPT_BOOL(0, "dedup", &delete_dup, N_("suppress duplicate entries")),
 		OPT_END()
 	};
 
