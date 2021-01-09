@@ -243,9 +243,16 @@ auto_merge () {
 	git merge-file --diff3 --marker-size=7 -q -p "$LOCAL" "$BASE" "$REMOTE" >"$DIFF3"
 	if test -s "$DIFF3"
 	then
-		sed -e '/^<<<<<<< /,/^||||||| /d' -e '/^=======\r\?$/,/^>>>>>>> /d' "$DIFF3" >"$BASE"
-		sed -e '/^||||||| /,/^>>>>>>> /d' -e '/^<<<<<<< /d' "$DIFF3" >"$LOCAL"
-		sed -e '/^<<<<<<< /,/^=======\r\?$/d' -e '/^>>>>>>> /d' "$DIFF3" >"$REMOTE"
+		cr=$(printf '\r')
+		sed -e '/^<<<<<<< /,/^||||||| /d' \
+			-e "/^=======$cr\{0,1\}$/,/^>>>>>>> /d" \
+			"$DIFF3" >"$BASE"
+		sed -e '/^||||||| /,/^>>>>>>> /d' \
+			-e '/^<<<<<<< /d' \
+			"$DIFF3" >"$LOCAL"
+		sed -e "/^<<<<<<< /,/^=======$cr\{0,1\}$/d" \
+			-e '/^>>>>>>> /d' \
+			"$DIFF3" >"$REMOTE"
 	fi
 	rm -- "$DIFF3"
 }
