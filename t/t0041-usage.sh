@@ -42,7 +42,7 @@ test_expect_success 'tag usage error' '
 
 test_expect_success 'branch --contains <existent_commit>' '
 	git branch --contains "master" >actual 2>actual.err &&
-	test_i18ngrep "master" actual &&
+	grep "master" actual &&
 	test_line_count = 0 actual.err
 '
 
