@@ -993,7 +993,13 @@ test_cmp_bin () {
 # under GIT_TEST_GETTEXT_POISON this pretends that the command produced expected
 # results.
 test_i18ncmp () {
-	! test_have_prereq C_LOCALE_OUTPUT || test_cmp "$@"
+	if test rot13 = "$GIT_TEST_GETTEXT_POISON"
+	then
+		test-tool i18n cmp "$@"
+	elif test_have_prereq C_LOCALE_OUTPUT
+	then
+		test_cmp "$@"
+	fi
 }
 
 # Use this instead of "grep expected-string actual" to see if the

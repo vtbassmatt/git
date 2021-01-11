@@ -1537,6 +1537,7 @@ then
 fi
 
 test_lazy_prereq C_LOCALE_OUTPUT '
+	test rot13 != "$GIT_TEST_GETTEXT_POISON" &&
 	! test_bool_env GIT_TEST_GETTEXT_POISON false
 '
 
