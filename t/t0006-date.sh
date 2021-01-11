@@ -9,7 +9,7 @@ GIT_TEST_DATE_NOW=1251660000; export GIT_TEST_DATE_NOW
 check_relative() {
 	t=$(($GIT_TEST_DATE_NOW - $1))
 	echo "$t -> $2" >expect
-	test_expect_${3:-success} "relative date ($2)" "
+	test_expect_${3:-success} C_LOCALE_OUTPUT "relative date ($2)" "
 	test-tool date relative $t >actual &&
 	test_i18ncmp expect actual
 	"
@@ -137,7 +137,7 @@ check_approxidate '2009-12-01' '2009-12-01 19:20:00'
 check_date_format_human() {
 	t=$(($GIT_TEST_DATE_NOW - $1))
 	echo "$t -> $2" >expect
-	test_expect_success "human date $t" '
+	test_expect_success C_LOCALE_OUTPUT "human date $t" '
 		test-tool date human $t >actual &&
 		test_i18ncmp expect actual
 '
