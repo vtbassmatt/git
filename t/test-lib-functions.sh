@@ -1021,6 +1021,12 @@ test_i18ngrep () {
 
 	if test_have_prereq !C_LOCALE_OUTPUT
 	then
+		if test rot13 = "$GIT_TEST_GETTEXT_POISON"
+		then
+			test-tool i18n grep "$@"
+			return $?
+		fi
+
 		# pretend success
 		return 0
 	fi

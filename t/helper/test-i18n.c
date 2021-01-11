@@ -1,8 +1,10 @@
 #include "test-tool.h"
 #include "cache.h"
+#include "grep.h"
 
 static const char *usage_msg = "\n"
-"  test-tool i18n cmp <file1> <file2>\n";
+"  test-tool i18n cmp <file1> <file2>\n"
+"  test-tool i18n grep <regex> <file>\n";
 
 static inline char do_rot13(char c)
 {
@@ -75,6 +77,42 @@ static int i18n_cmp(const char **argv)
 	return 0;
 }
 
+static int i18n_grep(const char **argv)
+{
+	int dont_match = 0;
+	const char *pattern, *path;
+
+	struct grep_opt opt;
+	struct grep_source source;
+	struct strbuf buf = STRBUF_INIT;
+	int hit;
+
+	if (*argv && !strcmp("!", *argv)) {
+		dont_match = 1;
+		argv++;
+	}
+
+	pattern = *(argv++);
+	path = *(argv++);
+
+	if (!pattern || !path || *argv)
+		usage(usage_msg);
+
+	grep_init(&opt, the_repository, NULL);
+	append_grep_pattern(&opt, pattern, "command line", 0, GREP_PATTERN);
+	compile_grep_patterns(&opt);
+
+	if (strbuf_read_file(&buf, path, 0) < 0)
+		die_errno("could not read %s", path);
+	unrot13_strbuf(&buf);
+	grep_source_init(&source, GREP_SOURCE_BUF, path, path, path);
+	source.buf = buf.buf;
+	source.size = buf.len;
+	hit = grep_source(&opt, &source);
+	strbuf_release(&buf);
+	return dont_match ^ !hit;
+}
+
 int cmd__i18n(int argc, const char **argv)
 {
 	argv++;
@@ -82,6 +120,8 @@ int cmd__i18n(int argc, const char **argv)
 		usage(usage_msg);
 	if (!strcmp(*argv, "cmp"))
 		return i18n_cmp(argv+1);
+	else if (!strcmp(*argv, "grep"))
+		return i18n_grep(argv+1);
 	else
 		usage(usage_msg);
 
