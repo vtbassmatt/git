@@ -29,6 +29,7 @@
 #define FORMAT_PRESERVING(n) __attribute__((format_arg(n)))
 
 int use_gettext_poison(void);
+const char *gettext_maybe_rot13(const char *msgid);
 
 #ifndef NO_GETTEXT
 void git_setup_gettext(void);
@@ -48,14 +49,14 @@ static inline FORMAT_PRESERVING(1) const char *_(const char *msgid)
 {
 	if (!*msgid)
 		return "";
-	return use_gettext_poison() ? "# GETTEXT POISON #" : gettext(msgid);
+	return use_gettext_poison() ? gettext_maybe_rot13(msgid) : gettext(msgid);
 }
 
 static inline FORMAT_PRESERVING(1) FORMAT_PRESERVING(2)
 const char *Q_(const char *msgid, const char *plu, unsigned long n)
 {
 	if (use_gettext_poison())
-		return "# GETTEXT POISON #";
+		return gettext_maybe_rot13(n < 2 ? msgid : plu);
 	return ngettext(msgid, plu, n);
 }
 

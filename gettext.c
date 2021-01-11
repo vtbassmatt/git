@@ -68,9 +68,70 @@ const char *get_preferred_languages(void)
 int use_gettext_poison(void)
 {
 	static int poison_requested = -1;
-	if (poison_requested == -1)
-		poison_requested = git_env_bool("GIT_TEST_GETTEXT_POISON", 0);
+	if (poison_requested == -1) {
+		const char *v = getenv("GIT_TEST_GETTEXT_POISON");
+		if (v && !strcmp(v, "rot13"))
+			poison_requested = 2;
+		else
+			poison_requested =
+				git_env_bool("GIT_TEST_GETTEXT_POISON", 0);
+	}
 	return poison_requested;
+}
+
+static inline char do_rot13(char c)
+{
+	if (c >= 'a' && c <= 'm')
+		return c + 'n' - 'a';
+	if (c >= 'n' && c <= 'z')
+		return c + 'a' - 'n';
+	if (c >= 'A' && c <= 'M')
+		return c + 'N' - 'A';
+	if (c >= 'N' && c <= 'Z')
+		return c + 'A' - 'N';
+	return c;
+}
+
+const char *gettext_maybe_rot13(const char *msgid)
+{
+	static struct strbuf round_robin[4] = {
+		STRBUF_INIT, STRBUF_INIT, STRBUF_INIT, STRBUF_INIT
+	};
+	static int current;
+	struct strbuf *buf;
+
+	if (use_gettext_poison() != 2)
+		return "# GETTEXT POISON #";
+
+	buf = &round_robin[current++];
+	if (current >= ARRAY_SIZE(round_robin))
+		current = 0;
+
+	strbuf_reset(buf);
+	while (*msgid) {
+		const char *p = strchrnul(msgid, '%'), *spec;
+
+		while (*p && p[1] == '%')
+			p = strchrnul(p + 2, '%');
+
+		if (p != msgid) {
+			strbuf_addstr(buf, "<rot13>");
+			while (p != msgid)
+				strbuf_addch(buf, do_rot13(*(msgid++)));
+			strbuf_addstr(buf, "</rot13>");
+		}
+
+		if (!*p)
+			break;
+
+		spec = strpbrk(p + 1, "diouxXeEfFgGaAcsCSpnm%");
+		if (!spec)
+			BUG("Unrecognized format string: %s", p);
+		strbuf_add(buf, p, spec + 1 - p);
+		msgid = spec + 1;
+	}
+
+	return buf->buf;
 }
 
 #ifndef NO_GETTEXT
