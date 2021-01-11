@@ -91,7 +91,7 @@ int parse_opt_commits(const struct option *opt, const char *arg, int unset)
 	if (!arg)
 		return -1;
 	if (get_oid(arg, &oid))
-		return error("malformed object name %s", arg);
+		return error(_("malformed object name %s"), arg);
 	commit = lookup_commit_reference(the_repository, &oid);
 	if (!commit)
 		return error("no such commit %s", arg);
@@ -110,7 +110,7 @@ int parse_opt_commit(const struct option *opt, const char *arg, int unset)
 	if (!arg)
 		return -1;
 	if (get_oid(arg, &oid))
-		return error("malformed object name %s", arg);
+		return error(_("malformed object name %s"), arg);
 	commit = lookup_commit_reference(the_repository, &oid);
 	if (!commit)
 		return error("no such commit %s", arg);
