@@ -20,7 +20,7 @@ test_expect_success 'Broken refs are reported correctly' '
 	test_when_finished "rm -f .git/$r" &&
 	echo "warning: ignoring broken ref $r" >broken-err &&
 	git for-each-ref >out 2>err &&
-	test_i18ncmp full-list out &&
+	test_cmp full-list out &&
 	test_i18ncmp broken-err err
 '
 
