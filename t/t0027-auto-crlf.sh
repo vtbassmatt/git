@@ -76,6 +76,9 @@ create_NNO_MIX_files () {
 }
 
 check_warning () {
+	# The `grep` and `sed` below expect the locale to be "C"
+	test_have_prereq C_LOCALE_OUTPUT || return 0
+
 	case "$1" in
 	LF_CRLF) echo "warning: LF will be replaced by CRLF" >"$2".expect ;;
 	CRLF_LF) echo "warning: CRLF will be replaced by LF" >"$2".expect ;;
