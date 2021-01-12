@@ -52,7 +52,7 @@ static void unrot13_strbuf(struct strbuf *buf)
 {
 	size_t len = unrot13(buf->buf);
 
-	if (len == buf->len)
+	if (len && len == buf->len)
 		die("not ROT13'ed:\n%s", buf->buf);
 	buf->len = len;
 }
