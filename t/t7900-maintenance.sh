@@ -420,7 +420,9 @@ test_expect_success 'start and stop macOS maintenance' '
 	GIT_TEST_MAINT_SCHEDULER=launchctl:./print-args git maintenance start &&
 
 	# start registers the repo
-	git config --get --global maintenance.repo "$(pwd)" &&
+	pwd >expect &&
+	git config --get --global maintenance.repo >actual &&
+	test_cmp expect actual &&
 
 	ls "$HOME/Library/LaunchAgents" >actual &&
 	cat >expect <<-\EOF &&
@@ -445,7 +447,9 @@ test_expect_success 'start and stop macOS maintenance' '
 	GIT_TEST_MAINT_SCHEDULER=launchctl:./print-args git maintenance stop &&
 
 	# stop does not unregister the repo
-	git config --get --global maintenance.repo "$(pwd)" &&
+	pwd >expect &&
+	git config --get --global maintenance.repo >actual &&
+	test_cmp expect actual &&
 
 	printf "bootout gui/[UID] $pfx/Library/LaunchAgents/org.git-scm.git.%s.plist\n" \
 		hourly daily weekly >expect &&
@@ -471,7 +475,9 @@ test_expect_success 'start and stop Windows maintenance' '
 	GIT_TEST_MAINT_SCHEDULER="schtasks:./print-args" git maintenance start &&
 
 	# start registers the repo
-	git config --get --global maintenance.repo "$(pwd)" &&
+	pwd >expect &&
+	git config --get --global maintenance.repo >actual &&
+	test_cmp expect actual &&
 
 	for frequency in hourly daily weekly
 	do
@@ -484,7 +490,9 @@ test_expect_success 'start and stop Windows maintenance' '
 	GIT_TEST_MAINT_SCHEDULER="schtasks:./print-args" git maintenance stop &&
 
 	# stop does not unregister the repo
-	git config --get --global maintenance.repo "$(pwd)" &&
+	pwd >expect &&
+	git config --get --global maintenance.repo >actual &&
+	test_cmp expect actual &&
 
 	printf "/delete /tn Git Maintenance (%s) /f\n" \
 		hourly daily weekly >expect &&
