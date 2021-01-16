@@ -347,9 +347,12 @@ static void show_files(struct repository *repo, struct dir_struct *dir)
 			if (ce_skip_worktree(ce))
 				continue;
 			err = lstat(fullname.buf, &st);
-			if (show_deleted && err)
-				show_ce(repo, dir, ce, fullname.buf, tag_removed);
-			if (show_modified && ie_modified(repo->index, ce, &st, 0))
+			if (err) {
+					if (show_deleted)
+						show_ce(repo, dir, ce, fullname.buf, tag_removed);
+					if (show_modified)
+						show_ce(repo, dir, ce, fullname.buf, tag_modified);
+			}else if (show_modified && ie_modified(repo->index, ce, &st, 0))
 				show_ce(repo, dir, ce, fullname.buf, tag_modified);
 		}
 	}
