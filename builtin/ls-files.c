@@ -35,6 +35,7 @@ static int line_terminator = '\n';
 static int debug_mode;
 static int show_eol;
 static int recurse_submodules;
+static int skipping_duplicates;
 
 static const char *prefix;
 static int max_prefix_len;
@@ -301,6 +302,7 @@ static void show_files(struct repository *repo, struct dir_struct *dir)
 {
 	int i;
 	struct strbuf fullname = STRBUF_INIT;
+	const struct cache_entry *last_shown_ce;
 
 	/* For cached/deleted files we don't need to even do the readdir */
 	if (show_others || show_killed) {
@@ -314,6 +316,7 @@ static void show_files(struct repository *repo, struct dir_struct *dir)
 	}
 	if (! (show_cached || show_stage || show_deleted || show_modified))
 		return;
+	last_shown_ce = NULL;
 	for (i = 0; i < repo->index->cache_nr; i++) {
 		const struct cache_entry *ce = repo->index->cache[i];
 		struct stat st;
@@ -321,30 +324,46 @@ static void show_files(struct repository *repo, struct dir_struct *dir)
 
 		construct_fullname(&fullname, repo, ce);
 
+		if (skipping_duplicates && last_shown_ce &&
+			!strcmp(last_shown_ce->name,ce->name))
+				continue;
 		if ((dir->flags & DIR_SHOW_IGNORED) &&
 			!ce_excluded(dir, repo->index, fullname.buf, ce))
 			continue;
 		if (ce->ce_flags & CE_UPDATE)
 			continue;
 		if (show_cached || show_stage) {
+			if (skipping_duplicates && last_shown_ce &&
+				!strcmp(last_shown_ce->name,ce->name))
+					continue;
 			if (!show_unmerged || ce_stage(ce))
 				show_ce(repo, dir, ce, fullname.buf,
 					ce_stage(ce) ? tag_unmerged :
 					(ce_skip_worktree(ce) ? tag_skip_worktree :
 						tag_cached));
+			if (show_cached && skipping_duplicates)
+				last_shown_ce = ce;
 		}
 		if (ce_skip_worktree(ce))
 			continue;
+		if (skipping_duplicates && last_shown_ce &&
+			!strcmp(last_shown_ce->name,ce->name))
+				continue;
 		err = lstat(fullname.buf, &st);
 		if (err) {
-			if (errno != ENOENT && errno != ENOTDIR)
-				error_errno("cannot lstat '%s'", fullname.buf);
-			if (show_deleted)
+			if (skipping_duplicates && show_deleted && show_modified)
 				show_ce(repo, dir, ce, fullname.buf, tag_removed);
-			if (show_modified)
-				show_ce(repo, dir, ce, fullname.buf, tag_modified);
+			else {
+				if (errno != ENOENT && errno != ENOTDIR)
+					error_errno("cannot lstat '%s'", fullname.buf);
+				if (show_deleted)
+					show_ce(repo, dir, ce, fullname.buf, tag_removed);
+				if (show_modified)
+					show_ce(repo, dir, ce, fullname.buf, tag_modified);
+			}
 		} else if (show_modified && ie_modified(repo->index, ce, &st, 0))
 			show_ce(repo, dir, ce, fullname.buf, tag_modified);
+		last_shown_ce = ce;
 	}
 
 	strbuf_release(&fullname);
@@ -571,6 +590,7 @@ int cmd_ls_files(int argc, const char **argv, const char *cmd_prefix)
 			N_("pretend that paths removed since <tree-ish> are still present")),
 		OPT__ABBREV(&abbrev),
 		OPT_BOOL(0, "debug", &debug_mode, N_("show debugging data")),
+		OPT_BOOL(0,"deduplicate",&skipping_duplicates,N_("suppress duplicate entries")),
 		OPT_END()
 	};
 
@@ -610,6 +630,8 @@ int cmd_ls_files(int argc, const char **argv, const char *cmd_prefix)
 		 * you also show the stage information.
 		 */
 		show_stage = 1;
+	if (show_tag || show_stage)
+		skipping_duplicates = 0;
 	if (dir.exclude_per_dir)
 		exc_given = 1;
 
