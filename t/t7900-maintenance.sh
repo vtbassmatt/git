@@ -256,6 +256,11 @@ test_expect_success 'incremental-repack task' '
 	HEAD
 	^HEAD~1
 	EOF
+
+	# Replace the object directory with this pack layout.
+	# However, it does not include all objects from the remotes.
+	rm -rf .git/refs/prefetch &&
+	rm -rf .git/refs/tags &&
 	rm -f $packDir/pack-* &&
 	rm -f $packDir/loose-* &&
 	ls $packDir/*.pack >packs-before &&
