@@ -280,8 +280,8 @@ test_expect_success 'basename similarity vs best similarity' '
 	# subdir/file.txt is 89% similar to file.md, 78% similar to file.txt,
 	# but since same basenames are checked first...
 	cat >expected <<-\EOF &&
-	R088	subdir/file.txt	file.md
-	A	file.txt
+	A	file.md
+	R078	subdir/file.txt	file.txt
 	EOF
 	test_cmp expected actual
 '
