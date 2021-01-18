@@ -372,9 +372,47 @@ static int find_basename_matches(struct diff_options *options,
 				 int minimum_score,
 				 int num_src)
 {
-	int i;
+	/*
+	 * When I checked, over 76% of file renames in linux just moved
+	 * files to a different directory but kept the same basename.  gcc
+	 * did that with over 64% of renames, gecko did it with over 79%,
+	 * and WebKit did it with over 89%.
+	 *
+	 * Therefore we can bypass the normal exhaustive NxM matrix
+	 * comparison of similarities between all potential rename sources
+	 * and destinations by instead using file basename as a hint, checking
+	 * for similarity between files with the same basename, and if we
+	 * find a pair that are sufficiently similar, record the rename
+	 * pair and exclude those two from the NxM matrix.
+	 *
+	 * This *might* cause us to find a less than optimal pairing (if
+	 * there is another file that we are even more similar to but has a
+	 * different basename).  Given the huge performance advantage
+	 * basename matching provides, and given the frequency with which
+	 * people use the same basename in real world projects, that's a
+	 * trade-off we are willing to accept when doing just rename
+	 * detection.  However, if someone wants copy detection that
+	 * implies they are willing to spend more cycles to find
+	 * similarities between files, so it may be less likely that this
+	 * heuristic is wanted.
+	 */
+
+	int i, renames = 0;
 	struct strintmap sources;
 	struct strintmap dests;
+
+	/*
+	 * The prefeteching stuff wants to know if it can skip prefetching blobs
+	 * that are unmodified.  unmodified blobs are only relevant when doing
+	 * copy detection.  find_basename_matches() is only used when detecting
+	 * renames, not when detecting copies, so it'll only be used when a file
+	 * only existed in the source.  Since we already know that the file
+	 * won't be unmodified, there's no point checking for it; that's just a
+	 * waste of resources.  So set skip_unmodified to 0 so that
+	 * estimate_similarity() and prefetch() won't waste resources checking
+	 * for something we already know is false.
+	 */
+	int skip_unmodified = 0;
 
 	/* Create maps of basename -> fullname(s) for sources and dests */
 	strintmap_init_with_options(&sources, -1, NULL, 0);
@@ -412,12 +450,62 @@ static int find_basename_matches(struct diff_options *options,
 			strintmap_set(&dests, base, i);
 	}
 
-	/* TODO: Make use of basenames source and destination basenames */
+	/* Now look for basename matchups and do similarity estimation */
+	for (i = 0; i < num_src; ++i) {
+		char *filename = rename_src[i].p->one->path;
+		char *base = NULL;
+		intptr_t src_index;
+		intptr_t dst_index;
+
+		/* Get the basename */
+		base = strrchr(filename, '/');
+		base = (base ? base+1 : filename);
+
+		/* Find out if this basename is unique among sources */
+		src_index = strintmap_get(&sources, base);
+		if (src_index == -1)
+			continue; /* not a unique basename; skip it */
+		assert(src_index == i);
+
+		if (strintmap_contains(&dests, base)) {
+			struct diff_filespec *one, *two;
+			int score;
+
+			/* Find out if this basename is unique among dests */
+			dst_index = strintmap_get(&dests, base);
+			if (dst_index == -1)
+				continue; /* not a unique basename; skip it */
+
+			/* Ignore this dest if already used in a rename */
+			if (rename_dst[dst_index].is_rename)
+				continue; /* already used previously */
+
+			/* Estimate the similarity */
+			one = rename_src[src_index].p->one;
+			two = rename_dst[dst_index].p->two;
+			score = estimate_similarity(options->repo, one, two,
+						    minimum_score, skip_unmodified);
+
+			/* If sufficiently similar, record as rename pair */
+			if (score < minimum_score)
+				continue;
+			record_rename_pair(dst_index, src_index, score);
+			renames++;
+
+			/*
+			 * Found a rename so don't need text anymore; if we
+			 * didn't find a rename, the filespec_blob would get
+			 * re-used when doing the matrix of comparisons.
+			 */
+			diff_free_filespec_blob(one);
+			diff_free_filespec_blob(two);
+		}
+	}
 
 	strintmap_clear(&sources);
 	strintmap_clear(&dests);
 
-	return 0;
+	return renames;
 }
 
 #define NUM_CANDIDATE_PER_DST 4
