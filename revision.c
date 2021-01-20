@@ -4209,5 +4209,25 @@ void put_revision_mark(const struct rev_info *revs, const struct commit *commit)
 
 int specifies_commit_range(const char *range)
 {
-	return !!strstr(range, "..");
+	size_t i;
+	char c;
+
+	if (strstr(range, ".."))
+		return 1;
+
+	i = strlen(range);
+	c = i > 2 ? range[--i] : 0;
+	if (c == '!')
+		i--; /* might be ...^! */
+	else if (isdigit(c)) {
+		/* handle ...^-<n> */
+		while (i > 2 && isdigit(range[--i]))
+			; /* keep trimming trailing digits */
+		if (i < 2 || range[i--] != '-')
+			return 0;
+	} else
+		return 0;
+
+	/* Before the `!` or the `-<n>`, we expect `<rev>^` */
+	return i > 0 && range[i] == '^';
 }
