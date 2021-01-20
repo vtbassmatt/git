@@ -457,4 +457,11 @@ int rewrite_parents(struct rev_info *revs,
  */
 struct commit_list *get_saved_parents(struct rev_info *revs, const struct commit *commit);
 
+/*
+ * Determine whether the given argument defines a commit range, e.g. A..B.
+ * Note that this only validates the format but does _not_ parse it, i.e.
+ * it does _not_ look up the specified commits in the local repository.
+ */
+int specifies_commit_range(const char *range);
+
 #endif

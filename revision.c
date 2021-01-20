@@ -4206,3 +4206,8 @@ void put_revision_mark(const struct rev_info *revs, const struct commit *commit)
 	fputs(mark, stdout);
 	putchar(' ');
 }
+
+int specifies_commit_range(const char *range)
+{
+	return !!strstr(range, "..");
+}
