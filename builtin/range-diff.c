@@ -13,7 +13,26 @@ NULL
 
 static int is_range(const char *range)
 {
-	return !!strstr(range, "..");
+	size_t i;
+	char c;
+
+	if (strstr(range, ".."))
+		return 1;
+
+	i = strlen(range);
+	c = i ? range[--i] : 0;
+	if (c == '!')
+		i--; /* might be ...^! or ...^@ */
+	else if (isdigit(c)) {
+		/* handle ...^-<n> */
+		while (i > 2 && isdigit(range[--i]))
+			; /* keep trimming trailing digits */
+		if (i < 2 || range[i--] != '-')
+			return 0;
+	} else
+		return 0;
+
+	return i > 0 && range[i] == '^';
 }
 
 int cmd_range_diff(int argc, const char **argv, const char *prefix)
