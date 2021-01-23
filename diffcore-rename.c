@@ -486,6 +486,25 @@ static void compute_dir_rename_counts(struct strmap *dir_rename_count,
 	}
 }
 
+void partial_clear_dir_rename_count(struct strmap *dir_rename_count)
+{
+	struct hashmap_iter iter;
+	struct strmap_entry *entry;
+
+	strmap_for_each_entry(dir_rename_count, &iter, entry) {
+		struct strintmap *counts = entry->value;
+		strintmap_clear(counts);
+	}
+	strmap_partial_clear(dir_rename_count, 1);
+}
+
+MAYBE_UNUSED
+static void clear_dir_rename_count(struct strmap *dir_rename_count)
+{
+	partial_clear_dir_rename_count(dir_rename_count);
+	strmap_clear(dir_rename_count, 1);
+}
+
 static const char *get_basename(const char *filename)
 {
 	/*
