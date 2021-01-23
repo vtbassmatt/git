@@ -369,6 +369,7 @@ static int find_exact_renames(struct diff_options *options)
 
 struct dir_rename_info {
 	struct strintmap idx_map;
+	struct strmap dir_rename_guess;
 	struct strmap *dir_rename_count;
 	unsigned setup;
 };
@@ -379,6 +380,24 @@ static void dirname_munge(char *filename)
 	if (!slash)
 		slash = filename;
 	*slash = '\0';
+}
+
+static const char *get_highest_rename_path(struct strintmap *counts)
+{
+	int highest_count = 0;
+	const char *highest_destination_dir = NULL;
+	struct hashmap_iter iter;
+	struct strmap_entry *entry;
+
+	strintmap_for_each_entry(counts, &iter, entry) {
+		const char *destination_dir = entry->key;
+		intptr_t count = (intptr_t)entry->value;
+		if (count > highest_count) {
+			highest_count = count;
+			highest_destination_dir = destination_dir;
+		}
+	}
+	return highest_destination_dir;
 }
 
 static void increment_count(struct dir_rename_info *info,
@@ -498,6 +517,8 @@ static void initialize_dir_rename_info(struct dir_rename_info *info,
 				       struct strset *dirs_removed,
 				       struct strmap *dir_rename_count)
 {
+	struct hashmap_iter iter;
+	struct strmap_entry *entry;
 	int i;
 
 	info->setup = 0;
@@ -511,6 +532,7 @@ static void initialize_dir_rename_info(struct dir_rename_info *info,
 		strmap_init(info->dir_rename_count);
 	}
 	strintmap_init_with_options(&info->idx_map, -1, NULL, 0);
+	strmap_init_with_options(&info->dir_rename_guess, NULL, 0);
 
 	/*
 	 * Loop setting up both info->idx_map, and doing setup of
@@ -539,6 +561,23 @@ static void initialize_dir_rename_info(struct dir_rename_info *info,
 					 rename_dst[i].p->one->path,
 					 rename_dst[i].p->two->path);
 	}
+
+	/*
+	 * Now we collapse
+	 *    dir_rename_count: old_directory -> {new_directory -> count}
+	 * down to
+	 *    dir_rename_guess: old_directory -> best_new_directory
+	 * where best_new_directory is the one with the highest count.
+	 */
+	strmap_for_each_entry(info->dir_rename_count, &iter, entry) {
+		/* entry->key is source_dir */
+		struct strintmap *counts = entry->value;
+		char *best_newdir;
+
+		best_newdir = xstrdup(get_highest_rename_path(counts));
+		strmap_put(&info->dir_rename_guess, entry->key,
+			   best_newdir);
+	}
 }
 
 void partial_clear_dir_rename_count(struct strmap *dir_rename_count)
@@ -565,6 +604,9 @@ static void cleanup_dir_rename_info(struct dir_rename_info *info,
 
 	/* idx_map */
 	strintmap_clear(&info->idx_map);
+
+	/* dir_rename_guess */
+	strmap_clear(&info->dir_rename_guess, 1);
 
 	if (!keep_dir_rename_count) {
 		partial_clear_dir_rename_count(info->dir_rename_count);
