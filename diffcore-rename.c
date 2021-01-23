@@ -368,6 +368,7 @@ static int find_exact_renames(struct diff_options *options)
 }
 
 struct dir_rename_info {
+	struct strintmap idx_map;
 	struct strmap *dir_rename_count;
 	unsigned setup;
 };
@@ -509,10 +510,26 @@ static void initialize_dir_rename_info(struct dir_rename_info *info,
 		info->dir_rename_count = xmalloc(sizeof(*dir_rename_count));
 		strmap_init(info->dir_rename_count);
 	}
+	strintmap_init_with_options(&info->idx_map, -1, NULL, 0);
 
+	/*
+	 * Loop setting up both info->idx_map, and doing setup of
+	 * info->dir_rename_count.
+	 */
 	for (i = 0; i < rename_dst_nr; ++i) {
 		/*
-		 * Make dir_rename_count contain a map of a map:
+		 * For non-renamed files, make idx_map contain mapping of
+		 *   filename -> index (index within rename_dst, that is)
+		 */
+		if (!rename_dst[i].is_rename) {
+			char *filename = rename_dst[i].p->two->path;
+			strintmap_set(&info->idx_map, filename, i);
+			continue;
+		}
+
+		/*
+		 * For everything else (i.e. renamed files), make
+		 * dir_rename_count contain a map of a map:
 		 *   old_directory -> {new_directory -> count}
 		 * In other words, for every pair look at the directories for
 		 * the old filename and the new filename and count how many
@@ -545,6 +562,9 @@ static void cleanup_dir_rename_info(struct dir_rename_info *info,
 
 	if (!info->setup)
 		return;
+
+	/* idx_map */
+	strintmap_clear(&info->idx_map);
 
 	if (!keep_dir_rename_count) {
 		partial_clear_dir_rename_count(info->dir_rename_count);
