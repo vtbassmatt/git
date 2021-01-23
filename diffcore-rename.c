@@ -507,13 +507,45 @@ void partial_clear_dir_rename_count(struct strmap *dir_rename_count)
 }
 
 MAYBE_UNUSED
-static void cleanup_dir_rename_info(struct dir_rename_info *info)
+static void cleanup_dir_rename_info(struct dir_rename_info *info,
+				    struct strset *dirs_removed,
+				    int keep_dir_rename_count)
 {
+	struct hashmap_iter iter;
+	struct strmap_entry *entry;
+
 	if (!info->setup)
 		return;
 
-	partial_clear_dir_rename_count(info->dir_rename_count);
-	strmap_clear(info->dir_rename_count, 1);
+	if (!keep_dir_rename_count) {
+		partial_clear_dir_rename_count(info->dir_rename_count);
+		strmap_clear(info->dir_rename_count, 1);
+		FREE_AND_NULL(info->dir_rename_count);
+	} else {
+		/*
+		 * Although dir_rename_count was passed in
+		 * diffcore_rename_extended() and we want to keep it around and
+		 * return it to that caller, we first want to remove any data
+		 * associated with directories that weren't renamed.
+		 */
+		struct string_list to_remove = STRING_LIST_INIT_NODUP;
+		int i;
+
+		strmap_for_each_entry(info->dir_rename_count, &iter, entry) {
+			const char *source_dir = entry->key;
+			struct strintmap *counts = entry->value;
+
+			if (!strset_contains(dirs_removed, source_dir)) {
+				string_list_append(&to_remove, source_dir);
+				strintmap_clear(counts);
+				continue;
+			}
+		}
+		for (i=0; i<to_remove.nr; ++i)
+			strmap_remove(info->dir_rename_count,
+				      to_remove.items[i].string, 1);
+		string_list_clear(&to_remove, 0);
+	}
 }
 
 static const char *get_basename(const char *filename)
