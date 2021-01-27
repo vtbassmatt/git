@@ -567,5 +567,17 @@ int show_range_diff(const char *range1, const char *range2,
 
 int is_range_diff_range(const char *arg)
 {
-	return !!strstr(arg, "..");
+	static regex_t *regex;
+
+	if (strstr(arg, ".."))
+		return 1;
+
+	/* match `<rev>^!` and `<rev>^-<n>` */
+	if (!regex) {
+		regex = xmalloc(sizeof(*regex));
+		if (regcomp(regex, "\\^(!|-[0-9]*)$", REG_EXTENDED) < 0)
+			BUG("could not compile range-diff regex");
+	}
+
+	return !regexec(regex, arg, 0, NULL, 0);
 }
