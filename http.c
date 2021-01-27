@@ -1642,6 +1642,14 @@ static int handle_curl_result(struct slot_results *results)
 		return HTTP_MISSING_TARGET;
 	else if (results->http_code == 401) {
 		if (http_auth.username && http_auth.password) {
+#ifdef LIBCURL_CAN_HANDLE_AUTH_ANY
+			if (results->auth_avail & CURLAUTH_GSSNEGOTIATE) {
+				http_auth_methods &= ~CURLAUTH_GSSNEGOTIATE;
+				http_auth_methods &= results->auth_avail;
+				http_auth_methods_restricted = 1;
+				return HTTP_REAUTH;
+			}
+#endif
 			credential_reject(&http_auth);
 			return HTTP_NOAUTH;
 		} else {
