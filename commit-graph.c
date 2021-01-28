@@ -1033,7 +1033,8 @@ struct write_commit_graph_context {
 		 split:1,
 		 changed_paths:1,
 		 order_by_pack:1,
-		 write_generation_data:1;
+		 write_generation_data:1,
+		 trust_generation_numbers:1;
 
 	struct topo_level_slab *topo_levels;
 	const struct commit_graph_opts *opts;
@@ -1452,6 +1453,15 @@ static void compute_generation_numbers(struct write_commit_graph_context *ctx)
 		ctx->progress = start_delayed_progress(
 					_("Computing commit graph generation numbers"),
 					ctx->commits.nr);
+
+	if (ctx->write_generation_data && !ctx->trust_generation_numbers) {
+		for (i = 0; i < ctx->commits.nr; i++) {
+			struct commit *c = ctx->commits.list[i];
+			repo_parse_commit(ctx->r, c);
+			commit_graph_data_at(c)->generation = GENERATION_NUMBER_ZERO;
+		}
+	}
+
 	for (i = 0; i < ctx->commits.nr; i++) {
 		struct commit *c = ctx->commits.list[i];
 		uint32_t level;
@@ -1480,7 +1490,8 @@ static void compute_generation_numbers(struct write_commit_graph_context *ctx)
 				corrected_commit_date = commit_graph_data_at(parent->item)->generation;
 
 				if (level == GENERATION_NUMBER_ZERO ||
-				    corrected_commit_date == GENERATION_NUMBER_ZERO) {
+				    (ctx->write_generation_data &&
+				     corrected_commit_date == GENERATION_NUMBER_ZERO)) {
 					all_parents_computed = 0;
 					commit_list_insert(parent->item, &list);
 					break;
@@ -1500,12 +1511,15 @@ static void compute_generation_numbers(struct write_commit_graph_context *ctx)
 					max_level = GENERATION_NUMBER_V1_MAX - 1;
 				*topo_level_slab_at(ctx->topo_levels, current) = max_level + 1;
 
-				if (current->date && current->date > max_corrected_commit_date)
-					max_corrected_commit_date = current->date - 1;
-				commit_graph_data_at(current)->generation = max_corrected_commit_date + 1;
-
-				if (commit_graph_data_at(current)->generation - current->date > GENERATION_NUMBER_V2_OFFSET_MAX)
-					ctx->num_generation_data_overflows++;
+				if (ctx->write_generation_data) {
+					timestamp_t cur_g;
+					if (current->date && current->date > max_corrected_commit_date)
+						max_corrected_commit_date = current->date - 1;
+					cur_g = commit_graph_data_at(current)->generation
+					      = max_corrected_commit_date + 1;
+					if (cur_g - current->date > GENERATION_NUMBER_V2_OFFSET_MAX)
+						ctx->num_generation_data_overflows++;
+				}
 			}
 		}
 	}
@@ -2396,7 +2410,7 @@ int write_commit_graph(struct object_directory *odb,
 	} else
 		ctx->num_commit_graphs_after = 1;
 
-	validate_mixed_generation_chain(ctx->r->objects->commit_graph);
+	ctx->trust_generation_numbers = validate_mixed_generation_chain(ctx->r->objects->commit_graph);
 
 	compute_generation_numbers(ctx);
 
