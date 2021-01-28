@@ -164,58 +164,80 @@ static int remove_redundant(struct repository *r, struct commit **array, int cnt
 	 * the array, and return the number of commits that
 	 * are independent from each other.
 	 */
-	struct commit **work;
-	unsigned char *redundant;
-	int *filled_index;
-	int i, j, filled;
+	int i, count_non_stale = 0;
+	timestamp_t min_generation = GENERATION_NUMBER_INFINITY;
+	struct commit **dup;
+	struct prio_queue queue = { compare_commits_by_gen_then_commit_date };
 
-	work = xcalloc(cnt, sizeof(*work));
-	redundant = xcalloc(cnt, 1);
-	ALLOC_ARRAY(filled_index, cnt - 1);
-
-	for (i = 0; i < cnt; i++)
-		repo_parse_commit(r, array[i]);
+	/* Mark all parents of the input as STALE */
 	for (i = 0; i < cnt; i++) {
-		struct commit_list *common;
-		timestamp_t min_generation = commit_graph_generation(array[i]);
+		struct commit_list *parents;
+		timestamp_t generation;
 
-		if (redundant[i])
-			continue;
-		for (j = filled = 0; j < cnt; j++) {
-			timestamp_t curr_generation;
-			if (i == j || redundant[j])
-				continue;
-			filled_index[filled] = j;
-			work[filled++] = array[j];
+		repo_parse_commit(r, array[i]);
+		parents = array[i]->parents;
 
-			curr_generation = commit_graph_generation(array[j]);
-			if (curr_generation < min_generation)
-				min_generation = curr_generation;
+		while (parents) {
+			repo_parse_commit(r, parents->item);
+			if (!(parents->item->object.flags & STALE)) {
+				parents->item->object.flags |= STALE;
+				prio_queue_put(&queue, parents->item);
+			}
+			parents = parents->next;
 		}
-		common = paint_down_to_common(r, array[i], filled,
-					      work, min_generation);
-		if (array[i]->object.flags & PARENT2)
-			redundant[i] = 1;
-		for (j = 0; j < filled; j++)
-			if (work[j]->object.flags & PARENT1)
-				redundant[filled_index[j]] = 1;
-		clear_commit_marks(array[i], all_flags);
-		clear_commit_marks_many(filled, work, all_flags);
-		free_commit_list(common);
+
+		generation = commit_graph_generation(array[i]);
+
+		if (generation < min_generation)
+			min_generation = generation;
 	}
 
-	/* Now collect the result */
-	COPY_ARRAY(work, array, cnt);
-	for (i = filled = 0; i < cnt; i++)
-		if (!redundant[i])
-			array[filled++] = work[i];
-	for (j = filled, i = 0; i < cnt; i++)
-		if (redundant[i])
-			array[j++] = work[i];
-	free(work);
-	free(redundant);
-	free(filled_index);
-	return filled;
+	/* push the STALE bits up to min generation */
+	while (queue.nr) {
+		struct commit_list *parents;
+		struct commit *c = prio_queue_get(&queue);
+
+		repo_parse_commit(r, c);
+
+		if (commit_graph_generation(c) < min_generation)
+			continue;
+
+		parents = c->parents;
+		while (parents) {
+			if (!(parents->item->object.flags & STALE)) {
+				parents->item->object.flags |= STALE;
+				prio_queue_put(&queue, parents->item);
+			}
+			parents = parents->next;
+		}
+	}
+
+	/* rearrange array */
+	dup = xcalloc(cnt, sizeof(struct commit *));
+	COPY_ARRAY(dup, array, cnt);
+	for (i = 0; i < cnt; i++) {
+		if (dup[i]->object.flags & STALE) {
+			int insert = cnt - 1 - (i - count_non_stale);
+			array[insert] = dup[i];
+		} else {
+			array[count_non_stale] = dup[i];
+			count_non_stale++;
+		}
+	}
+	free(dup);
+
+	/* clear marks */
+	for (i = 0; i < cnt; i++) {
+		struct commit_list *parents;
+		parents = array[i]->parents;
+
+		while (parents) {
+			clear_commit_marks(parents->item, STALE);
+			parents = parents->next;
+		}
+	}
+
+	return count_non_stale;
 }
 
 static struct commit_list *get_merge_bases_many_0(struct repository *r,
