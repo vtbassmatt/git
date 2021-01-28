@@ -2309,6 +2309,7 @@ int write_commit_graph(struct object_directory *odb,
 	init_topo_level_slab(&topo_levels);
 	ctx->topo_levels = &topo_levels;
 
+	prepare_commit_graph(ctx->r);
 	if (ctx->r->objects->commit_graph) {
 		struct commit_graph *g = ctx->r->objects->commit_graph;
 
@@ -2322,7 +2323,6 @@ int write_commit_graph(struct object_directory *odb,
 		ctx->changed_paths = 1;
 	if (!(flags & COMMIT_GRAPH_NO_WRITE_BLOOM_FILTERS)) {
 		struct commit_graph *g;
-		prepare_commit_graph_one(ctx->r, ctx->odb);
 
 		g = ctx->r->objects->commit_graph;
 
@@ -2334,10 +2334,7 @@ int write_commit_graph(struct object_directory *odb,
 	}
 
 	if (ctx->split) {
-		struct commit_graph *g;
-		prepare_commit_graph(ctx->r);
-
-		g = ctx->r->objects->commit_graph;
+		struct commit_graph *g = ctx->r->objects->commit_graph;
 
 		while (g) {
 			ctx->num_commit_graphs_before++;
@@ -2360,9 +2357,6 @@ int write_commit_graph(struct object_directory *odb,
 	}
 
 	ctx->approx_nr_objects = approximate_object_count();
-
-	if (ctx->append)
-		prepare_commit_graph_one(ctx->r, ctx->odb);
 
 	if (ctx->append && ctx->r->objects->commit_graph) {
 		struct commit_graph *g = ctx->r->objects->commit_graph;
