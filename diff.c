@@ -261,6 +261,11 @@ void init_diff_ui_defaults(void)
 	diff_detect_rename_default = DIFF_DETECT_RENAME;
 }
 
+void set_diff_color(int use_color)
+{
+       diff_use_color_default = use_color;
+}
+
 int git_diff_heuristic_config(const char *var, const char *value, void *cb)
 {
 	if (!strcmp(var, "diff.indentheuristic"))

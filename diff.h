@@ -501,6 +501,7 @@ int parse_long_opt(const char *opt, const char **argv,
 int git_diff_basic_config(const char *var, const char *value, void *cb);
 int git_diff_heuristic_config(const char *var, const char *value, void *cb);
 void init_diff_ui_defaults(void);
+void set_diff_color(int use_color);
 int git_diff_ui_config(const char *var, const char *value, void *cb);
 #ifndef NO_THE_REPOSITORY_COMPATIBILITY_MACROS
 #define diff_setup(diffopts) repo_diff_setup(the_repository, diffopts)
