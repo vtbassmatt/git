@@ -71,30 +71,30 @@ static inline void *alloc_node(struct alloc_state *s, size_t node_size)
 	return ret;
 }
 
-void *alloc_blob_node(struct repository *r)
+void *mem_pool_alloc_blob_node(struct repository *r)
 {
-	struct blob *b = alloc_node(r->parsed_objects->blob_state, sizeof(struct blob));
+	struct blob *b = mem_pool_calloc(r->parsed_objects->blob_pool, 1, sizeof(struct blob));
 	b->object.type = OBJ_BLOB;
 	return b;
 }
 
-void *alloc_tree_node(struct repository *r)
+void *mem_pool_alloc_tree_node(struct repository *r)
 {
-	struct tree *t = alloc_node(r->parsed_objects->tree_state, sizeof(struct tree));
+	struct tree *t = mem_pool_calloc(r->parsed_objects->tree_pool, 1, sizeof(struct tree));
 	t->object.type = OBJ_TREE;
 	return t;
 }
 
-void *alloc_tag_node(struct repository *r)
+void *mem_pool_alloc_tag_node(struct repository *r)
 {
-	struct tag *t = alloc_node(r->parsed_objects->tag_state, sizeof(struct tag));
+	struct tag *t = mem_pool_calloc(r->parsed_objects->tag_pool, 1, sizeof(struct tag));
 	t->object.type = OBJ_TAG;
 	return t;
 }
 
-void *alloc_object_node(struct repository *r)
+void *mem_pool_alloc_object_node(struct repository *r)
 {
-	struct object *obj = alloc_node(r->parsed_objects->object_state, sizeof(union any_object));
+	struct object *obj = mem_pool_calloc(r->parsed_objects->object_pool, 1, sizeof(union any_object));
 	obj->type = OBJ_NONE;
 	return obj;
 }
@@ -116,9 +116,9 @@ void init_commit_node(struct commit *c)
 	c->index = alloc_commit_index();
 }
 
-void *alloc_commit_node(struct repository *r)
+void *mem_pool_alloc_commit_node(struct repository *r)
 {
-	struct commit *c = alloc_node(r->parsed_objects->commit_state, sizeof(struct commit));
+	struct commit *c = mem_pool_calloc(r->parsed_objects->commit_pool, 1, sizeof(struct commit));
 	init_commit_node(c);
 	return c;
 }
@@ -130,8 +130,8 @@ static void report(const char *name, unsigned int count, size_t size)
 }
 
 #define REPORT(name, type)	\
-    report(#name, r->parsed_objects->name##_state->count, \
-		  r->parsed_objects->name##_state->count * sizeof(type) >> 10)
+    report(#name, r->parsed_objects->name##_pool->alloc_count, \
+		  r->parsed_objects->name##_pool->alloc_count * sizeof(type) >> 10)
 
 void alloc_report(struct repository *r)
 {

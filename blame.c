@@ -192,7 +192,7 @@ static struct commit *fake_working_tree_commit(struct repository *r,
 
 	repo_read_index(r);
 	time(&now);
-	commit = alloc_commit_node(r);
+	commit = mem_pool_alloc_commit_node(r);
 	commit->object.parsed = 1;
 	commit->date = now;
 	parent_tail = &commit->parents;

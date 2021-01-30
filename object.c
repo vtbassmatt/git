@@ -182,7 +182,7 @@ struct object *lookup_unknown_object(const struct object_id *oid)
 	struct object *obj = lookup_object(the_repository, oid);
 	if (!obj)
 		obj = create_object(the_repository, oid,
-				    alloc_object_node(the_repository));
+				mem_pool_alloc_object_node(the_repository));
 	return obj;
 }
 
@@ -469,11 +469,16 @@ struct parsed_object_pool *parsed_object_pool_new(void)
 	struct parsed_object_pool *o = xmalloc(sizeof(*o));
 	memset(o, 0, sizeof(*o));
 
-	o->blob_state = allocate_alloc_state();
-	o->tree_state = allocate_alloc_state();
-	o->commit_state = allocate_alloc_state();
-	o->tag_state = allocate_alloc_state();
-	o->object_state = allocate_alloc_state();
+	o->blob_pool = mem_pool_new();
+	o->tree_pool = mem_pool_new();
+	o->commit_pool = mem_pool_new();
+	o->tag_pool = mem_pool_new();
+	o->object_pool = mem_pool_new();
+	mem_pool_init(o->blob_pool,0);
+	mem_pool_init(o->tree_pool,0);
+	mem_pool_init(o->commit_pool,0);
+	mem_pool_init(o->tag_pool,0);
+	mem_pool_init(o->object_pool,0);
 
 	o->is_shallow = -1;
 	o->shallow_stat = xcalloc(1, sizeof(*o->shallow_stat));
@@ -566,16 +571,16 @@ void parsed_object_pool_clear(struct parsed_object_pool *o)
 	free_commit_buffer_slab(o->buffer_slab);
 	o->buffer_slab = NULL;
 
-	clear_alloc_state(o->blob_state);
-	clear_alloc_state(o->tree_state);
-	clear_alloc_state(o->commit_state);
-	clear_alloc_state(o->tag_state);
-	clear_alloc_state(o->object_state);
+	mem_pool_discard(o->blob_pool,1);
+	mem_pool_discard(o->tree_pool,1);
+	mem_pool_discard(o->tag_pool,1);
+	mem_pool_discard(o->object_pool,1);
+	mem_pool_discard(o->commit_pool,1);
 	stat_validity_clear(o->shallow_stat);
-	FREE_AND_NULL(o->blob_state);
-	FREE_AND_NULL(o->tree_state);
-	FREE_AND_NULL(o->commit_state);
-	FREE_AND_NULL(o->tag_state);
-	FREE_AND_NULL(o->object_state);
+	FREE_AND_NULL(o->blob_pool);
+	FREE_AND_NULL(o->tree_pool);
+	FREE_AND_NULL(o->commit_pool);
+	FREE_AND_NULL(o->tag_pool);
+	FREE_AND_NULL(o->object_pool);
 	FREE_AND_NULL(o->shallow_stat);
 }

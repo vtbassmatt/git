@@ -10,11 +10,11 @@ struct parsed_object_pool {
 	int nr_objs, obj_hash_size;
 
 	/* TODO: migrate alloc_states to mem-pool? */
-	struct alloc_state *blob_state;
-	struct alloc_state *tree_state;
-	struct alloc_state *commit_state;
-	struct alloc_state *tag_state;
-	struct alloc_state *object_state;
+	struct mem_pool *blob_pool;
+	struct mem_pool *tree_pool;
+	struct mem_pool *commit_pool;
+	struct mem_pool *tag_pool;
+	struct mem_pool *object_pool;
 
 	/* parent substitutions from .git/info/grafts and .git/shallow */
 	struct commit_graft **grafts;
