@@ -1774,7 +1774,7 @@ static struct commit *make_virtual_commit(struct repository *repo,
 					  struct tree *tree,
 					  const char *comment)
 {
-	struct commit *commit = alloc_commit_node(repo);
+	struct commit *commit = mem_pool_alloc_commit_node(repo);
 
 	set_merge_remote_desc(commit, comment, (struct object *)commit);
 	set_commit_tree(commit, tree);

@@ -19,7 +19,15 @@ struct mem_pool {
 
 	/* The total amount of memory allocated by the pool. */
 	size_t pool_alloc;
+
+	/* The count of calling mem_pool_alloc .*/
+	size_t alloc_count;
 };
+
+/*
+ * Create a new mem_pool.
+ */
+struct mem_pool *mem_pool_new(void);
 
 /*
  * Initialize mem_pool with specified initial size.

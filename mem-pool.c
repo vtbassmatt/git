@@ -35,6 +35,11 @@ static struct mp_block *mem_pool_alloc_block(struct mem_pool *pool,
 	return p;
 }
 
+struct mem_pool *mem_pool_new(void)
+{
+	return xmalloc(sizeof(struct mem_pool));
+}
+
 void mem_pool_init(struct mem_pool *pool, size_t initial_size)
 {
 	memset(pool, 0, sizeof(*pool));
@@ -69,6 +74,7 @@ void *mem_pool_alloc(struct mem_pool *pool, size_t len)
 	struct mp_block *p = NULL;
 	void *r;
 
+	pool->alloc_count++;
 	/* round up to a 'uintmax_t' alignment */
 	if (len & (sizeof(uintmax_t) - 1))
 		len += sizeof(uintmax_t) - (len & (sizeof(uintmax_t) - 1));
