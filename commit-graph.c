@@ -614,19 +614,26 @@ static struct commit_graph *load_commit_graph_chain(struct repository *r,
 	return graph_chain;
 }
 
-static void validate_mixed_generation_chain(struct commit_graph *g)
+/*
+ * returns 1 if and only if all graphs in the chain have
+ * corrected commit dates stored in the generation_data chunk.
+ */
+static int validate_mixed_generation_chain(struct commit_graph *g)
 {
-	int read_generation_data;
+	int read_generation_data = 1;
+	struct commit_graph *p = g;
 
-	if (!g)
-		return;
-
-	read_generation_data = !!g->chunk_generation_data;
+	while (read_generation_data && p) {
+		read_generation_data = p->read_generation_data;
+		p = p->base_graph;
+	}
 
 	while (g) {
 		g->read_generation_data = read_generation_data;
 		g = g->base_graph;
 	}
+
+	return read_generation_data;
 }
 
 struct commit_graph *read_commit_graph_one(struct repository *r,
