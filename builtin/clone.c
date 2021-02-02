@@ -32,6 +32,7 @@
 #include "connected.h"
 #include "packfile.h"
 #include "list-objects-filter-options.h"
+#include "shallow.h"
 
 /*
  * Overall FIXMEs:
@@ -50,6 +51,8 @@ static int option_no_checkout, option_bare, option_mirror, option_single_branch 
 static int option_local = -1, option_no_hardlinks, option_shared;
 static int option_no_tags;
 static int option_shallow_submodules;
+static int option_shallow = -1;    /* unspecified */
+static int config_shallow = -1;    /* unspecified */
 static int deepen;
 static char *option_template, *option_depth, *option_since;
 static char *option_origin = NULL;
@@ -90,6 +93,8 @@ static struct option builtin_clone_options[] = {
 	OPT__VERBOSITY(&option_verbosity),
 	OPT_BOOL(0, "progress", &option_progress,
 		 N_("force progress reporting")),
+	OPT_BOOL(0, "reject-shallow", &option_shallow,
+		 N_("don't clone shallow repository")),
 	OPT_BOOL('n', "no-checkout", &option_no_checkout,
 		 N_("don't create a checkout")),
 	OPT_BOOL(0, "bare", &option_bare, N_("create a bare repository")),
@@ -858,6 +863,9 @@ static int git_clone_config(const char *k, const char *v, void *cb)
 		free(remote_name);
 		remote_name = xstrdup(v);
 	}
+	if (!strcmp(k, "clone.rejectshallow")) {
+		config_shallow = git_config_bool(k, v);
+	}
 	return git_default_config(k, v, cb);
 }
 
@@ -963,6 +971,8 @@ static int path_exists(const char *path)
 int cmd_clone(int argc, const char **argv, const char *prefix)
 {
 	int is_bundle = 0, is_local;
+	int local_shallow = 0;
+	int reject_shallow = 0;
 	const char *repo_name, *repo, *work_tree, *git_dir;
 	char *path, *dir, *display_repo = NULL;
 	int dest_exists, real_dest_exists = 0;
@@ -1157,6 +1167,16 @@ int cmd_clone(int argc, const char **argv, const char *prefix)
 	git_config(git_clone_config, NULL);
 
 	/*
+	 * If option_shallow is specified from CLI option,
+	 * ignore config_shallow from git_clone_config.
+	 */
+	if (config_shallow != -1) {
+		reject_shallow = config_shallow;
+	}
+	if (option_shallow != -1) {
+		reject_shallow = option_shallow;
+	}
+	/*
 	 * apply the remote name provided by --origin only after this second
 	 * call to git_config, to ensure it overrides all config-based values.
 	 */
@@ -1216,6 +1236,7 @@ int cmd_clone(int argc, const char **argv, const char *prefix)
 		if (filter_options.choice)
 			warning(_("--filter is ignored in local clones; use file:// instead."));
 		if (!access(mkpath("%s/shallow", path), F_OK)) {
+			local_shallow = 1;
 			if (option_local > 0)
 				warning(_("source repository is shallow, ignoring --local"));
 			is_local = 0;
@@ -1361,6 +1382,12 @@ int cmd_clone(int argc, const char **argv, const char *prefix)
 		err = transport_fetch_refs(transport, mapped_refs);
 		if (err)
 			goto cleanup;
+	}
+
+	if (reject_shallow) {
+		if (local_shallow || is_repository_shallow(the_repository)) {
+			die(_("source repository is shallow, reject to clone."));
+		}
 	}
 
 	update_remote_refs(refs, mapped_refs, remote_head_points_at,
