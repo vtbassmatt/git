@@ -265,7 +265,8 @@ static const char *boolean_options[] = {
 	TRANS_OPT_THIN,
 	TRANS_OPT_KEEP,
 	TRANS_OPT_FOLLOWTAGS,
-	TRANS_OPT_DEEPEN_RELATIVE
+	TRANS_OPT_DEEPEN_RELATIVE,
+	TRANS_OPT_REJECT_SHALLOW
 	};
 
 static int strbuf_set_helper_option(struct helper_data *data,

@@ -1071,6 +1071,10 @@ static struct ref *do_fetch_pack(struct fetch_pack_args *args,
 
 	if (args->stateless_rpc)
 		packet_flush(fd[1]);
+
+	if (!args->deepen && args->remote_shallow)
+		die("source repository is shallow, reject to clone.");
+
 	if (args->deepen)
 		setup_alternate_shallow(&shallow_lock, &alternate_shallow_file,
 					NULL);
@@ -1440,6 +1444,8 @@ static void receive_shallow_info(struct fetch_pack_args *args,
 		 * shallow. In v0, remote refs that reach these objects are
 		 * rejected (unless --update-shallow is set); do the same.
 		 */
+		if (args->remote_shallow)
+			die("source repository is shallow, reject to clone.");
 		prepare_shallow_info(si, shallows);
 		if (si->nr_ours || si->nr_theirs)
 			alternate_shallow_file =
