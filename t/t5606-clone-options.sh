@@ -45,6 +45,13 @@ test_expect_success 'disallows --bare with --separate-git-dir' '
 
 '
 
+test_expect_success 'reject clone shallow repository' '
+	git clone --depth=1 --no-local parent shallow-repo &&
+	test_must_fail git clone --no-shallow shallow-repo out 2>err &&
+	test_i18ngrep -e "source repository is shallow, reject to clone." err
+
+'
+
 test_expect_success 'uses "origin" for default remote name' '
 
 	git clone parent clone-default-origin &&

@@ -15,7 +15,7 @@ SYNOPSIS
 	  [--dissociate] [--separate-git-dir <git dir>]
 	  [--depth <depth>] [--[no-]single-branch] [--no-tags]
 	  [--recurse-submodules[=<pathspec>]] [--[no-]shallow-submodules]
-	  [--[no-]remote-submodules] [--jobs <n>] [--sparse]
+	  [--[no-]remote-submodules] [--jobs <n>] [--sparse] [--no-shallow]
 	  [--filter=<filter>] [--] <repository>
 	  [<directory>]
 
@@ -148,6 +148,12 @@ objects from the source repository into a pack in the cloned repository.
 -n::
 --no-checkout::
 	No checkout of HEAD is performed after the clone is complete.
+
+--no-shallow::
+	Don't clone a shallow source repository. In some scenariors, clients
+	want the cloned repository information to be complete. Otherwise,
+	the cloning process should end immediately without creating any files,
+	which can save some disk space.
 
 --bare::
 	Make a 'bare' Git repository.  That is, instead of
