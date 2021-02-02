@@ -15,7 +15,7 @@ SYNOPSIS
 	  [--dissociate] [--separate-git-dir <git dir>]
 	  [--depth <depth>] [--[no-]single-branch] [--no-tags]
 	  [--recurse-submodules[=<pathspec>]] [--[no-]shallow-submodules]
-	  [--[no-]remote-submodules] [--jobs <n>] [--sparse]
+	  [--[no-]remote-submodules] [--jobs <n>] [--sparse] [--reject-shallow]
 	  [--filter=<filter>] [--] <repository>
 	  [<directory>]
 
@@ -148,6 +148,24 @@ objects from the source repository into a pack in the cloned repository.
 -n::
 --no-checkout::
 	No checkout of HEAD is performed after the clone is complete.
+
+--reject-shallow::
+	Don't clone a shallow source repository. In some scenarios, clients
+	want the cloned repository information to be complete. Otherwise,
+	the cloning process should end immediately without creating any files,
+	which can save some disk space. This can override `clone.rejectshallow`
+	from the configuration:
+
+	--------------------------------------------------------------------
+	$ git -c clone.rejectshallow=false clone --reject-shallow source out
+	--------------------------------------------------------------------
+
+	While there is a way to countermand a configured "I always refuse to
+	clone from a shallow repository" with "but let's allow it only this time":
+
+	----------------------------------------------------------------------
+	$ git -c clone.rejectshallow=true clone --no-reject-shallow source out
+	----------------------------------------------------------------------
 
 --bare::
 	Make a 'bare' Git repository.  That is, instead of
