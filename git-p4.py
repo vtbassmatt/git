@@ -206,6 +206,13 @@ def decode_path(path):
                 print('Path with non-ASCII characters detected. Used {} to decode: {}'.format(encoding, path))
         return path
 
+def decode_changlist_description(text):
+    """Decode bytes or bytearray using configured changelist description encoding options
+    """
+    encoding = gitConfig('git-p4.clDescEncoding') or 'utf_8'
+    err_handling = gitConfig('git-p4.clDescEncodingErrHandling') or 'strict'
+    return text.decode(encoding, err_handling)
+
 def run_git_hook(cmd, param=[]):
     """Execute a hook if the hook exists."""
     if verbose:
@@ -771,7 +778,10 @@ def p4CmdList(cmd, stdin=None, stdin_mode='w+b', cb=None, skip_info=False,
                 for key, value in entry.items():
                     key = key.decode()
                     if isinstance(value, bytes) and not (key in ('data', 'path', 'clientFile') or key.startswith('depotFile')):
-                        value = value.decode()
+                        if key == 'desc':
+                            value = decode_changlist_description(value)
+                        else:
+                            value = value.decode()
                     decoded_entry[key] = value
                 # Parse out data if it's an error response
                 if decoded_entry.get('code') == 'error' and 'data' in decoded_entry:
