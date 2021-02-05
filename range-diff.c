@@ -570,24 +570,28 @@ int is_range_diff_range(const char *arg)
 {
 	char *copy = xstrdup(arg); /* setup_revisions() modifies it */
 	const char *argv[] = { "", copy, "--", NULL };
-	int i, positive = 0, negative = 0;
+	int i;
 	struct rev_info revs;
+	unsigned npmask = 0;
 
 	init_revisions(&revs, NULL);
-	if (setup_revisions(3, argv, &revs, 0) == 1)
-		for (i = 0; i < revs.pending.nr; i++) {
-			struct object *obj = revs.pending.objects[i].item;
+	if (setup_revisions(3, argv, &revs, NULL) != 1)
+		goto cleanup;
 
-			if (obj->flags & UNINTERESTING)
-				negative++;
-			else
-				positive++;
-			if (obj->type == OBJ_COMMIT)
-				clear_commit_marks((struct commit *)obj,
-						   ALL_REV_FLAGS);
-		}
+	for (i = 0; i < revs.pending.nr && npmask != 3; i++) {
+		struct object *obj = revs.pending.objects[i].item;
 
+		npmask |= (obj->flags & UNINTERESTING) ? 01 : 02;
+	}
+
+	for (i = 0; i < revs.pending.nr; i++) {
+		struct object *obj = revs.pending.objects[i].item;
+		if (obj->type == OBJ_COMMIT)
+			clear_commit_marks((struct commit *)obj, ALL_REV_FLAGS);
+	}
+
+cleanup:
 	free(copy);
 	object_array_clear(&revs.pending);
-	return negative > 0 && positive > 0;
+	return npmask == 3;
 }

@@ -160,7 +160,7 @@ test_expect_success 'A^! and A^-<n> (unmodified)' '
 
 test_expect_success 'A^{/..} is not mistaken for a range' '
 	test_must_fail git range-diff topic^.. topic^{/..} 2>error &&
-	test_i18ngrep "not a commit rang" error
+	test_i18ngrep "not a commit range" error
 '
 
 test_expect_success 'trivial reordering' '
