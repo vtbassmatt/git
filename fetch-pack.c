@@ -23,6 +23,7 @@
 #include "fetch-negotiator.h"
 #include "fsck.h"
 #include "shallow.h"
+#include "progress.h"
 
 static int transfer_unpack_limit = -1;
 static int fetch_unpack_limit = -1;
@@ -1585,6 +1586,7 @@ static struct ref *do_fetch_pack_v2(struct fetch_pack_args *args,
 	struct fetch_negotiator *negotiator;
 	int seen_ack = 0;
 	struct string_list packfile_uris = STRING_LIST_INIT_DUP;
+	struct progress *packfile_uri_progress;
 	int i;
 	struct strvec index_pack_args = STRVEC_INIT;
 	struct oidset gitmodules_oids = OIDSET_INIT;
@@ -1689,6 +1691,8 @@ static struct ref *do_fetch_pack_v2(struct fetch_pack_args *args,
 		}
 	}
 
+	packfile_uri_progress = start_progress(_("Downloading packs"), packfile_uris.nr);
+
 	for (i = 0; i < packfile_uris.nr; i++) {
 		int j;
 		struct child_process cmd = CHILD_PROCESS_INIT;
@@ -1696,6 +1700,7 @@ static struct ref *do_fetch_pack_v2(struct fetch_pack_args *args,
 		const char *uri = packfile_uris.items[i].string +
 			the_hash_algo->hexsz + 1;
 
+		display_progress(packfile_uri_progress, i+1);
 		strvec_push(&cmd.args, "http-fetch");
 		strvec_pushf(&cmd.args, "--packfile=%.*s",
 			     (int) the_hash_algo->hexsz,
@@ -1739,6 +1744,9 @@ static struct ref *do_fetch_pack_v2(struct fetch_pack_args *args,
 						 get_object_directory(),
 						 packname));
 	}
+
+	stop_progress(&packfile_uri_progress);
+
 	string_list_clear(&packfile_uris, 0);
 	strvec_clear(&index_pack_args);
 
