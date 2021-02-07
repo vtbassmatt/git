@@ -6,6 +6,7 @@
 # Copyright (c) 2009, 2010 David Aguilar
 
 TOOL_MODE=diff
+GIT_DIFFTOOL_SKIP_TO_FILE="$GIT_DIR/difftool-skip-to"
 . git-mergetool--lib
 
 # difftool.prompt controls the default prompt/no-prompt behavior
@@ -40,6 +41,31 @@ launch_merge_tool () {
 	# the user with the real $MERGED name before launching $merge_tool.
 	if should_prompt
 	then
+		if test -f "$GIT_DIFFTOOL_SKIP_TO_FILE"
+		then
+			SAVE_POINT_NUM=$(cat "$GIT_DIFFTOOL_SKIP_TO_FILE")
+			if test $SAVE_POINT_NUM -le $GIT_DIFF_PATH_TOTAL &&
+				test $SAVE_POINT_NUM -gt $GIT_DIFF_PATH_COUNTER
+			then
+				# choice skip or not skip when check first file.
+				if test $GIT_DIFF_PATH_COUNTER -eq "1"
+				then
+					printf "do you want to skip to last time difftool save point($SAVE_POINT_NUM) [Y/n]?"
+					read skip_ans || return
+					if test "$skip_ans" = y
+					then
+						return
+					fi
+				else
+					return
+				fi
+			fi
+		fi
+		# write the current coordinates to .git/difftool-skip-to
+		if test !$SAVE_POINT_NUM || $SAVE_POINT_NUM -ne $GIT_DIFF_PATH_COUNTER
+		then
+			echo $GIT_DIFF_PATH_COUNTER > $GIT_DIFFTOOL_SKIP_TO_FILE
+		fi
 		printf "\nViewing (%s/%s): '%s'\n" "$GIT_DIFF_PATH_COUNTER" \
 			"$GIT_DIFF_PATH_TOTAL" "$MERGED"
 		if use_ext_cmd
@@ -102,4 +128,10 @@ else
 	done
 fi
 
+if test -f $GIT_DIFFTOOL_SKIP_TO_FILE &&
+	test $GIT_DIFF_PATH_COUNTER -eq $GIT_DIFF_PATH_TOTAL
+then
+	rm $GIT_DIFFTOOL_SKIP_TO_FILE
+
+fi
 exit 0
