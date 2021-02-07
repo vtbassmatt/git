@@ -6,6 +6,8 @@
 # Copyright (c) 2009, 2010 David Aguilar
 
 TOOL_MODE=diff
+GIT_DIFFTOOL_LAST_POSITION="$GIT_DIR/difftool-last-position"
+DIFFTOOL_FIRST_NUM="1"
 . git-mergetool--lib
 
 # difftool.prompt controls the default prompt/no-prompt behavior
@@ -40,6 +42,30 @@ launch_merge_tool () {
 	# the user with the real $MERGED name before launching $merge_tool.
 	if should_prompt
 	then
+		if test -f "$GIT_DIFFTOOL_LAST_POSITION"
+		then
+			if SAVE_POINT_NUM=$(cat 2>/dev/null "$GIT_DIFFTOOL_LAST_POSITION") &&
+				test "$SAVE_POINT_NUM" -le "$GIT_DIFF_PATH_TOTAL" &&
+					test "$SAVE_POINT_NUM" -gt "$GIT_DIFF_PATH_COUNTER"
+			then
+				if test "$GIT_DIFF_PATH_COUNTER" -eq "$DIFFTOOL_FIRST_NUM"
+				then
+					printf "Do you want to start from the possible last file you were viewing? [Y/n]?"
+					read skip_ans || return
+					if test "$skip_ans" = y
+					then
+						return
+					fi
+				else
+					return
+				fi
+			fi
+		fi
+		if test -z "$SAVE_POINT_NUM" ||
+			test "$SAVE_POINT_NUM" -ne "$GIT_DIFF_PATH_COUNTER"
+		then
+			echo "$GIT_DIFF_PATH_COUNTER" >"$GIT_DIFFTOOL_LAST_POSITION"
+		fi
 		printf "\nViewing (%s/%s): '%s'\n" "$GIT_DIFF_PATH_COUNTER" \
 			"$GIT_DIFF_PATH_TOTAL" "$MERGED"
 		if use_ext_cmd
@@ -102,4 +128,9 @@ else
 	done
 fi
 
+if test "$GIT_DIFF_PATH_COUNTER" -eq "$GIT_DIFF_PATH_TOTAL"
+then
+	rm -f "$GIT_DIFFTOOL_LAST_POSITION"
+
+fi
 exit 0
