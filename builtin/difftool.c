@@ -690,7 +690,7 @@ int cmd_difftool(int argc, const char **argv, const char *prefix)
 {
 	int use_gui_tool = 0, dir_diff = 0, prompt = -1, symlinks = 0,
 	    tool_help = 0, no_index = 0;
-	static char *difftool_cmd = NULL, *extcmd = NULL;
+	static char *difftool_cmd = NULL, *extcmd = NULL, *start_file = NULL;
 	struct option builtin_difftool_options[] = {
 		OPT_BOOL('g', "gui", &use_gui_tool,
 			 N_("use `diff.guitool` instead of `diff.tool`")),
@@ -714,6 +714,8 @@ int cmd_difftool(int argc, const char **argv, const char *prefix)
 		OPT_STRING('x', "extcmd", &extcmd, N_("command"),
 			   N_("specify a custom command for viewing diffs")),
 		OPT_ARGUMENT("no-index", &no_index, N_("passed to `diff`")),
+		OPT_STRING(0, "start-from", &start_file, N_("start-from"),
+			   N_("start viewing diff from the specified file")),
 		OPT_END()
 	};
 
@@ -723,6 +725,9 @@ int cmd_difftool(int argc, const char **argv, const char *prefix)
 	argc = parse_options(argc, argv, prefix, builtin_difftool_options,
 			     builtin_difftool_usage, PARSE_OPT_KEEP_UNKNOWN |
 			     PARSE_OPT_KEEP_DASHDASH);
+
+	if (start_file)
+		setenv("START_FILE", start_file, 1);
 
 	if (tool_help)
 		return print_tool_help();

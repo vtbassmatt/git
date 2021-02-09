@@ -4249,6 +4249,7 @@ static void run_external_diff(const char *pgm,
 			      const char *xfrm_msg,
 			      struct diff_options *o)
 {
+	const char *start_file = NULL;
 	struct strvec argv = STRVEC_INIT;
 	struct strvec env = STRVEC_INIT;
 	struct diff_queue_struct *q = &diff_queued_diff;
@@ -4272,9 +4273,17 @@ static void run_external_diff(const char *pgm,
 
 	diff_free_filespec_data(one);
 	diff_free_filespec_data(two);
+
+	start_file = xstrdup_or_null(getenv("START_FILE"));
+	if (start_file) {
+		if (strcmp(start_file, name))
+			goto finish;
+		unsetenv("START_FILE");
+	}
 	if (run_command_v_opt_cd_env(argv.v, RUN_USING_SHELL, NULL, env.v))
 		die(_("external diff died, stopping at %s"), name);
 
+finish:
 	remove_tempfile();
 	strvec_clear(&argv);
 	strvec_clear(&env);
