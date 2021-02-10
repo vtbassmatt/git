@@ -96,12 +96,11 @@ to the new separate pack will be written.
 	affects the performance on the unpacker side, because delta data needs
 	to be applied that many times to get to the necessary object.
 +
-Note that delta compression is never used on objects larger than the
-`core.bigFileThreshold` configuration variable (see
-linkgit:git-config[1]).
-+
 The default value for --window is 10 and --depth is 50. The maximum
 depth is 4095.
++
+Note that delta compression is never used on objects larger than the
+`core.bigFileThreshold` configuration variable (see linkgit:git-config[1]).
 
 --threads=<n>::
 	This option is passed through to `git pack-objects`.
