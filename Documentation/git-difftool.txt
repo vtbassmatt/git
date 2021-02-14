@@ -34,6 +34,9 @@ OPTIONS
 	This is the default behaviour; the option is provided to
 	override any configuration settings.
 
+--start-from=<file>::
+	Start viewing diff from the specified file.
+
 -t <tool>::
 --tool=<tool>::
 	Use the diff tool specified by <tool>.  Valid values include

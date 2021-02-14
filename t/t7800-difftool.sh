@@ -762,4 +762,27 @@ test_expect_success 'difftool --gui, --tool and --extcmd are mutually exclusive'
 	test_must_fail git difftool --gui --tool=test-tool --extcmd=cat
 '
 
+test_expect_success 'difftool --start-from' '
+	difftool_test_setup &&
+	test_when_finished git reset --hard &&
+	echo 1 >1 &&
+	echo 2 >2 &&
+	echo 4 >4 &&
+	git add 1 2 4 &&
+	git commit -a -m "124" &&
+	git difftool --no-prompt --extcmd=cat --start-from="2" HEAD^  >output &&
+	cat >expect <<-\EOF &&
+	2
+	4
+	1
+	EOF
+	test_cmp output expect &&
+	git difftool --no-prompt --extcmd=cat --start-from="3" HEAD^  >output &&
+	cat >expect <<-\EOF &&
+	4
+	1
+	2
+	EOF
+	test_cmp output expect
+'
 test_done

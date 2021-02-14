@@ -226,6 +226,7 @@ enum diff_submodule_format {
  */
 struct diff_options {
 	const char *orderfile;
+	const char *rotate_to;
 
 	/**
 	 * A constant string (can and typically does contain newlines to look for

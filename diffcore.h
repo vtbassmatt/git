@@ -164,6 +164,7 @@ void diffcore_rename(struct diff_options *);
 void diffcore_merge_broken(void);
 void diffcore_pickaxe(struct diff_options *);
 void diffcore_order(const char *orderfile);
+void diffcore_rotate(const char *rotate_to_filename);
 
 /* low-level interface to diffcore_order */
 struct obj_order {
