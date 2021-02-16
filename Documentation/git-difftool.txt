@@ -34,6 +34,16 @@ OPTIONS
 	This is the default behaviour; the option is provided to
 	override any configuration settings.
 
+--rotate-to=<file>::
+	Internally call `git diff --rotate-to=<file>`,
+	show the change in the specified path first.
+	Files before the specified path will be moved to the last output.
+
+--skip-to=<file>::
+	Internally call `git diff --skip-to=<file>`,
+	skip the output to the specified path.
+	Files before the specified path will not output.
+
 -t <tool>::
 --tool=<tool>::
 	Use the diff tool specified by <tool>.  Valid values include
