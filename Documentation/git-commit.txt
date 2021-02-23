@@ -143,7 +143,9 @@ OPTIONS
 	the commit author is then copied from the first such commit found.
 
 --date=<date>::
-	Override the author date used in the commit.
+	Override the author date used in the commit. The '<date>' can be in
+	any format that is accepted by the `approxidate_careful` function
+	in `date.c` or the <<DATES, DATE FORMATS>> section below.
 
 -m <msg>::
 --message=<msg>::
