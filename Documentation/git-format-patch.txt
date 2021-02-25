@@ -221,6 +221,7 @@ populated with placeholder text.
 	`--subject-prefix` option) has ` v<n>` appended to it.  E.g.
 	`--reroll-count=4` may produce `v4-0001-add-makefile.patch`
 	file that has "Subject: [PATCH v4 1/20] Add makefile" in it.
+	now can support non-integrated version number like `-v1.1`.
 
 --to=<email>::
 	Add a `To:` header to the email headers. This is in addition
