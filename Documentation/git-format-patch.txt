@@ -221,6 +221,11 @@ populated with placeholder text.
 	`--subject-prefix` option) has ` v<n>` appended to it.  E.g.
 	`--reroll-count=4` may produce `v4-0001-add-makefile.patch`
 	file that has "Subject: [PATCH v4 1/20] Add makefile" in it.
+	 `<n>` may be a non-integer number.  E.g. `--reroll-count=4.4`
+	may produce `v4.4-0001-add-makefile.patch` file that has
+	"Subject: [PATCH v4.4 1/20] Add makefile" in it.
+	`--reroll-count=4rev2` may produce `v4rev2-0001-add-makefile.patch`
+	file that has "Subject: [PATCH v4rev2 1/20] Add makefile" in it.
 
 --to=<email>::
 	Add a `To:` header to the email headers. This is in addition
