@@ -1718,6 +1718,7 @@ int cmd_format_patch(int argc, const char **argv, const char *prefix)
 	int use_patch_format = 0;
 	int quiet = 0;
 	int reroll_count = -1;
+	const char *reroll_count_string = NULL;
 	char *cover_from_description_arg = NULL;
 	char *branch_name = NULL;
 	char *base_commit = NULL;
@@ -1751,7 +1752,7 @@ int cmd_format_patch(int argc, const char **argv, const char *prefix)
 			    N_("use <sfx> instead of '.patch'")),
 		OPT_INTEGER(0, "start-number", &start_number,
 			    N_("start numbering patches at <n> instead of 1")),
-		OPT_INTEGER('v', "reroll-count", &reroll_count,
+		OPT_STRING('v', "reroll-count", &reroll_count_string, N_("reroll-count"),
 			    N_("mark the series as Nth re-roll")),
 		OPT_INTEGER(0, "filename-max-length", &fmt_patch_name_max,
 			    N_("max length of output filename")),
@@ -1862,11 +1863,13 @@ int cmd_format_patch(int argc, const char **argv, const char *prefix)
 	if (cover_from_description_arg)
 		cover_from_description_mode = parse_cover_from_description(cover_from_description_arg);
 
-	if (0 < reroll_count) {
+	if (reroll_count_string) {
 		struct strbuf sprefix = STRBUF_INIT;
-		strbuf_addf(&sprefix, "%s v%d",
-			    rev.subject_prefix, reroll_count);
-		rev.reroll_count = reroll_count;
+
+		strtol_i(reroll_count_string, 10, &reroll_count);
+		strbuf_addf(&sprefix, "%s v%s",
+			    rev.subject_prefix, reroll_count_string);
+		rev.reroll_count = reroll_count_string;
 		rev.subject_prefix = strbuf_detach(&sprefix, NULL);
 	}
 
