@@ -372,10 +372,10 @@ test_expect_success 'filename limit applies only to basename' '
 
 test_expect_success 'reroll count' '
 	rm -fr patches &&
-	git format-patch -o patches --cover-letter --reroll-count 4 main..side >list &&
-	! grep -v "^patches/v4-000[0-3]-" list &&
+	git format-patch -o patches --cover-letter --reroll-count 4.4 main..side >list &&
+	! grep -v "^patches/v4.4-000[0-3]-" list &&
 	sed -n -e "/^Subject: /p" $(cat list) >subjects &&
-	! grep -v "^Subject: \[PATCH v4 [0-3]/3\] " subjects
+	! grep -v "^Subject: \[PATCH v4.4 [0-3]/3\] " subjects
 '
 
 test_expect_success 'reroll count (-v)' '
@@ -2252,7 +2252,7 @@ test_expect_success 'interdiff: cover-letter' '
 
 test_expect_success 'interdiff: reroll-count' '
 	git format-patch --cover-letter --interdiff=boop~2 -v2 -1 boop &&
-	test_i18ngrep "^Interdiff ..* v1:$" v2-0000-cover-letter.patch
+	test_i18ngrep "^Interdiff ..* last version:$" v2-0000-cover-letter.patch
 '
 
 test_expect_success 'interdiff: solo-patch' '

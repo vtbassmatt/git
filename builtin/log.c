@@ -1662,13 +1662,13 @@ static void print_bases(struct base_tree_info *bases, FILE *file)
 	oidclr(&bases->base_commit);
 }
 
-static const char *diff_title(struct strbuf *sb, int reroll_count,
+static const char *diff_title(struct strbuf *sb, const char *reroll_count,
 		       const char *generic, const char *rerolled)
 {
-	if (reroll_count <= 0)
+	if (!reroll_count)
 		strbuf_addstr(sb, generic);
 	else /* RFC may be v0, so allow -v1 to diff against v0 */
-		strbuf_addf(sb, rerolled, reroll_count - 1);
+		strbuf_addf(sb, rerolled, "last version");
 	return sb->buf;
 }
 
@@ -1717,7 +1717,7 @@ int cmd_format_patch(int argc, const char **argv, const char *prefix)
 	struct strbuf buf = STRBUF_INIT;
 	int use_patch_format = 0;
 	int quiet = 0;
-	int reroll_count = -1;
+	const char *reroll_count = NULL;
 	char *cover_from_description_arg = NULL;
 	char *branch_name = NULL;
 	char *base_commit = NULL;
@@ -1751,8 +1751,8 @@ int cmd_format_patch(int argc, const char **argv, const char *prefix)
 			    N_("use <sfx> instead of '.patch'")),
 		OPT_INTEGER(0, "start-number", &start_number,
 			    N_("start numbering patches at <n> instead of 1")),
-		OPT_INTEGER('v', "reroll-count", &reroll_count,
-			    N_("mark the series as Nth re-roll")),
+		OPT_STRING('v', "reroll-count", &reroll_count, N_("reroll-count"),
+			    N_("mark the series as specified version re-roll")),
 		OPT_INTEGER(0, "filename-max-length", &fmt_patch_name_max,
 			    N_("max length of output filename")),
 		OPT_CALLBACK_F(0, "rfc", &rev, NULL,
@@ -1862,9 +1862,9 @@ int cmd_format_patch(int argc, const char **argv, const char *prefix)
 	if (cover_from_description_arg)
 		cover_from_description_mode = parse_cover_from_description(cover_from_description_arg);
 
-	if (0 < reroll_count) {
+	if (reroll_count) {
 		struct strbuf sprefix = STRBUF_INIT;
-		strbuf_addf(&sprefix, "%s v%d",
+		strbuf_addf(&sprefix, "%s v%s",
 			    rev.subject_prefix, reroll_count);
 		rev.reroll_count = reroll_count;
 		rev.subject_prefix = strbuf_detach(&sprefix, NULL);
@@ -2080,7 +2080,7 @@ int cmd_format_patch(int argc, const char **argv, const char *prefix)
 		rev.idiff_oid2 = get_commit_tree_oid(list[0]);
 		rev.idiff_title = diff_title(&idiff_title, reroll_count,
 					     _("Interdiff:"),
-					     _("Interdiff against v%d:"));
+					     _("Interdiff against %s:"));
 	}
 
 	if (creation_factor < 0)
@@ -2099,7 +2099,7 @@ int cmd_format_patch(int argc, const char **argv, const char *prefix)
 		rev.creation_factor = creation_factor;
 		rev.rdiff_title = diff_title(&rdiff_title, reroll_count,
 					     _("Range-diff:"),
-					     _("Range-diff against v%d:"));
+					     _("Range-diff against %s:"));
 	}
 
 	if (!signature) {
