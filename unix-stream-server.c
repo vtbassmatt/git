@@ -120,8 +120,11 @@ int unix_stream_server__was_stolen(
 
 	if (st_now.st_ino != server_socket->st_socket.st_ino)
 		return 1;
+	if (st_now.st_dev != server_socket->st_socket.st_dev)
+		return 1;
 
-	/* We might also consider the ctime on some platforms. */
+	if (!S_ISSOCK(st_now.st_mode))
+		return 1;
 
 	return 0;
 }
