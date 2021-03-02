@@ -7,13 +7,10 @@ struct unix_stream_listen_opts {
 	unsigned int disallow_chdir:1;
 };
 
-#define DEFAULT_UNIX_STREAM_LISTEN_TIMEOUT (100)
-#define DEFAULT_UNIX_STREAM_LISTEN_BACKLOG (5)
-
 #define UNIX_STREAM_LISTEN_OPTS_INIT \
 { \
-	.timeout_ms = DEFAULT_UNIX_STREAM_LISTEN_TIMEOUT, \
-	.listen_backlog_size = DEFAULT_UNIX_STREAM_LISTEN_BACKLOG, \
+	.timeout_ms = 0, \
+	.listen_backlog_size = 0, \
 	.disallow_chdir = 0, \
 }
 
