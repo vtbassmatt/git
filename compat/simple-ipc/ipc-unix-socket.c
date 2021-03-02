@@ -4,6 +4,7 @@
 #include "pkt-line.h"
 #include "thread-utils.h"
 #include "unix-socket.h"
+#include "unix-stream-server.h"
 
 #ifdef NO_UNIX_SOCKETS
 #error compat/simple-ipc/ipc-unix-socket.c requires Unix sockets
