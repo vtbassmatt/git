@@ -5,40 +5,43 @@
 
 #define DEFAULT_UNIX_STREAM_LISTEN_TIMEOUT (100)
 
+/*
+ * Try to connect to a unix domain socket at `path` (if it exists) and
+ * see if there is a server listening.
+ *
+ * We don't know if the socket exists, whether a server died and
+ * failed to cleanup, or whether we have a live server listening, so
+ * we "poke" it.
+ *
+ * We immediately hangup without sending/receiving any data because we
+ * don't know anything about the protocol spoken and don't want to
+ * block while writing/reading data.  It is sufficient to just know
+ * that someone is listening.
+ */
 static int is_another_server_alive(const char *path,
 				   const struct unix_stream_listen_opts *opts)
 {
-	struct stat st;
-	int fd;
+	int fd = unix_stream_connect(path, opts->disallow_chdir);
 
-	if (!lstat(path, &st) && S_ISSOCK(st.st_mode)) {
-		/*
-		 * A socket-inode exists on disk at `path`, but we
-		 * don't know whether it belongs to an active server
-		 * or whether the last server died without cleaning
-		 * up.
-		 *
-		 * Poke it with a trivial connection to try to find
-		 * out.
-		 */
-		fd = unix_stream_connect(path, opts->disallow_chdir);
-		if (fd >= 0) {
-			close(fd);
-			return 1;
-		}
+	if (fd >= 0) {
+		close(fd);
+		return 1;
 	}
 
 	return 0;
 }
 
-struct unix_stream_server_socket *unix_stream_server__listen_with_lock(
+int unix_stream_server__create(
 	const char *path,
-	const struct unix_stream_listen_opts *opts)
+	const struct unix_stream_listen_opts *opts,
+	struct unix_stream_server_socket **new_server_socket)
 {
 	struct lock_file lock = LOCK_INIT;
 	long timeout;
 	int fd_socket;
 	struct unix_stream_server_socket *server_socket;
+
+	*new_server_socket = NULL;
 
 	timeout = opts->timeout_ms;
 	if (opts->timeout_ms <= 0)
@@ -47,20 +50,17 @@ struct unix_stream_server_socket *unix_stream_server__listen_with_lock(
 	/*
 	 * Create a lock at "<path>.lock" if we can.
 	 */
-	if (hold_lock_file_for_update_timeout(&lock, path, 0, timeout) < 0) {
-		error_errno(_("could not lock listener socket '%s'"), path);
-		return NULL;
-	}
+	if (hold_lock_file_for_update_timeout(&lock, path, 0, timeout) < 0)
+		return -1;
 
 	/*
 	 * If another server is listening on "<path>" give up.  We do not
 	 * want to create a socket and steal future connections from them.
 	 */
 	if (is_another_server_alive(path, opts)) {
-		errno = EADDRINUSE;
-		error_errno(_("listener socket already in use '%s'"), path);
 		rollback_lock_file(&lock);
-		return NULL;
+		errno = EADDRINUSE;
+		return -2;
 	}
 
 	/*
@@ -68,15 +68,18 @@ struct unix_stream_server_socket *unix_stream_server__listen_with_lock(
 	 */
 	fd_socket = unix_stream_listen(path, opts);
 	if (fd_socket < 0) {
-		error_errno(_("could not create listener socket '%s'"), path);
+		int saved_errno = errno;
 		rollback_lock_file(&lock);
-		return NULL;
+		errno = saved_errno;
+		return -1;
 	}
 
 	server_socket = xcalloc(1, sizeof(*server_socket));
 	server_socket->path_socket = strdup(path);
 	server_socket->fd_socket = fd_socket;
 	lstat(path, &server_socket->st_socket);
+
+	*new_server_socket = server_socket;
 
 	/*
 	 * Always rollback (just delete) "<path>.lock" because we already created
@@ -85,7 +88,7 @@ struct unix_stream_server_socket *unix_stream_server__listen_with_lock(
 	 */
 	rollback_lock_file(&lock);
 
-	return server_socket;
+	return 0;
 }
 
 void unix_stream_server__free(

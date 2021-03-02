@@ -219,6 +219,8 @@ static int test_app_cb(void *application_data,
  */
 static int daemon__run_server(const char *path, int argc, const char **argv)
 {
+	int ret;
+
 	struct ipc_server_opts opts = {
 		.nr_threads = 5
 	};
@@ -243,7 +245,13 @@ static int daemon__run_server(const char *path, int argc, const char **argv)
 	 * instance data, so pass an arbitrary pointer (that we'll later
 	 * verify made the round trip).
 	 */
-	return ipc_server_run(path, &opts, test_app_cb, (void*)&my_app_data);
+	ret = ipc_server_run(path, &opts, test_app_cb, (void*)&my_app_data);
+	if (ret == -2)
+		error(_("socket/pipe already in use: '%s'"), path);
+	else if (ret == -1)
+		error_errno(_("could not start server on: '%s'"), path);
+
+	return ret;
 }
 
 #ifndef GIT_WINDOWS_NATIVE

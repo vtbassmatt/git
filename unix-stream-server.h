@@ -12,10 +12,13 @@ struct unix_stream_server_socket {
 /*
  * Create a Unix Domain Socket at the given path under the protection
  * of a '.lock' lockfile.
+ *
+ * Returns 0 on success, -1 on error, -2 if socket is in use.
  */
-struct unix_stream_server_socket *unix_stream_server__listen_with_lock(
+int unix_stream_server__create(
 	const char *path,
-	const struct unix_stream_listen_opts *opts);
+	const struct unix_stream_listen_opts *opts,
+	struct unix_stream_server_socket **server_socket);
 
 /*
  * Close and delete the socket.
