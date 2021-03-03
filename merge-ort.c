@@ -360,7 +360,7 @@ static void clear_or_reinit_internal_opts(struct merge_options_internal *opti,
 	string_list_clear(&opti->paths_to_free, 0);
 	opti->paths_to_free.strdup_strings = 0;
 
-	if (opti->attr_index.cache_nr)
+	if (opti->attr_index.cache_nr) /* true iff opt->renormalize */
 		discard_index(&opti->attr_index);
 
 	/* Free memory used by various renames maps */
@@ -988,7 +988,6 @@ static int merge_submodule(struct merge_options *opt,
 	return 0;
 }
 
-MAYBE_UNUSED
 static void initialize_attr_index(struct merge_options *opt)
 {
 	/*
@@ -1063,6 +1062,8 @@ static int merge_3way(struct merge_options *opt,
 	char *base, *name1, *name2;
 	int merge_status;
 
+	initialize_attr_index(opt);
+
 	ll_opts.renormalize = opt->renormalize;
 	ll_opts.extra_marker_size = extra_marker_size;
 	ll_opts.xdl_opts = opt->xdl_opts;
@@ -1101,7 +1102,7 @@ static int merge_3way(struct merge_options *opt,
 
 	merge_status = ll_merge(result_buf, path, &orig, base,
 				&src1, name1, &src2, name2,
-				opt->repo->index, &ll_opts);
+				&opt->priv->attr_index, &ll_opts);
 
 	free(base);
 	free(name1);
