@@ -48,6 +48,7 @@ enum parse_opt_option_flags {
 	PARSE_OPT_NOCOMPLETE = 1 << 8,
 	PARSE_OPT_COMP_ARG = 1 << 9,
 	PARSE_OPT_CMDMODE = 1 << 10,
+	PARSE_OPT_FROM_ALIAS = 1 << 11,
 };
 
 enum parse_opt_result {
