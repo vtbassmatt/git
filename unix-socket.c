@@ -2,6 +2,9 @@
 #include "lockfile.h"
 #include "unix-socket.h"
 
+#define DEFAULT_UNIX_STREAM_LISTEN_TIMEOUT (100)
+#define DEFAULT_UNIX_STREAM_LISTEN_BACKLOG (5)
+
 static int chdir_len(const char *orig, int len)
 {
 	char *path = xmemdupz(orig, len);
@@ -165,14 +168,18 @@ struct unix_stream_server_socket *unix_stream_server__listen_with_lock(
 	const struct unix_stream_listen_opts *opts)
 {
 	struct lock_file lock = LOCK_INIT;
+	long timeout;
 	int fd_socket;
 	struct unix_stream_server_socket *server_socket;
+
+	timeout = opts->timeout_ms;
+	if (opts->timeout_ms <= 0)
+		timeout = DEFAULT_UNIX_STREAM_LISTEN_TIMEOUT;
 
 	/*
 	 * Create a lock at "<path>.lock" if we can.
 	 */
-	if (hold_lock_file_for_update_timeout(&lock, path, 0,
-					      opts->timeout_ms) < 0) {
+	if (hold_lock_file_for_update_timeout(&lock, path, 0, timeout) < 0) {
 		error_errno(_("could not lock listener socket '%s'"), path);
 		return NULL;
 	}
