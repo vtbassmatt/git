@@ -217,6 +217,7 @@ struct cl_args
 {
 	const char *subcommand;
 	const char *path;
+	const char *token;
 
 	int nr_threads;
 	int max_wait_sec;
@@ -229,6 +230,7 @@ struct cl_args
 struct cl_args cl_args = {
 	.subcommand = NULL,
 	.path = "ipc-test",
+	.token = NULL,
 
 	.nr_threads = 5,
 	.max_wait_sec = 60,
@@ -467,18 +469,21 @@ static int client__probe_server(void)
 }
 
 /*
- * Send an IPC command to an already-running server daemon and print the
- * response.
+ * Send an IPC command token to an already-running server daemon and
+ * print the response.
  *
- * argv[2] contains a simple (1 word) command that `test_app_cb()` (in
- * the daemon process) will understand.
+ * This is a simple 1 word command/token that `test_app_cb()` (in the
+ * daemon process) will understand.
  */
-static int client__send_ipc(const char *send_token)
+static int client__send_ipc(void)
 {
-	const char *command = send_token ? send_token : "(no-command)";
+	const char *command = "(no-command)";
 	struct strbuf buf = STRBUF_INIT;
 	struct ipc_client_connect_options options
 		= IPC_CLIENT_CONNECT_OPTIONS_INIT;
+
+	if (cl_args.token && *cl_args.token)
+		command = cl_args.token;
 
 	options.wait_if_busy = 1;
 	options.wait_if_not_found = 0;
@@ -511,7 +516,9 @@ static int client__stop_server(void)
 	time(&time_limit);
 	time_limit += cl_args.max_wait_sec;
 
-	ret = client__send_ipc("quit");
+	cl_args.token = "quit";
+
+	ret = client__send_ipc();
 	if (ret)
 		return ret;
 
@@ -697,6 +704,7 @@ int cmd__simple_ipc(int argc, const char **argv)
 		OPT_INTEGER(0, "batchsize", &cl_args.batchsize, N_("number of requests per thread")),
 
 		OPT_STRING(0, "byte", &bytevalue, N_("byte"), N_("ballast character")),
+		OPT_STRING(0, "token", &cl_args.token, N_("token"), N_("command token to send to the server")),
 
 		OPT_END()
 	};
@@ -757,10 +765,9 @@ int cmd__simple_ipc(int argc, const char **argv)
 	}
 
 	if (!strcmp(cl_args.subcommand, "send")) {
-		const char *send_token = argv[0];
 		if (client__probe_server())
 			return 1;
-		return !!client__send_ipc(send_token);
+		return !!client__send_ipc();
 	}
 
 	if (!strcmp(cl_args.subcommand, "sendbytes")) {
