@@ -20,6 +20,8 @@ void prepare_repo_settings(struct repository *r)
 	if (r->settings.initialized++)
 		return;
 
+	r->settings.fsmonitor = NULL; /* lazy loaded */
+
 	/* Defaults */
 	r->settings.index_version = -1;
 	r->settings.core_untracked_cache = UNTRACKED_CACHE_KEEP;
