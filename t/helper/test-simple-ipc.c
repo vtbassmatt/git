@@ -227,7 +227,7 @@ struct cl_args
 	char bytevalue;
 };
 
-struct cl_args cl_args = {
+static struct cl_args cl_args = {
 	.subcommand = NULL,
 	.path = "ipc-test",
 	.token = NULL,
