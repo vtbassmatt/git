@@ -4668,15 +4668,11 @@ int sequencer_pick_revisions(struct repository *r,
 	return res;
 }
 
-void append_signoff(struct strbuf *msgbuf, size_t ignore_footer, unsigned flag)
+void append_message(struct strbuf *msgbuf, struct strbuf *sob,
+			size_t ignore_footer, unsigned flag)
 {
 	unsigned no_dup_sob = flag & APPEND_SIGNOFF_DEDUP;
-	struct strbuf sob = STRBUF_INIT;
 	int has_footer;
-
-	strbuf_addstr(&sob, sign_off_header);
-	strbuf_addstr(&sob, fmt_name(WANT_COMMITTER_IDENT));
-	strbuf_addch(&sob, '\n');
 
 	if (!ignore_footer)
 		strbuf_complete_line(msgbuf);
@@ -4685,11 +4681,11 @@ void append_signoff(struct strbuf *msgbuf, size_t ignore_footer, unsigned flag)
 	 * If the whole message buffer is equal to the sob, pretend that we
 	 * found a conforming footer with a matching sob
 	 */
-	if (msgbuf->len - ignore_footer == sob.len &&
-	    !strncmp(msgbuf->buf, sob.buf, sob.len))
+	if (msgbuf->len - ignore_footer == sob->len &&
+	    !strncmp(msgbuf->buf, sob->buf, sob->len))
 		has_footer = 3;
 	else
-		has_footer = has_conforming_footer(msgbuf, &sob, ignore_footer);
+		has_footer = has_conforming_footer(msgbuf, sob, ignore_footer);
 
 	if (!has_footer) {
 		const char *append_newlines = NULL;
@@ -4723,8 +4719,32 @@ void append_signoff(struct strbuf *msgbuf, size_t ignore_footer, unsigned flag)
 
 	if (has_footer != 3 && (!no_dup_sob || has_footer != 2))
 		strbuf_splice(msgbuf, msgbuf->len - ignore_footer, 0,
-				sob.buf, sob.len);
+				sob->buf, sob->len);
+}
 
+void append_signoff(struct strbuf *msgbuf, size_t ignore_footer, unsigned flag)
+{
+	struct strbuf sob = STRBUF_INIT;
+	strbuf_addstr(&sob, sign_off_header);
+	strbuf_addstr(&sob, fmt_name(WANT_COMMITTER_IDENT));
+	strbuf_addch(&sob, '\n');
+	append_message(msgbuf, &sob, ignore_footer, flag);
+	strbuf_release(&sob);
+}
+
+void append_message_string_list(struct strbuf *msgbuf, const char *header,
+		struct string_list *sobs, size_t ignore_footer, unsigned flag) {
+	int i;
+	struct strbuf sob = STRBUF_INIT;
+
+	for ( i = 0; i < sobs->nr; i++)
+	{
+		strbuf_addstr(&sob, header);
+		strbuf_addstr(&sob, sobs->items[i].string);
+		strbuf_addch(&sob, '\n');
+		append_message(msgbuf, &sob, ignore_footer, flag);
+		strbuf_reset(&sob);
+	}
 	strbuf_release(&sob);
 }
 

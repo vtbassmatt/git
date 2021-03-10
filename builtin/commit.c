@@ -113,6 +113,10 @@ static int config_commit_verbose = -1; /* unspecified */
 static int no_post_rewrite, allow_empty_message, pathspec_file_nul;
 static char *untracked_files_arg, *force_date, *ignore_submodule_arg, *ignored_arg;
 static char *sign_commit, *pathspec_from_file;
+static struct string_list helped_by = STRING_LIST_INIT_NODUP;
+static struct string_list mentored_by = STRING_LIST_INIT_NODUP;
+static struct string_list reviewed_by = STRING_LIST_INIT_NODUP;
+static struct string_list reported_by = STRING_LIST_INIT_NODUP;
 
 /*
  * The default commit message cleanup mode will remove the lines
@@ -829,6 +833,20 @@ static int prepare_to_commit(const char *index_file, const char *prefix,
 	if (signoff)
 		append_signoff(&sb, ignore_non_trailer(sb.buf, sb.len), 0);
 
+	if(helped_by.items)
+		append_message_string_list(&sb, "Helped-by: ", &helped_by, ignore_non_trailer(sb.buf, sb.len), 0);
+	if(reviewed_by.items)
+		append_message_string_list(&sb, "Reviewed-by: ", &reviewed_by, ignore_non_trailer(sb.buf, sb.len), 0);
+	if(reported_by.items)
+		append_message_string_list(&sb, "Reported-by: ", &reported_by, ignore_non_trailer(sb.buf, sb.len), 0);
+	if(mentored_by.items)
+		append_message_string_list(&sb, "Mentored-by: ", &mentored_by, ignore_non_trailer(sb.buf, sb.len), 0);
+
+	string_list_clear(&helped_by, 0);
+	string_list_clear(&reviewed_by, 0);
+	string_list_clear(&reported_by, 0);
+	string_list_clear(&mentored_by, 0);
+
 	if (fwrite(sb.buf, 1, sb.len, s->fp) < sb.len)
 		die_errno(_("could not write commit template"));
 
@@ -1490,6 +1508,42 @@ static int git_commit_config(const char *k, const char *v, void *cb)
 	return git_status_config(k, v, s);
 }
 
+static int help_callback(const struct option *opt, const char *arg, int unset)
+{
+	if (unset)
+		string_list_clear(&helped_by, 0);
+	else
+		string_list_append(&helped_by, arg);
+	return 0;
+}
+
+static int review_callback(const struct option *opt, const char *arg, int unset)
+{
+	if (unset)
+		string_list_clear(&reviewed_by, 0);
+	else
+		string_list_append(&reviewed_by, arg);
+	return 0;
+}
+
+static int report_callback(const struct option *opt, const char *arg, int unset)
+{
+	if (unset)
+		string_list_clear(&reported_by, 0);
+	else
+		string_list_append(&reported_by, arg);
+	return 0;
+}
+
+static int mentor_callback(const struct option *opt, const char *arg, int unset)
+{
+	if (unset)
+		string_list_clear(&mentored_by, 0);
+	else
+		string_list_append(&mentored_by, arg);
+	return 0;
+}
+
 int cmd_commit(int argc, const char **argv, const char *prefix)
 {
 	static struct wt_status s;
@@ -1507,6 +1561,10 @@ int cmd_commit(int argc, const char **argv, const char *prefix)
 		OPT_STRING(0, "fixup", &fixup_message, N_("commit"), N_("use autosquash formatted message to fixup specified commit")),
 		OPT_STRING(0, "squash", &squash_message, N_("commit"), N_("use autosquash formatted message to squash specified commit")),
 		OPT_BOOL(0, "reset-author", &renew_authorship, N_("the commit is authored by me now (used with -C/-c/--amend)")),
+		OPT_CALLBACK('H', "helped-by", NULL, N_("email"), N_("add a Helped-by trailer"), help_callback),
+		OPT_CALLBACK('r', "reported-by", NULL, N_("email"), N_("add a Reported-by trailer"), report_callback),
+		OPT_CALLBACK('R', "reviewed-by", NULL, N_("email"), N_("add a Reviewed-by trailer"), review_callback),
+		OPT_CALLBACK('M', "mentored-by", NULL, N_("email"), N_("add a Mentored-by trailer"), mentor_callback),
 		OPT_BOOL('s', "signoff", &signoff, N_("add a Signed-off-by trailer")),
 		OPT_FILENAME('t', "template", &template_file, N_("use specified template file")),
 		OPT_BOOL('e', "edit", &edit_flag, N_("force edit of commit")),
@@ -1560,6 +1618,11 @@ int cmd_commit(int argc, const char **argv, const char *prefix)
 	struct commit *current_head = NULL;
 	struct commit_extra_header *extra = NULL;
 	struct strbuf err = STRBUF_INIT;
+
+	helped_by.strdup_strings = 1;
+	reviewed_by.strdup_strings = 1;
+	reported_by.strdup_strings = 1;
+	mentored_by.strdup_strings = 1;
 
 	if (argc == 2 && !strcmp(argv[1], "-h"))
 		usage_with_options(builtin_commit_usage, builtin_commit_options);

@@ -154,6 +154,112 @@ test_expect_success 'sign off' '
 
 '
 
+test_expect_success 'helped-by' '
+
+	>file1 &&
+	git add file1 &&
+	git commit --helped-by="foo <bar@frotz>" \
+	--helped-by="foo2 <bar2@frotz>" -m "thank you" &&
+	git cat-file commit HEAD >commit.msg &&
+	sed -ne "s/Helped-by: //p" commit.msg >actual &&
+	cat >expected <<-\EOF &&
+	foo <bar@frotz>
+	foo2 <bar2@frotz>
+	EOF
+	test_cmp expected actual
+
+'
+
+test_expect_success 'reported-by' '
+
+	>file2 &&
+	git add file2 &&
+	git commit --reported-by="foo <bar@frotz>" \
+	--reported-by="foo2 <bar2@frotz>" -m "thank you" &&
+	git cat-file commit HEAD >commit.msg &&
+	sed -ne "s/Reported-by: //p" commit.msg >actual &&
+	cat >expected <<-\EOF &&
+	foo <bar@frotz>
+	foo2 <bar2@frotz>
+	EOF
+	test_cmp expected actual
+
+'
+
+test_expect_success 'reviewed-by' '
+
+	>file3 &&
+	git add file3 &&
+	git commit --reviewed-by="foo <bar@frotz>" \
+	--reviewed-by="foo2 <bar2@frotz>" -m "thank you" &&
+	git cat-file commit HEAD >commit.msg &&
+	sed -ne "s/Reviewed-by: //p" commit.msg >actual &&
+	cat >expected <<-\EOF &&
+	foo <bar@frotz>
+	foo2 <bar2@frotz>
+	EOF
+	test_cmp expected actual
+
+'
+
+test_expect_success 'mentored-by' '
+
+	>file4 &&
+	git add file4 &&
+	git commit --mentored-by="foo <bar@frotz>" \
+	--mentored-by="foo2 <bar2@frotz>" -m "thank you" &&
+	git cat-file commit HEAD >commit.msg &&
+	sed -ne "s/Mentored-by: //p" commit.msg >actual &&
+	cat >expected <<-\EOF &&
+	foo <bar@frotz>
+	foo2 <bar2@frotz>
+	EOF
+	test_cmp expected actual
+
+'
+
+test_expect_success 'multiple signatures' '
+
+	>file5 &&
+	git add file5 &&
+	git commit --helped-by="foo <bar@frotz>" \
+	--reviewed-by="foo2 <bar2@frotz>" \
+	--mentored-by="foo3 <bar3@frotz>" \
+	--reported-by="foo4 <bar4@frotz>" -s -m "thank you" &&
+	git cat-file commit HEAD >commit.msg &&
+	sed -e "1,7d" commit.msg >actual &&
+	cat >expected <<-\EOF &&
+	Signed-off-by: C O Mitter <committer@example.com>
+	Helped-by: foo <bar@frotz>
+	Reviewed-by: foo2 <bar2@frotz>
+	Reported-by: foo4 <bar4@frotz>
+	Mentored-by: foo3 <bar3@frotz>
+	EOF
+	test_cmp expected actual
+
+'
+
+test_expect_success 'multiple signatures (use abbreviations)' '
+
+	>file6 &&
+	git add file6 &&
+	git commit -H "foo <bar@frotz>" \
+	-R "foo2 <bar2@frotz>" \
+	-M "foo3 <bar3@frotz>" \
+	-r "foo4 <bar4@frotz>" -s -m "thank you" &&
+	git cat-file commit HEAD >commit.msg &&
+	sed -e "1,7d" commit.msg >actual &&
+	cat >expected <<-\EOF &&
+	Signed-off-by: C O Mitter <committer@example.com>
+	Helped-by: foo <bar@frotz>
+	Reviewed-by: foo2 <bar2@frotz>
+	Reported-by: foo4 <bar4@frotz>
+	Mentored-by: foo3 <bar3@frotz>
+	EOF
+	test_cmp expected actual
+
+'
+
 test_expect_success 'multiple -m' '
 
 	>negative &&

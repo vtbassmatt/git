@@ -174,6 +174,10 @@ int todo_list_rearrange_squash(struct todo_list *todo_list);
  * and the new signoff will be spliced into the buffer before those bytes.
  */
 void append_signoff(struct strbuf *msgbuf, size_t ignore_footer, unsigned flag);
+void append_message(struct strbuf *msgbuf, struct strbuf *sob,
+		size_t ignore_footer, unsigned flag);
+void append_message_string_list(struct strbuf *msgbuf, const char*header,
+		struct string_list *sobs, size_t ignore_footer, unsigned flag);
 
 void append_conflicts_hint(struct index_state *istate,
 		struct strbuf *msgbuf, enum commit_msg_cleanup_mode cleanup_mode);
