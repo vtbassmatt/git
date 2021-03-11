@@ -111,7 +111,8 @@ int cmd__chmtime(int argc, const char **argv)
 		if (stat(argv[i], &sb) < 0) {
 			fprintf(stderr, "Failed to stat %s: %s\n",
 			        argv[i], strerror(errno));
-			return 1;
+			// Skip and move on - eg if it's a broken symlink
+			continue;
 		}
 
 #ifdef GIT_WINDOWS_NATIVE
