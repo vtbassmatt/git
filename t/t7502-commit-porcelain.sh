@@ -154,6 +154,342 @@ test_expect_success 'sign off' '
 
 '
 
+test_expect_success 'commit --trailer without -c' '
+	echo "fun" >>file &&
+	git add file &&
+	cat >expected <<-\EOF &&
+
+	Signed-off-by: C O Mitter <committer@example.com>
+	Signed-off-by: C1 E1
+	Helped-by: C2 E2
+	Reported-by: C3 E3
+	Mentored-by: C4 E4
+	EOF
+	git commit -s --trailer "Signed-off-by:C1 E1 " \
+		--trailer "Helped-by:C2 E2 " \
+		--trailer "Reported-by:C3 E3" \
+		--trailer "Mentored-by:C4 E4" \
+		-m "hello" &&
+	git cat-file commit HEAD >commit.msg &&
+	sed -e "1,6d" commit.msg >actual &&
+	test_cmp expected actual
+'
+
+test_expect_success 'commit --trailer with -c and "replace" as ifexists' '
+	echo "fun" >>file1 &&
+	git add file1 &&
+	cat >expected <<-\EOF &&
+
+	Signed-off-by: C O Mitter <committer@example.com>
+	Signed-off-by: C1 E1
+	Reported-by: C3 E3
+	Mentored-by: C4 E4
+	Helped-by: C3 E3
+	EOF
+	git -c trailer.ifexists="replace" \
+		commit --trailer "Mentored-by: C4 E4" \
+		 --trailer "Helped-by: C3 E3" \
+		--amend &&
+	git cat-file commit HEAD >commit.msg &&
+	sed -e "1,6d" commit.msg >actual &&
+	test_cmp expected actual
+'
+
+test_expect_success 'commit --trailer with -c and "add" as ifexists' '
+	echo "fun" >>file1 &&
+	git add file1 &&
+	cat >expected <<-\EOF &&
+
+	Signed-off-by: C O Mitter <committer@example.com>
+	Signed-off-by: C1 E1
+	Reported-by: C3 E3
+	Mentored-by: C4 E4
+	Helped-by: C3 E3
+	Helped-by: C3 E3
+	Helped-by: C3 E3
+	EOF
+	git -c trailer.ifexists="add" \
+		commit --trailer "Helped-by: C3 E3" \
+		--trailer "Helped-by: C3 E3" \
+		--amend &&
+	git cat-file commit HEAD >commit.msg &&
+	sed -e "1,6d" commit.msg >actual &&
+	test_cmp expected actual
+'
+
+test_expect_success 'commit --trailer with -c and "donothing" as ifexists' '
+	echo "fun" >>file1 &&
+	git add file1 &&
+	cat >expected <<-\EOF &&
+
+	Signed-off-by: C O Mitter <committer@example.com>
+	Signed-off-by: C1 E1
+	Reported-by: C3 E3
+	Mentored-by: C4 E4
+	Helped-by: C3 E3
+	Helped-by: C3 E3
+	Helped-by: C3 E3
+	Reviewed-by: C6 E6
+	EOF
+	git -c trailer.ifexists="donothing" \
+		commit --trailer "Mentored-by: C5 E5" \
+		--trailer "Reviewed-by: C6 E6" \
+		--amend &&
+	git cat-file commit HEAD >commit.msg &&
+	sed -e "1,6d" commit.msg >actual &&
+	test_cmp expected actual
+'
+
+test_expect_success 'commit --trailer with -c and "addIfDifferent" as ifexists' '
+	echo "fun" >>file1 &&
+	git add file1 &&
+	cat >expected <<-\EOF &&
+
+	Signed-off-by: C O Mitter <committer@example.com>
+	Signed-off-by: C1 E1
+	Reported-by: C3 E3
+	Mentored-by: C4 E4
+	Helped-by: C3 E3
+	Helped-by: C3 E3
+	Helped-by: C3 E3
+	Reviewed-by: C6 E6
+	Reported-by: C5 E5
+	EOF
+	git -c trailer.ifexists="addIfDifferent" \
+		commit --trailer "Reviewed-by: C6 E6" \
+		--trailer "Reported-by: C5 E5" \
+		--amend &&
+	git cat-file commit HEAD >commit.msg &&
+	sed -e "1,6d" commit.msg >actual &&
+	test_cmp expected actual
+'
+
+test_expect_success 'commit --trailer with -c and "addIfDifferentNeighbor" as ifexists' '
+	echo "fun" >>file1 &&
+	git add file1 &&
+	cat >expected <<-\EOF &&
+
+	Signed-off-by: C O Mitter <committer@example.com>
+	Signed-off-by: C1 E1
+	Reported-by: C3 E3
+	Mentored-by: C4 E4
+	Helped-by: C3 E3
+	Helped-by: C3 E3
+	Helped-by: C3 E3
+	Reviewed-by: C6 E6
+	Reported-by: C5 E5
+	EOF
+	git -c trailer.ifexists="addIfDifferent" \
+		commit --trailer "Reported-by: C5 E5" \
+		--trailer "Reviewed-by: C6 E6" \
+		--amend &&
+	git cat-file commit HEAD >commit.msg &&
+	sed -e "1,6d" commit.msg >actual &&
+	test_cmp expected actual
+'
+
+test_expect_success 'commit --trailer with -c and "end" as where' '
+	echo "fun" >>file1 &&
+	git add file1 &&
+	cat >expected <<-\EOF &&
+
+	Signed-off-by: C O Mitter <committer@example.com>
+	Signed-off-by: C1 E1
+	Reported-by: C3 E3
+	Mentored-by: C4 E4
+	Helped-by: C3 E3
+	Helped-by: C3 E3
+	Helped-by: C3 E3
+	Reviewed-by: C6 E6
+	Reported-by: C5 E5
+	Reported-by: C7 E7
+	EOF
+	git -c trailer.where="end" \
+		commit --trailer "Reported-by: C5 E5" \
+		--trailer "Reported-by: C7 E7" \
+		--amend &&
+	git cat-file commit HEAD >commit.msg &&
+	sed -e "1,6d" commit.msg >actual &&
+	test_cmp expected actual
+'
+
+test_expect_success 'commit --trailer with -c and "start" as where' '
+	echo "fun" >>file1 &&
+	git add file1 &&
+	cat >expected <<-\EOF &&
+
+	Signed-off-by: C8 E8
+	Signed-off-by: C O Mitter <committer@example.com>
+	Signed-off-by: C1 E1
+	Reported-by: C3 E3
+	Mentored-by: C4 E4
+	Helped-by: C3 E3
+	Helped-by: C3 E3
+	Helped-by: C3 E3
+	Reviewed-by: C6 E6
+	Reported-by: C5 E5
+	Reported-by: C7 E7
+	EOF
+	git -c trailer.where="start" \
+		commit --trailer "Signed-off-by: C8 E8" \
+		--trailer "Signed-off-by: C8 E8" \
+		--amend &&
+	git cat-file commit HEAD >commit.msg &&
+	sed -e "1,6d" commit.msg >actual &&
+	test_cmp expected actual
+'
+
+test_expect_success 'commit --trailer with -c and "after" as where' '
+	echo "fun" >>file1 &&
+	git add file1 &&
+	cat >expected <<-\EOF &&
+
+	Signed-off-by: C8 E8
+	Signed-off-by: C O Mitter <committer@example.com>
+	Signed-off-by: C1 E1
+	Reported-by: C3 E3
+	Mentored-by: C4 E4
+	Mentored-by: C9 E9
+	Helped-by: C3 E3
+	Helped-by: C3 E3
+	Helped-by: C3 E3
+	Reviewed-by: C6 E6
+	Reported-by: C5 E5
+	Reported-by: C7 E7
+	Reported-by: C10 E10
+	EOF
+	git -c trailer.where="after" \
+		commit --trailer "Mentored-by: C9 E9" \
+		--trailer "Reported-by: C10 E10" \
+		--amend &&
+	git cat-file commit HEAD >commit.msg &&
+	sed -e "1,6d" commit.msg >actual &&
+	test_cmp expected actual
+'
+
+test_expect_success 'commit --trailer with -c and "before" as where' '
+	echo "fun" >>file1 &&
+	git add file1 &&
+	cat >expected <<-\EOF &&
+
+	Signed-off-by: C8 E8
+	Signed-off-by: C O Mitter <committer@example.com>
+	Signed-off-by: C1 E1
+	Reported-by: C11 E11
+	Reported-by: C3 E3
+	Mentored-by: C4 E4
+	Mentored-by: C9 E9
+	Helped-by: C12 E12
+	Helped-by: C3 E3
+	Helped-by: C3 E3
+	Helped-by: C3 E3
+	Reviewed-by: C6 E6
+	Reported-by: C5 E5
+	Reported-by: C7 E7
+	Reported-by: C10 E10
+	EOF
+	git -c trailer.where="before" \
+		commit --trailer "Helped-by: C12 E12" \
+		--trailer "Reported-by: C11 E11" \
+		--amend &&
+	git cat-file commit HEAD >commit.msg &&
+	sed -e "1,6d" commit.msg >actual &&
+	test_cmp expected actual
+'
+
+test_expect_success 'commit --trailer with -c and "donothing" as ifmissing' '
+	echo "fun" >>file1 &&
+	git add file1 &&
+	cat >expected <<-\EOF &&
+
+	Signed-off-by: C8 E8
+	Signed-off-by: C O Mitter <committer@example.com>
+	Signed-off-by: C1 E1
+	Reported-by: C11 E11
+	Reported-by: C3 E3
+	Mentored-by: C4 E4
+	Mentored-by: C9 E9
+	Helped-by: C12 E12
+	Helped-by: C3 E3
+	Helped-by: C3 E3
+	Helped-by: C3 E3
+	Reviewed-by: C6 E6
+	Reported-by: C5 E5
+	Reported-by: C7 E7
+	Reported-by: C10 E10
+	Helped-by: C12 E12
+	EOF
+	git -c trailer.ifmissing="donothing" \
+		commit --trailer "Helped-by: C12 E12" \
+		--trailer "Based-by: C13 E13" \
+		--amend &&
+	git cat-file commit HEAD >commit.msg &&
+	sed -e "1,6d" commit.msg >actual &&
+	test_cmp expected actual
+'
+
+test_expect_success 'commit --trailer with -c and "add" as ifmissing' '
+	echo "fun" >>file1 &&
+	git add file1 &&
+	cat >expected <<-\EOF &&
+
+	Signed-off-by: C8 E8
+	Signed-off-by: C O Mitter <committer@example.com>
+	Signed-off-by: C1 E1
+	Reported-by: C11 E11
+	Reported-by: C3 E3
+	Mentored-by: C4 E4
+	Mentored-by: C9 E9
+	Helped-by: C12 E12
+	Helped-by: C3 E3
+	Helped-by: C3 E3
+	Helped-by: C3 E3
+	Reviewed-by: C6 E6
+	Reported-by: C5 E5
+	Reported-by: C7 E7
+	Reported-by: C10 E10
+	Helped-by: C12 E12
+	Based-by: C13 E13
+	EOF
+	git -c trailer.ifmissing="add" \
+		commit --trailer "Helped-by: C12 E12" \
+		--trailer "Based-by: C13 E13" \
+		--amend &&
+	git cat-file commit HEAD >commit.msg &&
+	sed -e "1,6d" commit.msg >actual &&
+	test_cmp expected actual
+'
+
+test_expect_success 'commit --trailer with -c and "=" as separators' '
+	echo "fun" >>file1 &&
+	git add file1 &&
+	cat >expected <<-\EOF &&
+
+		Acked-by= Peff
+	EOF
+	git -c trailer.separators="=" \
+		-c trailer.ack.key="Acked-by= " \
+		commit --trailer "ack = Peff" -m "hello" &&
+	git cat-file commit HEAD >commit.msg &&
+	sed -e "1,6d" commit.msg >actual &&
+	test_cmp expected actual
+'
+
+test_expect_success 'commit --trailer with -c and ":=#" as separators' '
+	echo "fun" >>file1 &&
+	git add file1 &&
+	cat >expected <<-\EOF &&
+
+		Bug #42
+	EOF
+	git -c trailer.separators=":=#" \
+		-c trailer.bug.key="Bug #" \
+		commit --trailer "bug = 42" -m "I hate bug" &&
+	git cat-file commit HEAD >commit.msg &&
+	sed -e "1,6d" commit.msg >actual &&
+	test_cmp expected actual
+'
+
 test_expect_success 'multiple -m' '
 
 	>negative &&
