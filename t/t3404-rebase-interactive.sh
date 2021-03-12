@@ -155,6 +155,8 @@ test_expect_success 'rebase -i with the exec command checks tree cleanness' '
 	git rebase --continue
 '
 
+# NEEDSWORK: Fix c762aada1ab3a2c428c with s/@/HEAD/;
+
 test_expect_success 'rebase -x with empty command fails' '
 	test_when_finished "git rebase --abort ||:" &&
 	test_must_fail env git rebase -x "" @ 2>actual &&
@@ -865,6 +867,22 @@ test_expect_success 'rebase -i can copy notes over a fixup' '
 	) &&
 	git notes show > output &&
 	test_cmp expect output
+'
+
+test_expect_success 'notes are copied even rebase -x changes HEAD' '
+	git reset --hard n3 &&
+	git rebase -x "git commit --amend --no-edit" n1^1 &&
+	git log --format="%s <%N>" n1^1..n3 >expect &&
+	git log --format="%s <%N>" n1^1..HEAD >actual &&
+	test_cmp expect actual
+'
+
+test_expect_failure 'notes are copied even rebase -x changes HEAD' '
+	git reset --hard n3 &&
+	git rebase -x "git commit --amend -m tweak" n1^1 &&
+	git log --format="tweak <%N>" n1^1..n3 >expect &&
+	git log --format="%s <%N>" n1^1..HEAD >actual &&
+	test_cmp expect actual
 '
 
 test_expect_success 'rebase while detaching HEAD' '

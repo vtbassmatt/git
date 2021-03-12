@@ -3276,7 +3276,10 @@ static int do_exec(struct repository *r, const char *command_line)
 {
 	struct strvec child_env = STRVEC_INIT;
 	const char *child_argv[] = { NULL, NULL };
-	int dirty, status;
+	int dirty, status, bad_head;
+	struct object_id old_head_oid, new_head_oid;
+
+	bad_head = get_oid("HEAD", &old_head_oid);
 
 	fprintf(stderr, _("Executing: %s\n"), command_line);
 	child_argv[0] = command_line;
@@ -3285,6 +3288,11 @@ static int do_exec(struct repository *r, const char *command_line)
 		     absolute_path(get_git_work_tree()));
 	status = run_command_v_opt_cd_env(child_argv, RUN_USING_SHELL, NULL,
 					  child_env.v);
+
+	bad_head |= get_oid("HEAD", &new_head_oid);
+
+	if (!bad_head && !oideq(&old_head_oid, &new_head_oid))
+		commit_post_rewrite(r, &old_head_oid, &new_head_oid);
 
 	/* force re-reading of the cache */
 	if (discard_index(r->index) < 0 || repo_read_index(r) < 0)
