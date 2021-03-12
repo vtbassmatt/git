@@ -192,7 +192,7 @@ int update_head_with_reflog(const struct commit *old_head,
 			    const char *action, const struct strbuf *msg,
 			    struct strbuf *err);
 void commit_post_rewrite(struct repository *r,
-			 const struct commit *current_head,
+			 const struct object_id *old_head,
 			 const struct object_id *new_head);
 
 void create_autostash(struct repository *r, const char *path,
