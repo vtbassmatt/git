@@ -14,7 +14,7 @@ SYNOPSIS
 	   [--allow-empty-message] [--no-verify] [-e] [--author=<author>]
 	   [--date=<date>] [--cleanup=<mode>] [--[no-]status]
 	   [-i | -o] [--pathspec-from-file=<file> [--pathspec-file-nul]]
-	   [-S[<keyid>]] [--] [<pathspec>...]
+	   [-S[<keyid>]] [--] [<pathspec>...] [(--trailer <token>[(=|:)<value>])...]
 
 DESCRIPTION
 -----------
@@ -165,6 +165,12 @@ The `-m` option is mutually exclusive with `-c`, `-C`, and `-F`.
 	is given by other means, e.g. with the `-m` or `-F` options.
 
 include::signoff-option.txt[]
+
+--trailer <token>[(=|:)<value>]::
+	Specify a (<token>, <value>) pair that should be applied as a
+	trailer. (e.g.  `git commit --trailer "Signed-off-by:C O Mitter <committer@example.com>" \
+	--trailer "Helped-by:C O Mitter <committer@example.com>"`will add the "Signed-off" trailer
+	and the "Helped-by" trailer in the commit message.)
 
 -n::
 --no-verify::
