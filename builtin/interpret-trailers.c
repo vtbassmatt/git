@@ -24,19 +24,38 @@ static enum trailer_if_missing if_missing;
 static int option_parse_where(const struct option *opt,
 			      const char *arg, int unset)
 {
-	return trailer_set_where(&where, arg);
+	int ret;
+
+	ret = trailer_set_where(&where, arg);
+	if (ret)
+		warning(_("unknown value '%s' for key 'where'"),
+			arg);
+	return ret;
+
 }
 
 static int option_parse_if_exists(const struct option *opt,
 				  const char *arg, int unset)
 {
-	return trailer_set_if_exists(&if_exists, arg);
+	int ret;
+
+	ret = trailer_set_if_exists(&if_exists, arg);
+	if (ret)
+		warning(_("unknown value '%s' for key 'if_exists'"),
+			arg);
+	return ret;
 }
 
 static int option_parse_if_missing(const struct option *opt,
 				   const char *arg, int unset)
 {
-	return trailer_set_if_missing(&if_missing, arg);
+	int ret;
+
+	ret = trailer_set_if_missing(&if_missing, arg);
+	if (ret)
+		warning(_("unknown value '%s' for key 'if_missing'"),
+			arg);
+	return ret;
 }
 
 static void new_trailers_clear(struct list_head *trailers)
