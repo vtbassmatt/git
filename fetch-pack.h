@@ -78,7 +78,8 @@ struct ref *fetch_pack(struct fetch_pack_args *args,
 		       int nr_sought,
 		       struct oid_array *shallow,
 		       struct string_list *pack_lockfiles,
-		       enum protocol_version version);
+		       enum protocol_version version,
+			   pid_t *index_pack_pid);
 
 /*
  * Print an appropriate error message for each sought ref that wasn't

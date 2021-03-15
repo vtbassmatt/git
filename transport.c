@@ -391,7 +391,7 @@ static int fetch_refs_via_pack(struct transport *transport,
 	refs = fetch_pack(&args, data->fd,
 			  refs_tmp ? refs_tmp : transport->remote_refs,
 			  to_fetch, nr_heads, &data->shallow,
-			  &transport->pack_lockfiles, data->version);
+			  &transport->pack_lockfiles, data->version, &transport->index_pack_pid);
 
 	close(data->fd[0]);
 	close(data->fd[1]);
@@ -1095,6 +1095,7 @@ struct transport *transport_get(struct remote *remote, const char *url)
 	}
 
 	ret->hash_algo = &hash_algos[GIT_HASH_SHA1];
+	ret->index_pack_pid = -1;
 
 	return ret;
 }
