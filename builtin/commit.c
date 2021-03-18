@@ -114,6 +114,7 @@ static int no_post_rewrite, allow_empty_message, pathspec_file_nul;
 static char *untracked_files_arg, *force_date, *ignore_submodule_arg, *ignored_arg;
 static char *sign_commit, *pathspec_from_file;
 static struct strvec trailer_args = STRVEC_INIT;
+static int own_identity;
 
 /*
  * The default commit message cleanup mode will remove the lines
@@ -972,6 +973,8 @@ static int prepare_to_commit(const char *index_file, const char *prefix,
 
 		strvec_pushl(&run_trailer.args, "interpret-trailers",
 			     "--in-place", git_path_commit_editmsg(), NULL);
+		if (own_identity)
+			strvec_push(&run_trailer.args, "--own-identity");
 		strvec_pushv(&run_trailer.args, trailer_args.v);
 		run_trailer.git_cmd = 1;
 		if (run_command(&run_trailer))
@@ -1529,6 +1532,8 @@ int cmd_commit(int argc, const char **argv, const char *prefix)
 		OPT_STRING(0, "squash", &squash_message, N_("commit"), N_("use autosquash formatted message to squash specified commit")),
 		OPT_BOOL(0, "reset-author", &renew_authorship, N_("the commit is authored by me now (used with -C/-c/--amend)")),
 		OPT_CALLBACK_F(0, "trailer", NULL, N_("trailer"), N_("add custom trailer(s)"), PARSE_OPT_NONEG, opt_pass_trailer),
+		OPT_BOOL(0, "own-identity", &own_identity,
+			     N_("specify the user's own identity for omitted trailers value")),
 		OPT_BOOL('s', "signoff", &signoff, N_("add a Signed-off-by trailer")),
 		OPT_FILENAME('t', "template", &template_file, N_("use specified template file")),
 		OPT_BOOL('e', "edit", &edit_flag, N_("force edit of commit")),
@@ -1604,6 +1609,9 @@ int cmd_commit(int argc, const char **argv, const char *prefix)
 					  prefix, current_head, &s);
 	if (verbose == -1)
 		verbose = (config_commit_verbose < 0) ? 0 : config_commit_verbose;
+
+	if (own_identity && !trailer_args.nr)
+		die(_("--own_identity requires --trailer"));
 
 	if (dry_run)
 		return dry_run_commit(argv, prefix, current_head, &s);
