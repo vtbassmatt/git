@@ -490,6 +490,26 @@ test_expect_success 'commit --trailer with -c and ":=#" as separators' '
 	test_cmp expected actual
 '
 
+test_expect_success 'commit --trailer with -c and --own-identity' '
+	echo "fun" >>file1 &&
+	git add file1 &&
+	cat >expected <<-\EOF &&
+
+	Signed-off-by: C O Mitter <committer@example.com>
+	EOF
+	git -c trailer.signoff.key="Signed-off-by: " \
+		commit --trailer "signoff" --own-identity -m "abc" &&
+	git cat-file commit HEAD >commit.msg &&
+	sed -e "1,6d" commit.msg >actual &&
+	test_cmp expected actual
+'
+
+test_expect_success 'commit --own-identity without --trailer' '
+	echo "fun" >>file1 &&
+	git add file1 &&
+	test_must_fail git -c commit --own-identity -m "abc"
+'
+
 test_expect_success 'multiple -m' '
 
 	>negative &&

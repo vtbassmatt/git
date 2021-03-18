@@ -423,6 +423,25 @@ test_expect_success 'sign off (1)' '
 
 '
 
+test_expect_success '--trailer="signoff" (1)' '
+
+	echo 1 >>positive &&
+	git add positive &&
+	git -c trailer.signoff.key="Signed-off-by" \
+		commit --trailer="signoff" --own-identity \
+		-m "thank you" &&
+	git cat-file commit HEAD >commit &&
+	sed -e "1,/^\$/d" commit >actual &&
+	(
+		echo thank you &&
+		echo &&
+		git var GIT_COMMITTER_IDENT >ident &&
+		sed -e "s/>.*/>/" -e "s/^/Signed-off-by: /" ident
+	) >expected &&
+	test_cmp expected actual
+
+'
+
 test_expect_success 'sign off (2)' '
 
 	echo 2 >positive &&
@@ -444,6 +463,30 @@ $existing" &&
 
 '
 
+test_expect_success '--trailer="signoff" (2)' '
+
+	echo 2 >>positive &&
+	git add positive &&
+	existing="Signed-off-by: Watch This <watchthis@example.com>" &&
+	git -c trailer.signoff.key="Signed-off-by" \
+		commit --trailer="signoff" --own-identity \
+		-m "thank you
+
+$existing" &&
+	git cat-file commit HEAD >commit &&
+	sed -e "1,/^\$/d" commit >actual &&
+	(
+		echo thank you &&
+		echo &&
+		echo $existing &&
+		git var GIT_COMMITTER_IDENT >ident &&
+		sed -e "s/>.*/>/" -e "s/^/Signed-off-by: /" ident
+	) >expected &&
+	test_cmp expected actual
+
+'
+
+
 test_expect_success 'signoff gap' '
 
 	echo 3 >positive &&
@@ -464,12 +507,60 @@ $alt" &&
 	test_cmp expected actual
 '
 
+test_expect_success '--trailer="signoff" gap' '
+
+	echo 3 >>positive &&
+	git add positive &&
+	alt="Alt-RFC-822-Header: Value" &&
+	git -c trailer.signoff.key="Signed-off-by" \
+		commit --trailer="signoff" --own-identity \
+		-m "welcome
+
+$alt" &&
+	git cat-file commit HEAD >commit &&
+	sed -e "1,/^\$/d" commit >actual &&
+	(
+		echo welcome &&
+		echo &&
+		echo $alt &&
+		git var GIT_COMMITTER_IDENT >ident &&
+		sed -e "s/>.*/>/" -e "s/^/Signed-off-by: /" ident
+	) >expected &&
+	test_cmp expected actual
+'
+
+
 test_expect_success 'signoff gap 2' '
 
 	echo 4 >positive &&
 	git add positive &&
 	alt="fixed: 34" &&
 	git commit -s -m "welcome
+
+We have now
+$alt" &&
+	git cat-file commit HEAD >commit &&
+	sed -e "1,/^\$/d" commit >actual &&
+	(
+		echo welcome &&
+		echo &&
+		echo We have now &&
+		echo $alt &&
+		echo &&
+		git var GIT_COMMITTER_IDENT >ident &&
+		sed -e "s/>.*/>/" -e "s/^/Signed-off-by: /" ident
+	) >expected &&
+	test_cmp expected actual
+'
+
+test_expect_success '--trailer="signoff" gap 2' '
+
+	echo 4 >>positive &&
+	git add positive &&
+	alt="fixed: 34" &&
+	git -c trailer.signoff.key="Signed-off-by" \
+		commit --trailer="signoff" --own-identity \
+		-m "welcome
 
 We have now
 $alt" &&

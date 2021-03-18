@@ -174,6 +174,21 @@ include::signoff-option.txt[]
 	and the "Helped-by" trailer in the commit message.)
 	Use `git -c trailer.* commit --trailer` to make the appropriate
 	configuration. See linkgit:git-interpret-trailers[1] for details.
+
+--own-identity::
+	Used with `--trailer`. Those trailers without value with the
+	`--own-identity` option all will add the user's own identity.
+	For example, `git commit --trailer \
+	"A:B" --trailer	"Signed-off-by" --trailer "Helped-by" --own-identity`,
+	will output:
+	"
+	A:B
+	Signed-off-by: C O Mitter <committer@example.com>
+	Helped-by: C O Mitter <committer@example.com>
+	"
+	in commit messages.
+	See linkgit:git-interpret-trailers[1]for details.
+
 -n::
 --no-verify::
 	This option bypasses the pre-commit and commit-msg hooks.
