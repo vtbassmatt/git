@@ -690,8 +690,18 @@ static void add_arg_item(struct list_head *arg_head, char *tok, char *val,
 	list_add_tail(&new_item->list, arg_head);
 }
 
+static void add_user_own_identity(struct new_trailer_item *item)
+{
+	struct strbuf buf = STRBUF_INIT;
+	strbuf_addstr(&buf, item->text);
+	strbuf_add(&buf, "=", 1);
+	strbuf_addstr(&buf, fmt_name(WANT_COMMITTER_IDENT));
+	free(item->text);
+	item->text = buf.buf;
+}
+
 static void process_command_line_args(struct list_head *arg_head,
-				      struct list_head *new_trailer_head)
+				      struct list_head *new_trailer_head, int own_identity)
 {
 	struct arg_item *item;
 	struct strbuf tok = STRBUF_INIT;
@@ -728,6 +738,10 @@ static void process_command_line_args(struct list_head *arg_head,
 			error(_("empty trailer token in trailer '%.*s'"),
 			      (int) sb.len, sb.buf);
 			strbuf_release(&sb);
+		} else if (separator_pos == -1 && own_identity) {
+				add_user_own_identity(tr);
+				pos = pos->prev;
+				continue;
 		} else {
 			parse_trailer(&tok, &val, &conf, tr->text,
 				      separator_pos);
@@ -1048,7 +1062,7 @@ void process_trailers(const char *file,
 
 	if (!opts->only_input) {
 		LIST_HEAD(arg_head);
-		process_command_line_args(&arg_head, new_trailer_head);
+		process_command_line_args(&arg_head, new_trailer_head ,opts->own_identity);
 		process_trailers_lists(&head, &arg_head);
 	}
 
