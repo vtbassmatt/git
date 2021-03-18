@@ -57,7 +57,7 @@ struct trailer_info {
 struct new_trailer_item {
 	struct list_head list;
 
-	const char *text;
+	char *text;
 
 	enum trailer_where where;
 	enum trailer_if_exists if_exists;
@@ -73,6 +73,7 @@ struct process_trailer_options {
 	int no_divider;
 	int key_only;
 	int value_only;
+	int own_identity;
 	const struct strbuf *separator;
 	const struct strbuf *key_value_separator;
 	int (*filter)(const struct strbuf *, void *);

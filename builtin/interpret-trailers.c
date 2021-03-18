@@ -47,6 +47,7 @@ static void new_trailers_clear(struct list_head *trailers)
 	list_for_each_safe(pos, tmp, trailers) {
 		item = list_entry(pos, struct new_trailer_item, list);
 		list_del(pos);
+		free(item->text);
 		free(item);
 	}
 }
@@ -66,7 +67,7 @@ static int option_parse_trailer(const struct option *opt,
 		return -1;
 
 	item = xmalloc(sizeof(*item));
-	item->text = arg;
+	item->text = xstrdup(arg);
 	item->where = where;
 	item->if_exists = if_exists;
 	item->if_missing = if_missing;
@@ -94,7 +95,8 @@ int cmd_interpret_trailers(int argc, const char **argv, const char *prefix)
 	struct option options[] = {
 		OPT_BOOL(0, "in-place", &opts.in_place, N_("edit files in place")),
 		OPT_BOOL(0, "trim-empty", &opts.trim_empty, N_("trim empty trailers")),
-
+		OPT_BOOL(0, "own-identity", &opts.own_identity,
+			     N_("specify the user's own identity for omitted trailers value")),
 		OPT_CALLBACK(0, "where", NULL, N_("action"),
 			     N_("where to place the new trailer"), option_parse_where),
 		OPT_CALLBACK(0, "if-exists", NULL, N_("action"),

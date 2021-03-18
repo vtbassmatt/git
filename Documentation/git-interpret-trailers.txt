@@ -84,6 +84,19 @@ OPTIONS
 	trailer to the input messages. See the description of this
 	command.
 
+--own-identity::
+	Used with `--trailer`. Those trailers without value with the
+	`--own-identity` option all will add the user's own identity.
+	For example,` git interpret-trailers --trailer "A:B" --trailer \
+	"Signed-off-by" --trailer "Helped-by" --own-identity --inplace a.txt`
+	will output:
+	"
+	A:B
+	Signed-off-by: C O Mitter <committer@example.com>
+	Helped-by: C O Mitter <committer@example.com>
+	"
+	in `a.txt`.
+
 --where <placement>::
 --no-where::
 	Specify where all new trailers will be added.  A setting
@@ -130,6 +143,7 @@ OPTIONS
 	Do not treat `---` as the end of the commit message. Use this
 	when you know your input contains just the commit message itself
 	(and not an email or the output of `git format-patch`).
+
 
 CONFIGURATION VARIABLES
 -----------------------

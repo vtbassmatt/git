@@ -63,6 +63,18 @@ test_expect_success 'without config' '
 	test_cmp expected actual
 '
 
+test_expect_success 'without config with --own-identity' '
+	cat >expected <<-\EOF &&
+
+	Acked-by: A B <C>
+	Helped-by: C O Mitter <committer@example.com>
+	Signed-off-by: C O Mitter <committer@example.com>
+	EOF
+	git interpret-trailers --trailer "Acked-by: A B <C>" --trailer "Helped-by" \
+	--trailer "Signed-off-by" --own-identity empty >actual &&
+	test_cmp expected actual
+'
+
 test_expect_success 'without config in another order' '
 	sed -e "s/ Z\$/ /" >expected <<-\EOF &&
 
