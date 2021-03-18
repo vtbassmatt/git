@@ -16,6 +16,7 @@ struct hashfile {
 	const char *name;
 	int do_crc;
 	uint32_t crc32;
+	struct hashfile *base;
 	unsigned char buffer[8192];
 };
 
@@ -41,6 +42,14 @@ void hashwrite(struct hashfile *, const void *, unsigned int);
 void hashflush(struct hashfile *f);
 void crc32_begin(struct hashfile *);
 uint32_t crc32_end(struct hashfile *);
+
+/*
+ * A nested hashfile uses the same interface as a hashfile, and computes
+ * a hash for the input bytes while passing them to the base hashfile
+ * instead of writing them to its own file. This is useful for computing
+ * a hash of a region within a file during the write.
+ */
+struct hashfile *nested_hashfile(struct hashfile *f);
 
 /*
  * Returns the total number of bytes fed to the hashfile so far (including ones

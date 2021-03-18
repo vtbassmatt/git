@@ -13,6 +13,9 @@
 
 static void flush(struct hashfile *f, const void *buf, unsigned int count)
 {
+	if (f->base)
+		return;
+
 	if (0 <= f->check_fd && count)  {
 		unsigned char check_buffer[8192];
 		ssize_t ret = read_in_full(f->check_fd, check_buffer, count);
@@ -116,6 +119,9 @@ void hashwrite(struct hashfile *f, const void *buf, unsigned int count)
 		}
 		f->offset = offset;
 	}
+
+	if (f->base)
+		hashwrite(f->base, buf, count);
 }
 
 struct hashfile *hashfd(int fd, const char *name)
@@ -150,6 +156,7 @@ struct hashfile *hashfd_throughput(int fd, const char *name, struct progress *tp
 	f->name = name;
 	f->do_crc = 0;
 	the_hash_algo->init_fn(&f->ctx);
+	f->base = NULL;
 	return f;
 }
 
@@ -183,4 +190,19 @@ uint32_t crc32_end(struct hashfile *f)
 {
 	f->do_crc = 0;
 	return f->crc32;
+}
+
+struct hashfile *nested_hashfile(struct hashfile *f)
+{
+	struct hashfile *n = xmalloc(sizeof(*f));
+	n->fd = -1;
+	n->check_fd = -1;
+	n->offset = 0;
+	n->total = 0;
+	n->tp = NULL;
+	n->name = NULL;
+	n->do_crc = 0;
+	the_hash_algo->init_fn(&n->ctx);
+	n->base = f;
+	return n;
 }
