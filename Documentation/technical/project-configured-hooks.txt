@@ -1,0 +1,426 @@
+Project Configured Hooks
+------------------------
+
+Background
+~~~~~~~~~~
+
+Context
+^^^^^^^
+
+Git has https://git-scm.com/docs/githooks[hooks] functionality to allow users to
+execute commands or scripts when certain Git events occur. Some use cases
+include:
+
+* The `pre-commit` hook event:
+
+  ** A developer may want to lint their changes to enforce certain code style
+  and quality. The project may want the commit to fail so that commits that
+  violate the project's style don't get uploaded.
+
+  ** The project may want to prevent developers from committing passwords or
+  other sensitive information e.g. via
+  https://github.com/awslabs/git-secrets[git-secrets].
+
+* The `commit-msg` hook event: the project may want to enforce a certain commit
+message style. This may be out of necessity:
+https://www.gerritcodereview.com/[Gerrit Code Review], for example, requires
+each commit to have a Change-Id in the footer.
+
+* The `pre-push` hook: the project may want to verify that pushes are going to
+the correct central repository to prevent leaks.
+
+A common thread between these use cases is to enforce certain behavior across
+many developers working in the same code base, encouraging best practices and
+healthy code quality.
+
+Hooks today are configured individually in each clone, making it difficult for
+project maintainers to enforce hooks usage across them.
+https://lore.kernel.org/git/20210311021037.3001235-2-emilyshaffer@google.com[Configuration-based
+hook management], by moving hooks to the config, makes this easier; individuals
+can at least configure hooks to be used across multiple workspaces on their
+host. However, there is still no good way for project maintainers to encourage
+or enforce adoption of specific hook commands on specific hook events in a
+clone. As such, there are many tools that provide this functionality on top of
+Git (see <<prior-art, Prior Art>>).
+
+We propose adding native Git functionality to allow project maintainers to
+specify hooks that a user ought to install and utilize in their development
+workflows.
+
+Server-side vs Local Checks
+^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A large motivation for this change is providing projects a method to enable
+local checks of code e.g. linting. As documented in
+https://git-scm.com/docs/gitfaq#_hooks[gitfaq], in some cases, server-side
+checks may be more appropriate, especially since developers can always skip
+local hook execution. We think there are still benefits to local checks:
+
+* Ensuring commit message style and preventing the committing of sensitive data,
+as described above. In particular, if CI results are public, as with many open
+source projects, server side checks are useless for guarding against leaking
+sensitive data.
+
+* Helps developers catch issues earlier: typically developers need to push to
+the remote to trigger server-side checks. Local hooks can be run anytime the
+developer wants. This is especially useful if the project has slow
+server-checks; catching issues locally can save the developer a lot of time
+waiting for CI. They are also useful for locally reproducing an issue identified
+in CI, helping resolve issues faster.
+
+* Since the typical goal of developers to submit changes to a central
+repository, their interests are aligned with the project maintainers'; while
+they can choose to skip local hook execution, it is in their interest to allow
+hooks to run at least before proposing code for submission to the central
+repository to increase the chances of the code getting accepted.
+
+In the ideal world, developers and project maintainers use both local and server
+side checks in their workflow. However, for many smaller projects, this may not
+be possible: CI may be too expensive to run or configure. The number of local
+solutions to this use case speaks to this need (see <<prior-art, Prior Art>>).
+Bringing this natively to Git can give all these developers a well-supported,
+secure implementation opposed to the fragmentation we see today.
+
+User Goals / Critical User Journeys
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+* As a project maintainer,
+
+    ** I want to enforce code style so I require developers to use a
+    standardized linter.
+
+    ** I want to prevent sensitive data from getting checked in.
+
+    ** I want to prevent leaks so I check that developers are uploading code to
+    the right private central repository. Conversely, I may want to encourage
+    more open source development and encourage developers to push to public
+    central repositories.
+
+    ** I want this to just work for all the developers in my project, without
+    needing to support them through configuration.
+
+* As a developer developing in a local clone,
+
+    ** I want to set up my workspace.
+
+    ** I want control over what code runs on my machine.
+
+    ** I want to set up my own hooks, in addition to or in lieu of project
+    configured hooks.
+
+    ** I want to skip hooks from running (for various reasons).
+
+Security Considerations and Design Principles
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+We must balance the desire to make hooks setup easy for developers --- allowing
+them to get hooks set up with low friction, and hence increasing the probability
+of them adopting these hooks --- with protecting users from the security risks
+of arbitrary code execution on their hosts.
+
+To inform the design, we propose these design principles:
+
+* User consent: Users must explicitly agree to hooks usage; no hooks should
+execute without consent, and users should re-consent if hooks update. Users can
+opt-out of hooks.
+
+* Trust comes from the central repository:
+  ** Most users don't have the time or expertise to properly audit every hook
+  and what it does. There must be trust between the user and the remote that the
+  code came from, and the Git project should ensure trust to the degree it can
+  e.g. enforce HTTPS for its integrity guarantees.
+
+  ** Since developers will likely build their local clone in their development
+  process, at some point, arbitrary code from the repository will be executed.
+  In this sense, hooks _with user consent_ do not introduce a new attack surface.
+
+* Give users visibility: Git must allow users to make informed decisions. This
+means surfacing essential information to the user in a visible manner e.g. what
+remotes the hooks are coming from, whether the hooks have changed in the latest
+checkout.
+
+Feature Requirements
+~~~~~~~~~~~~~~~~~~~~
+
+Minimum Feature Set
+^^^^^^^^^^^^^^^^^^^
+
+* A repository can specify a configuration for what hook commands are
+enabled for what hook events
+
+* A repository can specify, in this configuration, where the hook
+commands reside
+
+    ** This could be a path to a script/binary within the repository
+
+    ** This could be a path to a script/binary contained within submodules of
+    the repository
+
+    ** This could be a user installed command or script/binary that exists
+    outside of the repository and is present in `$PATH`
+
+* This configuration should only apply if it was received over HTTPS
+
+* A setup command for users to set up hooks
+
+    ** Hook setup could happen at clone time assuming the user has consented
+    e.g. if `--setup-hooks` is passed to `git clone`
+
+* Users must explicitly approve hooks at least once
+
+    ** Running the setup command should count as approval, including if the user
+    consented during the clone
+
+    ** When a hook command changes, a user should re-approve execution (note:
+    implementation should not interfere with requirement listed in “Fast
+    Follows")
+
+* Automation is able to continue to use clone and other commands
+non-interactively
+
+* Works across Windows/Linux/macOS
+
+Fast Follows
+^^^^^^^^^^^^
+
+* When prompted to execute a hook, users can specify always or never, even if
+the hook updates
+
+Nice to Haves
+^^^^^^^^^^^^^
+
+* A method to skip hook execution i.e. `--no-verify` works everywhere
+
+* Support a “warnings only mode” where hooks run but don’t block commands from
+executing
+
+Out of Scope
+^^^^^^^^^^^^
+
+* Ensuring the user has installed software that isn't distributed with the repo
+
+Implementation Exploration: Check "magic" branch for configs at fetch time
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Example User Experience
+^^^^^^^^^^^^^^^^^^^^^^^
+
+===== Case 1: Consent through clone
+
+....
+$ git clone --setup-hooks
+...
+
+The following hooks were installed from remote `origin` ($ORIGIN_URL):
+
+pre-commit: git-secrets --pre_commit_hook
+pre-push:  $GIT_ROOT/pre_push.sh
+....
+
+===== Case 2: Prompting after clone
+....
+$ git clone
+...
+
+Remote `origin` ($ORIGIN_URL) suggest installing the following hooks:
+
+pre-commit: git-secrets --pre_commit_hook
+pre-push:  $GIT_ROOT/pre_push.sh
+
+# instead of prompting, we could give users commands to run instead
+# see case 3
+
+Do you wish to install them?
+1. Yes (this time)
+2. Yes (always from origin)
+3. No (not this time)
+4. No (never)
+....
+
+===== Case 3: Re-prompting when hooks change
+....
+$ git pull
+
+The following hooks were updated from remote `origin` ($ORIGIN_URL):
+
+pre-push:  $GIT_ROOT/pre_push.sh
+
+If you wish to install them, run `git hook setup origin`.
+
+If you wish to always accept hooks from `origin`, run `git hook setup --always
+origin`. You should only do this if you trust code changes from origin.
+
+To always ignore hooks from `origin`, run `git hook ignore origin`.
+....
+
+===== Case 4: Nudging when hooks weren't installed
+....
+$ git commit
+advice: The repository owner has recommended a 'pre-commit' hook that was not run.
+To view it, run `git show origin/refs/recommended-config:some-pre-commit`. To install it, run `git hook setup origin pre-commit`
+
+Turn off this advice by setting config variable advice.missingHook to false."
+....
+
+
+Implementation Sketch
+^^^^^^^^^^^^^^^^^^^^^
+
+* Perform fetch as normal
+
+* After fetch is complete, Git checks for a "magic" config branch (e.g.
++origin/refs/recommended-config+) which contains information about config lines
+an end-user may want (including hooks).
+
+* As part of the fetch subcommand, Git prompts users to install the configs
+contained there.
+
+    ** User responses to that prompt could be "sticky" - e.g. a user could reply
+    "no (this time)", "no (never)", "yes (this time)", or "yes (always)".
+    Always/never indicate that the user trusts the remote this config is coming
+    from, and should not apply to configs fetched from other remotes.
+
+Later, we might want to do this before the initial clone is performed; that
+workflow looks like:
+
+* During clone, perform ls-refs as normal
+
+* If the server has a "magic" config branch, fetch only that config branch.
+
+* Prompt users as described above.
+
+* Perform the rest of the clone.
+
+Pros
+^^^^
+
+* Repository owners have a method for providing recommended config for
+contributors.
+
+* Installation flow happens without additional user intervention.
+
+* Keeping config branch and history separate from code branch and history means
+it is versioned, but not tied to user's checkout.
+
+* Letting users specify "always" or "never" reduces amount of pain introduced by
+interactive "configuration wizard" flow.
+
+Cons
+^^^^
+
+* Requires addition of step to fetch (and later clone).
+
+* Turning a "set and forget" command like clone into an interactive session with
+the user is not ideal; care must be taken to avoid breaking bots.
+
+* Inflating configs and executables from a remote tracking branch which is never
+checked out could be slow.
+
+Future Work
+~~~~~~~~~~~
+
+* Extending this to allow repository owners to specify specific configurations
+in general e.g. this repository should use partial-clone with these parameters.
+
+* Extending this to support submodules: We want to make sure this works in a way
+that's easy to adapt to submodules, who would likely need to run the same hooks
+as the superproject; for example, submodules could inherit the superproject
+config.
+
+* A way to perform general set up of a code base e.g. installing dependencies,
+any first-build related tasks
+
+* Sandboxing hook execution to provide higher levels of security.
+
+[[prior-art]]
+Prior Art
+~~~~~~~~~
+
+Husky
+^^^^^
+
+* Add it as a dev dependency in package.json
+
+* Supports out-of-the-box configuration: Adding a `prepare` script in
+package.json with `husky install` will automate the installation of the husky
+script in the .git directory.
+
+pre-commit
+^^^^^^^^^^
+
+* Acts as a package manager for linting, installing the required linters as
+needed
+
+* `pre-commit install` installs the pre-commit hook shim
+
+* Config is checked into the repository, allowing owners to set versions for
+linters
+
+* Provides some out-of-the-box hooks:
+https://github.com/pre-commit/pre-commit-hooks[https://github.com/pre-commit/pre-commit-hooks]
+
+Repo Hooks
+^^^^^^^^^^
+
+* A Git repository containing hooks commands is specified in the manifest and
+checked out during `repo init`.
+
+* A `repo-hooks` element specifies the Git repository where the hooks code lives
+and which hook to enable. This is typically
+https://android.googlesource.com/platform/tools/repohooks/.
+
+* The only hook event currently supported is `pre-upload`, running when people
+run +repo upload+.
+
+* The hooks code file name must be the same as the hook event name e.g.
+`pre-upload.py`.
+
+* When a hook is used for the first time, the user is prompted
+to approve execution
+
+    ** For manifests fetched via secure protocols (e.g. https://), the user is
+    prompted once.
+
+    ** For insecure protocols (e.g. http://), the user is prompted whenever the
+    registered repohooks project is updated and a hook is triggered.
+
+* Repo hooks must be python modules (Python 2 or 3, with 2 support deprecated)
+
+* Repo hooks run from the top of the repo directory
+
+    ** if the repo client is under `~/tree/`, then that is where the hook runs,
+    even if you ran repo in a git repository at `~/tree/src/foo/`, or in a
+    subdirectory of that git repository in `~/tree/src/foo/bar/`.
+
+* `--no-verify` allows developers to bypass hooks.
+
+* `--ignore-hooks` allows developers to run hooks without blocking
+
+// The '+' in Gerrit URL frightens asciidoctor.
+:repohook-read: https://android.googlesource.com/platform/tools/repohooks/+/refs/heads/master/rh/config.py
+:repohook-config: https://android.googlesource.com/platform/tools/repohooks/+/refs/heads/master#config-files
+
+* The hooks {repohook-read}[read] a {repohook-config}[config file] to determine
+what code to actually execute.
+
+    ** Config can be global e.g. at the top of the Repo workspace and local, and
+    they get merged together.
+
+    ** Local config: looks for the closest config file to where you ran repo,
+    allowing each repository to configure its own hooks
+
+* Example code that gets run:
+
+    ** pylint3 (requiring this to be installed on the host)
+
+    ** commit_msg_bug_field: require “Bug:” to be present in the commit message
+    (built into repohooks)
+
+Glossary
+~~~~~~~~
+
+*hook event*: A point during Git’s execution where user scripts may be run, for
+example, `prepare-commit-msg` or `pre-push`.
+
+*hook command*: A user script or executable which will be run on one or more
+hook events.
