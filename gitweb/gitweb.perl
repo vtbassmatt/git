@@ -569,6 +569,15 @@ our %feature = (
 		'sub' => \&feature_extra_branch_refs,
 		'override' => 0,
 		'default' => []},
+
+    # Redact e-mail addresses.
+
+    # To disable system wide have in $GITWEB_CONFIG
+    # $feature{'email_privacy'}{'default'} = [0];
+	'email_privacy' => {
+		'sub' => sub { feature_bool('email_privacy', @_) },
+		'override' => 0,
+		'default' => [1]},
 );
 
 sub gitweb_get_feature {
@@ -3471,6 +3480,10 @@ sub parse_tag {
 			if ($tag{'author'} =~ m/^([^<]+) <([^>]*)>/) {
 				$tag{'author_name'}  = $1;
 				$tag{'author_email'} = $2;
+				if (gitweb_check_feature('email_privacy')) {
+					$tag{'author_email'} = "private";
+					$tag{'author'} =~ s/<([^>]+)>/<private>/;
+				}
 			} else {
 				$tag{'author_name'} = $tag{'author'};
 			}
@@ -3519,6 +3532,10 @@ sub parse_commit_text {
 			if ($co{'author'} =~ m/^([^<]+) <([^>]*)>/) {
 				$co{'author_name'}  = $1;
 				$co{'author_email'} = $2;
+				if (gitweb_check_feature('email_privacy')) {
+					$co{'author_email'} = "private";
+					$co{'author'} =~ s/<([^>]+)>/<private>/;
+				}
 			} else {
 				$co{'author_name'} = $co{'author'};
 			}
@@ -3529,6 +3546,10 @@ sub parse_commit_text {
 			if ($co{'committer'} =~ m/^([^<]+) <([^>]*)>/) {
 				$co{'committer_name'}  = $1;
 				$co{'committer_email'} = $2;
+				if (gitweb_check_feature('email_privacy')) {
+					$co{'committer_email'} = "private";
+					$co{'committer'} =~ s/<([^>]+)>/<private>/;
+				}
 			} else {
 				$co{'committer_name'} = $co{'committer'};
 			}
@@ -3568,9 +3589,13 @@ sub parse_commit_text {
 	if (! defined $co{'title'} || $co{'title'} eq "") {
 		$co{'title'} = $co{'title_short'} = '(no commit message)';
 	}
-	# remove added spaces
+	# remove added spaces, redact e-mail addresses if applicable.
 	foreach my $line (@commit_lines) {
 		$line =~ s/^    //;
+		if (gitweb_check_feature('email_privacy') &&
+			$line =~ m/^([^<]+) <([^>]*)>/) {
+			$line =~ s/<([^>]+)>/<private>/;
+		}
 	}
 	$co{'comment'} = \@commit_lines;
 
@@ -8060,8 +8085,13 @@ sub git_commitdiff {
 		close $fd
 			or print "Reading git-diff-tree failed\n";
 	} elsif ($format eq 'patch') {
-		local $/ = undef;
-		print <$fd>;
+		while (my $line = <$fd>) {
+			if (gitweb_check_feature('email_privacy') &&
+				$line =~ m/^([^<]+) <([^>]*)>/) {
+				$line =~ s/<([^>]+)>/<private>/;
+			}
+			print $line;
+		}
 		close $fd
 			or print "Reading git-format-patch failed\n";
 	}

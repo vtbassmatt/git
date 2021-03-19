@@ -896,6 +896,18 @@ same as of the snippet above:
 It is an error to specify a ref that does not pass "git check-ref-format"
 scrutiny. Duplicated values are filtered.
 
+email_privacy::
+    Redact e-mail addresses from the generated HTML, etc. content.
+    This hides e-mail addresses found in the commit log from web crawlers.
+    Enabled by default.
++
+It is highly recommended to keep this feature enabled unless web crawlers
+are hindered in some other way. You can disable this feature as shown below:
++
+---------------------------------------------------------------------------
+$feature{'email_privacy'}{'default'} = [0];
+---------------------------------------------------------------------------
+
 
 EXAMPLES
 --------
