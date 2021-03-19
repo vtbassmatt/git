@@ -569,6 +569,15 @@ our %feature = (
 		'sub' => \&feature_extra_branch_refs,
 		'override' => 0,
 		'default' => []},
+
+	# Redact e-mail addresses.
+
+	# To enable system wide have in $GITWEB_CONFIG
+	# $feature{'email_privacy'}{'default'} = [1];
+	'email_privacy' => {
+		'sub' => sub { feature_bool('email_privacy', @_) },
+		'override' => 0,
+		'default' => [0]},
 );
 
 sub gitweb_get_feature {
@@ -3449,6 +3458,19 @@ sub parse_date {
 	return %date;
 }
 
+sub hide_mailaddr_if_private {
+	my $line = shift;
+	return $line unless (gitweb_check_feature('email_privacy') &&
+						$line =~ m/^([^<]+) <([^>]*)>/);
+	return hide_mailaddr($line)
+}
+
+sub hide_mailaddr {
+	my $mailaddr = shift;
+	$mailaddr =~ s/<([^>]*)>/<private>/;
+	return $mailaddr;
+}
+
 sub parse_tag {
 	my $tag_id = shift;
 	my %tag;
@@ -3471,6 +3493,10 @@ sub parse_tag {
 			if ($tag{'author'} =~ m/^([^<]+) <([^>]*)>/) {
 				$tag{'author_name'}  = $1;
 				$tag{'author_email'} = $2;
+				if (gitweb_check_feature('email_privacy')) {
+					$tag{'author_email'} = "private";
+					$tag{'author'} = hide_mailaddr($tag{'author'});
+				}
 			} else {
 				$tag{'author_name'} = $tag{'author'};
 			}
@@ -3519,6 +3545,10 @@ sub parse_commit_text {
 			if ($co{'author'} =~ m/^([^<]+) <([^>]*)>/) {
 				$co{'author_name'}  = $1;
 				$co{'author_email'} = $2;
+				if (gitweb_check_feature('email_privacy')) {
+					$co{'author_email'} = "private";
+					$co{'author'} = hide_mailaddr($co{'author'});
+				}
 			} else {
 				$co{'author_name'} = $co{'author'};
 			}
@@ -3529,6 +3559,10 @@ sub parse_commit_text {
 			if ($co{'committer'} =~ m/^([^<]+) <([^>]*)>/) {
 				$co{'committer_name'}  = $1;
 				$co{'committer_email'} = $2;
+				if (gitweb_check_feature('email_privacy')) {
+					$co{'committer_email'} = "private";
+					$co{'committer'} = hide_mailaddr($co{'committer'});
+				}
 			} else {
 				$co{'committer_name'} = $co{'committer'};
 			}
@@ -3568,9 +3602,10 @@ sub parse_commit_text {
 	if (! defined $co{'title'} || $co{'title'} eq "") {
 		$co{'title'} = $co{'title_short'} = '(no commit message)';
 	}
-	# remove added spaces
+	# remove added spaces, redact e-mail addresses if applicable.
 	foreach my $line (@commit_lines) {
 		$line =~ s/^    //;
+		$line = hide_mailaddr_if_private($line);
 	}
 	$co{'comment'} = \@commit_lines;
 
@@ -8060,8 +8095,9 @@ sub git_commitdiff {
 		close $fd
 			or print "Reading git-diff-tree failed\n";
 	} elsif ($format eq 'patch') {
-		local $/ = undef;
-		print <$fd>;
+		while (my $line = <$fd>) {
+			print hide_mailaddr_if_private($line);
+		}
 		close $fd
 			or print "Reading git-format-patch failed\n";
 	}
