@@ -445,6 +445,34 @@ test_expect_success 'commit --trailer with -c and ":=#" as separators' '
 	test_cmp expected actual
 '
 
+
+test_expect_success 'commit --trailer parse @nickname' '
+	echo "I love git" >file1 &&
+	git add file1 &&
+	git commit -m "yly" --author="batman <email1>" &&
+	echo "I love git" >file2 &&
+	git add file2 &&
+	git commit -m "yly" --author="jocker <email2>" &&
+	echo "I love git" >file3 &&
+	git add file3 &&
+	git commit -m "yly" \
+	--trailer "Reviewed-by:@bat" \
+	--trailer "Signed-off-by:@jock" \
+	--trailer "Helped-by:@email1" \
+	--trailer "Mentored-by:@email2" &&
+	git cat-file commit HEAD >commit.msg &&
+	sed -e "1,/^\$/d" commit.msg >actual &&
+	cat >expected <<-\EOF &&
+	yly
+
+	Reviewed-by: batman <email1>
+	Signed-off-by: jocker <email2>
+	Helped-by: batman <email1>
+	Mentored-by: jocker <email2>
+	EOF
+	test_cmp expected actual
+'
+
 test_expect_success 'multiple -m' '
 
 	>negative &&

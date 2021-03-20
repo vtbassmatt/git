@@ -6,6 +6,7 @@
 #include "tempfile.h"
 #include "trailer.h"
 #include "list.h"
+#include "revision.h"
 /*
  * Copyright (c) 2013, 2014 Christian Couder <chriscool@tuxfamily.org>
  */
@@ -633,11 +634,21 @@ static void parse_trailer(struct strbuf *tok, struct strbuf *val,
 	struct arg_item *item;
 	size_t tok_len;
 	struct list_head *pos;
+	const char *ae = NULL;
 
 	if (separator_pos != -1) {
 		strbuf_add(tok, trailer, separator_pos);
 		strbuf_trim(tok);
-		strbuf_addstr(val, trailer + separator_pos + 1);
+		if (trailer[separator_pos + 1] == '@') {
+			ae = find_author_by_nickname(trailer + separator_pos + 2);
+			reset_revision_walk();
+			if (ae) {
+				strbuf_addstr(val, ae);
+				free((char*)ae);
+			} else
+				strbuf_addstr(val, trailer + separator_pos + 1);
+		} else
+			strbuf_addstr(val, trailer + separator_pos + 1);
 		strbuf_trim(val);
 	} else {
 		strbuf_addstr(tok, trailer);

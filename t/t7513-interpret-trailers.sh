@@ -63,6 +63,29 @@ test_expect_success 'without config' '
 	test_cmp expected actual
 '
 
+test_expect_success 'trailer parse @nickname' '
+	echo "I love git" >file1 &&
+	git add file1 &&
+	git commit -m "yly" --author="batman <email1>" &&
+	echo "I love git" >file2 &&
+	git add file2 &&
+	git commit -m "yly" --author="jocker <email2>" &&
+	git interpret-trailers \
+	--trailer "Reviewed-by:@bat" \
+	--trailer "Signed-off-by:@jock" \
+	--trailer "Helped-by:@email1" \
+	--trailer "Mentored-by:@email2" \
+	empty >actual &&
+	cat >expected <<-\EOF &&
+
+	Reviewed-by: batman <email1>
+	Signed-off-by: jocker <email2>
+	Helped-by: batman <email1>
+	Mentored-by: jocker <email2>
+	EOF
+	test_cmp expected actual
+'
+
 test_expect_success 'without config in another order' '
 	sed -e "s/ Z\$/ /" >expected <<-\EOF &&
 

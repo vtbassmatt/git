@@ -371,4 +371,6 @@ int parse_buffer_signed_by_header(const char *buffer,
 				  struct strbuf *signature,
 				  const struct git_hash_algo *algop);
 
+const char *find_author_by_nickname(const char *name);
+
 #endif /* COMMIT_H */
