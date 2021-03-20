@@ -370,5 +370,15 @@ int parse_buffer_signed_by_header(const char *buffer,
 				  struct strbuf *payload,
 				  struct strbuf *signature,
 				  const struct git_hash_algo *algop);
+/*
+ * Calling `find_author_by_nickname` to find the "author <email>" pair
+ * in the most recent commit which matches "--author=name".
+ *
+ * Note that `find_author_by_nickname` is not reusable, because it haven't
+ * reset flags for parsed objects. The only safe way to use `find_author_by_nickname`
+ * (without rewriting the revision traversal machinery) is to spawn a
+ * subprocess and do find_author_by_nickname() in it.
+ */
+const char *find_author_by_nickname(const char *name);
 
 #endif /* COMMIT_H */
