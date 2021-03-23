@@ -242,7 +242,8 @@ line, where <value> is taken to be the standard output of the
 specified command with any leading and trailing whitespace trimmed
 off.
 +
-If the command contains the `$ARG` string, this string will be
+If the command contains the `$ARG` string (`$ARG` is an exported
+environment variable), this string will be
 replaced with the <value> part of an existing trailer with the same
 <token>, if any, before the command is launched.
 +

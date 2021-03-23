@@ -44,7 +44,7 @@ static char *separators = ":";
 
 static int configured;
 
-#define TRAILER_ARG_STRING "$ARG"
+#define TRAILER_ARG_STRING "ARG"
 
 static const char *git_generated_prefixes[] = {
 	"Signed-off-by: ",
@@ -222,13 +222,16 @@ static char *apply_command(const char *command, const char *arg)
 	struct strbuf buf = STRBUF_INIT;
 	struct child_process cp = CHILD_PROCESS_INIT;
 	char *result;
+	const char *const *var;
 
 	strbuf_addstr(&cmd, command);
+	for (var = local_repo_env; *var; var++)
+		strvec_push(&cp.env_array, *var);
 	if (arg)
-		strbuf_replace(&cmd, TRAILER_ARG_STRING, arg);
+		strvec_pushf(&cp.env_array, "%s=%s", TRAILER_ARG_STRING, arg);
 
 	strvec_push(&cp.args, cmd.buf);
-	cp.env = local_repo_env;
+
 	cp.no_stdin = 1;
 	cp.use_shell = 1;
 

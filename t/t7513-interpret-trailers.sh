@@ -1291,6 +1291,23 @@ test_expect_success 'with command using $ARG' '
 	test_cmp expected actual
 '
 
+test_expect_success 'with command using more than one $ARG' '
+	git config trailer.fix.ifExists "replace" &&
+	git config trailer.fix.command "test -n $ARG && git log -1 --oneline --format=\"%h (%s)\" --abbrev-commit --abbrev=14 \$ARG || true" &&
+	FIXED=$(git log -1 --oneline --format="%h (%s)" --abbrev-commit --abbrev=14 HEAD) &&
+	cat complex_message_body >expected &&
+	sed -e "s/ Z\$/ /" >>expected <<-EOF &&
+		Fixes: $FIXED
+		Acked-by= Z
+		Reviewed-by:
+		Signed-off-by: Z
+		Signed-off-by: A U Thor <author@example.com>
+	EOF
+	git interpret-trailers --trailer "review:" --trailer "fix=HEAD" \
+		<complex_message >actual &&
+	test_cmp expected actual
+'
+
 test_expect_success 'with failing command using $ARG' '
 	git config trailer.fix.ifExists "replace" &&
 	git config trailer.fix.command "false \$ARG" &&
