@@ -14,6 +14,7 @@ struct conf_info {
 	char *name;
 	char *key;
 	char *command;
+	int is_new_cmd;
 	enum trailer_where where;
 	enum trailer_if_exists if_exists;
 	enum trailer_if_missing if_missing;
@@ -216,7 +217,7 @@ static int check_if_different(struct trailer_item *in_tok,
 	return 1;
 }
 
-static char *apply_command(const char *command, const char *arg)
+static char *apply_command(const char *command, int is_new_cmd , const char *arg)
 {
 	struct strbuf cmd = STRBUF_INIT;
 	struct strbuf buf = STRBUF_INIT;
@@ -224,10 +225,13 @@ static char *apply_command(const char *command, const char *arg)
 	char *result;
 
 	strbuf_addstr(&cmd, command);
-	if (arg)
-		strbuf_replace(&cmd, TRAILER_ARG_STRING, arg);
-
 	strvec_push(&cp.args, cmd.buf);
+	if (arg) {
+		if (is_new_cmd)
+			strvec_push(&cp.args, arg);
+		else
+			strbuf_replace(&cmd, TRAILER_ARG_STRING, arg);
+	}
 	cp.env = local_repo_env;
 	cp.no_stdin = 1;
 	cp.use_shell = 1;
@@ -257,7 +261,7 @@ static void apply_item_command(struct trailer_item *in_tok, struct arg_item *arg
 			else
 				arg = xstrdup("");
 		}
-		arg_tok->value = apply_command(arg_tok->conf.command, arg);
+		arg_tok->value = apply_command(arg_tok->conf.command, arg_tok->conf.is_new_cmd, arg);
 		free((char *)arg);
 	}
 }
@@ -454,8 +458,8 @@ static struct arg_item *get_conf_item(const char *name)
 	return item;
 }
 
-enum trailer_info_type { TRAILER_KEY, TRAILER_COMMAND, TRAILER_WHERE,
-			 TRAILER_IF_EXISTS, TRAILER_IF_MISSING };
+enum trailer_info_type { TRAILER_KEY, TRAILER_COMMAND, TRAILER_CMD,
+			TRAILER_WHERE, TRAILER_IF_EXISTS, TRAILER_IF_MISSING };
 
 static struct {
 	const char *name;
@@ -463,6 +467,7 @@ static struct {
 } trailer_config_items[] = {
 	{ "key", TRAILER_KEY },
 	{ "command", TRAILER_COMMAND },
+	{ "cmd", TRAILER_CMD },
 	{ "where", TRAILER_WHERE },
 	{ "ifexists", TRAILER_IF_EXISTS },
 	{ "ifmissing", TRAILER_IF_MISSING }
@@ -540,6 +545,13 @@ static int git_trailer_config(const char *conf_key, const char *value, void *cb)
 	case TRAILER_COMMAND:
 		if (conf->command)
 			warning(_("more than one %s"), conf_key);
+		conf->is_new_cmd = 0;
+		conf->command = xstrdup(value);
+		break;
+	case TRAILER_CMD:
+		if (conf->command)
+			warning(_("more than one %s"), conf_key);
+		conf->is_new_cmd = 1;
 		conf->command = xstrdup(value);
 		break;
 	case TRAILER_WHERE:
