@@ -252,6 +252,16 @@ also be executed for each of these arguments. And the <value> part of
 these arguments, if any, will be used to replace the `$ARG` string in
 the command.
 
+trailer.<token>.cmd::
+	Similar to 'trailer.<token>.command'. But the difference is that
+	`$1` is used in the command to replace the value of the trailer
+	instead of the original `$ARG`, which means that we can pass the
+	trailer value multiple times in the command.
+	E.g. `git config trailer.sign.cmd "test -n \"$1\" && echo \"$1\" || true "`.
+	If the user has these two configuration: "trailer.<token>.cmd"
+	and "trailer.<token>.command", "cmd" will be executed and "command"
+	will not be executed.
+
 EXAMPLES
 --------
 
