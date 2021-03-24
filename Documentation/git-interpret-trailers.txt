@@ -252,6 +252,16 @@ also be executed for each of these arguments. And the <value> part of
 these arguments, if any, will be used to replace the `$ARG` string in
 the command.
 
+trailer.<token>.cmd::
+	The command specified by this configuration variable is run
+	with a single parameter, which is the <value> part of an
+	existing trailer with the same <token>.  The output from the
+	command is then used as the value for the <token> in the
+	resulting trailer.
+	The command is expected to replace `trailer.<token>.cmd`.
+	When both .cmd and .command are given for the same <token>,
+        .cmd is used and .command is ignored.
+
 EXAMPLES
 --------
 
@@ -301,7 +311,7 @@ $ git format-patch -1
 $ git interpret-trailers --trailer 'Cc: Alice <alice@example.com>' --trailer 'Reviewed-by: Bob <bob@example.com>' 0001-foo.patch >0001-bar.patch
 ------------
 
-* Configure a 'sign' trailer with a command to automatically add a
+* Configure a 'sign' trailer with a cmd to automatically add a
   'Signed-off-by: ' with the author information only if there is no
   'Signed-off-by: ' already, and show how it works:
 +
@@ -309,7 +319,7 @@ $ git interpret-trailers --trailer 'Cc: Alice <alice@example.com>' --trailer 'Re
 $ git config trailer.sign.key "Signed-off-by: "
 $ git config trailer.sign.ifmissing add
 $ git config trailer.sign.ifexists doNothing
-$ git config trailer.sign.command 'echo "$(git config user.name) <$(git config user.email)>"'
+$ git config trailer.sign.cmd 'echo "$(git config user.name) <$(git config user.email)>"'
 $ git interpret-trailers <<EOF
 > EOF
 
@@ -333,14 +343,14 @@ subject
 Fix #42
 ------------
 
-* Configure a 'see' trailer with a command to show the subject of a
+* Configure a 'see' trailer with a cmd to show the subject of a
   commit that is related, and show how it works:
 +
 ------------
 $ git config trailer.see.key "See-also: "
 $ git config trailer.see.ifExists "replace"
 $ git config trailer.see.ifMissing "doNothing"
-$ git config trailer.see.command "git log -1 --oneline --format=\"%h (%s)\" --abbrev-commit --abbrev=14 \$ARG"
+$ git config trailer.see.cmd "test -n \"\$1\" && git log -1 --oneline --format=\"%h (%s)\" --abbrev-commit --abbrev=14 \"\$1\"|| true "
 $ git interpret-trailers <<EOF
 > subject
 > 
