@@ -677,10 +677,10 @@ static int do_recursive_merge(struct repository *r,
 	return !clean;
 }
 
-static struct object_id *get_cache_tree_oid(struct index_state *istate)
+static struct object_id *get_cache_tree_oid(struct repository *r, struct index_state *istate)
 {
 	if (!cache_tree_fully_valid(istate->cache_tree))
-		if (cache_tree_update(istate, 0)) {
+		if (cache_tree_update(r, istate, 0)) {
 			error(_("unable to update cache tree"));
 			return NULL;
 		}
@@ -710,7 +710,7 @@ static int is_index_unchanged(struct repository *r)
 	if (parse_commit(head_commit))
 		return -1;
 
-	if (!(cache_tree_oid = get_cache_tree_oid(istate)))
+	if (!(cache_tree_oid = get_cache_tree_oid(r, istate)))
 		return -1;
 
 	return oideq(cache_tree_oid, get_commit_tree_oid(head_commit));

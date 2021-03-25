@@ -433,7 +433,7 @@ static int update_one(struct cache_tree *it,
 	return i;
 }
 
-int cache_tree_update(struct index_state *istate, int flags)
+int cache_tree_update(struct repository *r, struct index_state *istate, int flags)
 {
 	int skip, i;
 
@@ -446,10 +446,10 @@ int cache_tree_update(struct index_state *istate, int flags)
 		istate->cache_tree = cache_tree();
 
 	trace_performance_enter();
-	trace2_region_enter("cache_tree", "update", the_repository);
+	trace2_region_enter("cache_tree", "update", r);
 	i = update_one(istate->cache_tree, istate->cache, istate->cache_nr,
 		       "", 0, &skip, flags);
-	trace2_region_leave("cache_tree", "update", the_repository);
+	trace2_region_leave("cache_tree", "update", r);
 	trace_performance_leave("cache_tree_update");
 	if (i < 0)
 		return i;
@@ -638,7 +638,7 @@ static int write_index_as_tree_internal(struct object_id *oid,
 		cache_tree_valid = 0;
 	}
 
-	if (!cache_tree_valid && cache_tree_update(index_state, flags) < 0)
+	if (!cache_tree_valid && cache_tree_update(the_repository, index_state, flags) < 0)
 		return WRITE_TREE_UNMERGED_INDEX;
 
 	if (prefix) {
@@ -746,13 +746,13 @@ void prime_cache_tree(struct repository *r,
 		      struct index_state *istate,
 		      struct tree *tree)
 {
-	trace2_region_enter("cache-tree", "prime_cache_tree", the_repository);
+	trace2_region_enter("cache-tree", "prime_cache_tree", r);
 	cache_tree_free(&istate->cache_tree);
 	istate->cache_tree = cache_tree();
 
 	prime_cache_tree_rec(r, istate->cache_tree, tree);
 	istate->cache_changed |= CACHE_TREE_CHANGED;
-	trace2_region_leave("cache-tree", "prime_cache_tree", the_repository);
+	trace2_region_leave("cache-tree", "prime_cache_tree", r);
 }
 
 /*
