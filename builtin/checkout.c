@@ -684,6 +684,7 @@ static int merge_working_tree(const struct checkout_opts *opts,
 	int ret;
 	struct lock_file lock_file = LOCK_INIT;
 	struct tree *new_tree;
+	struct repository *r = the_repository;
 
 	hold_locked_index(&lock_file, LOCK_DIE_ON_ERROR);
 	if (read_cache_preload(NULL) < 0)
@@ -768,7 +769,7 @@ static int merge_working_tree(const struct checkout_opts *opts,
 				return 1;
 			old_tree = get_commit_tree(old_branch_info->commit);
 
-			if (repo_index_has_changes(the_repository, old_tree, &sb))
+			if (repo_index_has_changes(r, old_tree, &sb))
 				die(_("cannot continue with staged changes in "
 				      "the following files:\n%s"), sb.buf);
 			strbuf_release(&sb);
@@ -787,9 +788,9 @@ static int merge_working_tree(const struct checkout_opts *opts,
 			 */
 
 			add_files_to_cache(NULL, NULL, 0);
-			init_merge_options(&o, the_repository);
+			init_merge_options(&o, r);
 			o.verbosity = 0;
-			work = write_in_core_index_as_tree(the_repository);
+			work = write_in_core_index_as_tree(r);
 
 			ret = reset_tree(new_tree,
 					 opts, 1,
@@ -822,7 +823,7 @@ static int merge_working_tree(const struct checkout_opts *opts,
 	}
 
 	if (!cache_tree_fully_valid(active_cache_tree))
-		cache_tree_update(&the_index, WRITE_TREE_SILENT | WRITE_TREE_REPAIR);
+		cache_tree_update(r, r->index, WRITE_TREE_SILENT | WRITE_TREE_REPAIR);
 
 	if (write_locked_index(&the_index, &lock_file, COMMIT_LOCK))
 		die(_("unable to write new index file"));
