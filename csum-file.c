@@ -11,19 +11,25 @@
 #include "progress.h"
 #include "csum-file.h"
 
+static void verify_buffer_or_die(struct hashfile *f,
+				 const void *buf,
+				 unsigned int count)
+{
+	static unsigned char check_buffer[WRITE_BUFFER_SIZE];
+	ssize_t ret = read_in_full(f->check_fd, check_buffer, count);
+
+	if (ret < 0)
+		die_errno("%s: sha1 file read error", f->name);
+	if (ret != count)
+		die("%s: sha1 file truncated", f->name);
+	if (memcmp(buf, check_buffer, count))
+		die("sha1 file '%s' validation error", f->name);
+}
+
 static void flush(struct hashfile *f, const void *buf, unsigned int count)
 {
-	if (0 <= f->check_fd && count)  {
-		unsigned char check_buffer[8192];
-		ssize_t ret = read_in_full(f->check_fd, check_buffer, count);
-
-		if (ret < 0)
-			die_errno("%s: sha1 file read error", f->name);
-		if (ret != count)
-			die("%s: sha1 file truncated", f->name);
-		if (memcmp(buf, check_buffer, count))
-			die("sha1 file '%s' validation error", f->name);
-	}
+	if (0 <= f->check_fd && count)
+		verify_buffer_or_die(f, buf, count);
 
 	if (write_in_full(f->fd, buf, count) < 0) {
 		if (errno == ENOSPC)

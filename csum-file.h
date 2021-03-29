@@ -5,6 +5,8 @@
 
 struct progress;
 
+#define WRITE_BUFFER_SIZE (128 * 1024)
+
 /* A SHA1-protected file */
 struct hashfile {
 	int fd;
@@ -16,7 +18,7 @@ struct hashfile {
 	const char *name;
 	int do_crc;
 	uint32_t crc32;
-	unsigned char buffer[8192];
+	unsigned char buffer[WRITE_BUFFER_SIZE];
 };
 
 /* Checkpoint */
