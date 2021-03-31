@@ -133,6 +133,7 @@ struct child_process {
 	 * argv[1], etc, do not need to be shell-quoted.
 	 */
 	unsigned use_shell:1;
+	unsigned shell_no_implicit_args:1;
 
 	unsigned stdout_to_stderr:1;
 	unsigned clean_on_exit:1;

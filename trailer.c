@@ -231,6 +231,7 @@ static char *apply_command(const char *command, const char *arg)
 	cp.env = local_repo_env;
 	cp.no_stdin = 1;
 	cp.use_shell = 1;
+	cp.shell_no_implicit_args = 1;
 
 	if (capture_command(&cp, &buf, 1024)) {
 		error(_("running trailer command '%s' failed"), cmd.buf);

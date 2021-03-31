@@ -264,7 +264,7 @@ int sane_execvp(const char *file, char * const argv[])
 	return -1;
 }
 
-static const char **prepare_shell_cmd(struct strvec *out, const char **argv)
+static const char **prepare_shell_cmd(struct strvec *out, const char **argv, int shell_no_implicit_args)
 {
 	if (!argv[0])
 		BUG("shell command is empty");
@@ -281,7 +281,7 @@ static const char **prepare_shell_cmd(struct strvec *out, const char **argv)
 		 * If we have no extra arguments, we do not even need to
 		 * bother with the "$@" magic.
 		 */
-		if (!argv[1])
+		if (!argv[1] || shell_no_implicit_args)
 			strvec_push(out, argv[0]);
 		else
 			strvec_pushf(out, "%s \"$@\"", argv[0]);
@@ -416,7 +416,7 @@ static int prepare_cmd(struct strvec *out, const struct child_process *cmd)
 	if (cmd->git_cmd) {
 		prepare_git_cmd(out, cmd->argv);
 	} else if (cmd->use_shell) {
-		prepare_shell_cmd(out, cmd->argv);
+		prepare_shell_cmd(out, cmd->argv, cmd->shell_no_implicit_args);
 	} else {
 		strvec_pushv(out, cmd->argv);
 	}
@@ -929,7 +929,7 @@ end_of_spawn:
 	if (cmd->git_cmd)
 		cmd->argv = prepare_git_cmd(&nargv, cmd->argv);
 	else if (cmd->use_shell)
-		cmd->argv = prepare_shell_cmd(&nargv, cmd->argv);
+		cmd->argv = prepare_shell_cmd(&nargv, cmd->argv, cmd->shell_no_implicit_args);
 
 	cmd->pid = mingw_spawnvpe(cmd->argv[0], cmd->argv, (char**) cmd->env,
 			cmd->dir, fhin, fhout, fherr);
