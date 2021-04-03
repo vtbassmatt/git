@@ -128,12 +128,14 @@ int set_sparse_index_config(struct repository *repo, int enable)
 int convert_to_sparse(struct index_state *istate)
 {
 	int test_env;
+	struct repository *r = the_repository;
+
 	if (istate->split_index || istate->sparse_index ||
 	    !core_apply_sparse_checkout || !core_sparse_checkout_cone)
 		return 0;
 
 	if (!istate->repo)
-		istate->repo = the_repository;
+		istate->repo = r;
 
 	/*
 	 * The GIT_TEST_SPARSE_INDEX environment variable triggers the
@@ -161,7 +163,7 @@ int convert_to_sparse(struct index_state *istate)
 		return -1;
 	}
 
-	if (cache_tree_update(istate, 0)) {
+	if (cache_tree_update(r, istate, 0)) {
 		warning(_("unable to update cache-tree, staying full"));
 		return -1;
 	}
@@ -175,7 +177,7 @@ int convert_to_sparse(struct index_state *istate)
 
 	/* Clear and recompute the cache-tree */
 	cache_tree_free(&istate->cache_tree);
-	cache_tree_update(istate, 0);
+	cache_tree_update(r, istate, 0);
 
 	istate->sparse_index = 1;
 	trace2_region_leave("index", "convert_to_sparse", istate->repo);
@@ -216,12 +218,13 @@ void ensure_full_index(struct index_state *istate)
 	int i;
 	struct index_state *full;
 	struct strbuf base = STRBUF_INIT;
+	struct repository *r = the_repository;
 
 	if (!istate || !istate->sparse_index)
 		return;
 
 	if (!istate->repo)
-		istate->repo = the_repository;
+		istate->repo = r;
 
 	trace2_region_enter("index", "ensure_full_index", istate->repo);
 
@@ -279,7 +282,7 @@ void ensure_full_index(struct index_state *istate)
 
 	/* Clear and recompute the cache-tree */
 	cache_tree_free(&istate->cache_tree);
-	cache_tree_update(istate, 0);
+	cache_tree_update(r, istate, 0);
 
 	trace2_region_leave("index", "ensure_full_index", istate->repo);
 }

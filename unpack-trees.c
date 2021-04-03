@@ -1571,7 +1571,7 @@ static int verify_absent(const struct cache_entry *,
  */
 int unpack_trees(unsigned len, struct tree_desc *t, struct unpack_trees_options *o)
 {
-	struct repository *repo = the_repository;
+	struct repository *r = the_repository;
 	int i, ret;
 	static struct cache_entry *dfc;
 	struct pattern_list pl;
@@ -1581,10 +1581,10 @@ int unpack_trees(unsigned len, struct tree_desc *t, struct unpack_trees_options 
 		die("unpack_trees takes at most %d trees", MAX_UNPACK_TREES);
 
 	trace_performance_enter();
-	trace2_region_enter("unpack_trees", "unpack_trees", the_repository);
+	trace2_region_enter("unpack_trees", "unpack_trees", r);
 
-	prepare_repo_settings(repo);
-	if (repo->settings.command_requires_full_index) {
+	prepare_repo_settings(r);
+	if (r->settings.command_requires_full_index) {
 		ensure_full_index(o->src_index);
 		ensure_full_index(o->dst_index);
 	}
@@ -1662,9 +1662,9 @@ int unpack_trees(unsigned len, struct tree_desc *t, struct unpack_trees_options 
 		}
 
 		trace_performance_enter();
-		trace2_region_enter("unpack_trees", "traverse_trees", the_repository);
+		trace2_region_enter("unpack_trees", "traverse_trees", r);
 		ret = traverse_trees(o->src_index, len, t, &info);
-		trace2_region_leave("unpack_trees", "traverse_trees", the_repository);
+		trace2_region_leave("unpack_trees", "traverse_trees", r);
 		trace_performance_leave("traverse_trees");
 		if (ret < 0)
 			goto return_failed;
@@ -1732,9 +1732,10 @@ int unpack_trees(unsigned len, struct tree_desc *t, struct unpack_trees_options 
 		move_index_extensions(&o->result, o->src_index);
 		if (!ret) {
 			if (git_env_bool("GIT_TEST_CHECK_CACHE_TREE", 0))
-				cache_tree_verify(the_repository, &o->result);
+				cache_tree_verify(r, &o->result);
 			if (!cache_tree_fully_valid(o->result.cache_tree))
-				cache_tree_update(&o->result,
+				cache_tree_update(r,
+						  &o->result,
 						  WRITE_TREE_SILENT |
 						  WRITE_TREE_REPAIR);
 		}
@@ -1750,7 +1751,7 @@ int unpack_trees(unsigned len, struct tree_desc *t, struct unpack_trees_options 
 done:
 	if (free_pattern_list)
 		clear_pattern_list(&pl);
-	trace2_region_leave("unpack_trees", "unpack_trees", the_repository);
+	trace2_region_leave("unpack_trees", "unpack_trees", r);
 	trace_performance_leave("unpack_trees");
 	return ret;
 

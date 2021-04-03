@@ -33,7 +33,7 @@ void cache_tree_write(struct strbuf *, struct cache_tree *root);
 struct cache_tree *cache_tree_read(const char *buffer, unsigned long size);
 
 int cache_tree_fully_valid(struct cache_tree *);
-int cache_tree_update(struct index_state *, int);
+int cache_tree_update(struct repository *, struct index_state *, int);
 void cache_tree_verify(struct repository *, struct index_state *);
 
 /* bitmasks to write_index_as_tree flags */
@@ -62,9 +62,11 @@ static inline int write_cache_as_tree(struct object_id *oid, int flags, const ch
 
 static inline int update_main_cache_tree(int flags)
 {
+	struct repository *r = the_repository;
+
 	if (!the_index.cache_tree)
 		the_index.cache_tree = cache_tree();
-	return cache_tree_update(&the_index, flags);
+	return cache_tree_update(r, r->index, flags);
 }
 #endif
 
