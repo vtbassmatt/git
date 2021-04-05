@@ -39,6 +39,8 @@ static int list_tags(struct ref_filter *filter, struct ref_sorting *sorting,
 		     struct ref_format *format)
 {
 	struct ref_array array;
+	struct strbuf final_buf = STRBUF_INIT;
+	struct strbuf error_buf = STRBUF_INIT;
 	char *to_free = NULL;
 	int i;
 
@@ -64,7 +66,7 @@ static int list_tags(struct ref_filter *filter, struct ref_sorting *sorting,
 	ref_array_sort(sorting, &array);
 
 	for (i = 0; i < array.nr; i++)
-		show_ref_array_item(array.items[i], format);
+		show_ref_array_item(array.items[i], format, &final_buf, &error_buf);
 	ref_array_clear(&array);
 	free(to_free);
 
