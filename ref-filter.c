@@ -2435,6 +2435,26 @@ int format_ref_array_item(struct ref_array_item *info,
 	return 0;
 }
 
+void show_ref_array_items(struct ref_array_item **info,
+			 const struct ref_format *format,
+			 size_t n)
+{
+	struct strbuf final_buf = STRBUF_INIT;
+	struct strbuf error_buf = STRBUF_INIT;
+	size_t i;
+
+	for (i = 0; i < n; i++) {
+		if (format_ref_array_item(info[i], format, &final_buf, &error_buf))
+			die("%s", error_buf.buf);
+		fwrite(final_buf.buf, 1, final_buf.len, stdout);
+		strbuf_reset(&error_buf);
+		strbuf_reset(&final_buf);
+		putchar('\n');
+	}
+	strbuf_release(&error_buf);
+	strbuf_release(&final_buf);
+}
+
 void show_ref_array_item(struct ref_array_item *info,
 			 const struct ref_format *format)
 {
