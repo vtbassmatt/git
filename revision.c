@@ -1460,6 +1460,7 @@ static int limit_list(struct rev_info *revs)
 			update_treesame(revs, c);
 		}
 
+	free_commit_list(list);
 	revs->commits = newlist;
 	return 0;
 }
