@@ -781,5 +781,6 @@ int cmd_ls_files(int argc, const char **argv, const char *cmd_prefix)
 	}
 
 	dir_clear(&dir);
+	free((void *)max_prefix);
 	return 0;
 }
