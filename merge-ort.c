@@ -2504,8 +2504,10 @@ static void write_tree(struct object_id *result_oid,
 	 * We won't use relevant_entries again and will let it just pop off the
 	 * stack, so there won't be allocation worries or anything.
 	 */
-	relevant_entries.items = versions->items + offset;
-	relevant_entries.nr = versions->nr - offset;
+	if (versions->nr) {
+		relevant_entries.items = versions->items + offset;
+		relevant_entries.nr = versions->nr - offset;
+	}
 	QSORT(relevant_entries.items, relevant_entries.nr, tree_entry_order);
 
 	/* Pre-allocate some space in buf */
