@@ -49,6 +49,7 @@ linux-gcc-4.8|pedantic)
 	make test
 	;;
 esac
+make -C contrib/scalar test
 
 check_unignored_build_artifacts
 
