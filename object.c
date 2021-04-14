@@ -39,6 +39,9 @@ enum object_type type_from_string_gently(const char *str, ssize_t len)
 {
 	enum object_type i;
 
+	if (len < 0)
+		BUG("type-from-string-gently no longer allows unspecified length");
+
 	for (i = 1; i < ARRAY_SIZE(object_type_strings); i++)
 		if (!strncmp(str, object_type_strings[i], len) &&
 		    object_type_strings[i][len] == '\0')
