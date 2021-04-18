@@ -383,7 +383,7 @@ static void restore_state(const struct object_id *head,
 static void finish_up_to_date(const char *msg)
 {
 	if (verbosity >= 0)
-		printf("%s%s\n", squash ? _(" (nothing to squash)") : "", msg);
+		printf("%s%s\n", squash ? _("(nothing to squash) ") : "", msg);
 	remove_merge_branch_state(the_repository);
 }
 
