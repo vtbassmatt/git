@@ -617,10 +617,12 @@ typedef int reflog_expire_fn(struct ref_store *ref_store,
  * properly-formatted or even safe reference name. NEITHER INPUT NOR
  * OUTPUT REFERENCE NAMES ARE VALIDATED WITHIN THIS FUNCTION.
  *
- * Return 0 on success. If the ref doesn't exist, set errno to ENOENT and return
- * -1. If the ref exists but is neither a symbolic ref nor an object ID, it is
- * broken; set REF_ISBROKEN in type, and return -1. If there is another error
- * reading the ref, set errno appropriately and return -1.
+ * Return 0 on success. If the ref doesn't exist, set failure_errno to ENOENT
+ * and return -1. If the ref exists but is neither a symbolic ref nor an object
+ * ID, it is broken; set REF_ISBROKEN in type, and return -1. For the files
+ * backend, EISDIR and ENOTDIR may be set if the ref name is a directory. If
+ * there is another error reading the ref, set failure_errno appropriately and
+ * return -1.
  *
  * Backend-specific flags might be set in type as well, regardless of
  * outcome.
@@ -634,9 +636,9 @@ typedef int reflog_expire_fn(struct ref_store *ref_store,
  * - in all other cases, referent will be untouched, and therefore
  *   refname will still be valid and unchanged.
  */
-typedef int read_raw_ref_fn(struct ref_store *ref_store,
-			    const char *refname, struct object_id *oid,
-			    struct strbuf *referent, unsigned int *type);
+typedef int read_raw_ref_fn(struct ref_store *ref_store, const char *refname,
+			    struct object_id *oid, struct strbuf *referent,
+			    unsigned int *type, int *failure_errno);
 
 struct ref_storage_be {
 	struct ref_storage_be *next;
