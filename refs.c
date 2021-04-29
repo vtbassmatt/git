@@ -1684,12 +1684,11 @@ int refs_read_raw_ref(struct ref_store *ref_store, const char *refname,
 					   type, failure_errno);
 }
 
-/* This function needs to return a meaningful errno on failure */
-static const char *refs_resolve_ref_unsafe_errno(struct ref_store *refs,
-						 const char *refname,
-						 int resolve_flags,
-						 struct object_id *oid,
-						 int *flags)
+const char *refs_resolve_ref_unsafe_with_errno(struct ref_store *refs,
+					       const char *refname,
+					       int resolve_flags,
+					       struct object_id *oid,
+					       int *flags, int *failure_errno)
 {
 	static struct strbuf sb_refname = STRBUF_INIT;
 	struct object_id unused_oid;
@@ -1702,6 +1701,7 @@ static const char *refs_resolve_ref_unsafe_errno(struct ref_store *refs,
 		flags = &unused_flags;
 
 	*flags = 0;
+	*failure_errno = 0;
 
 	if (check_refname_format(refname, REFNAME_ALLOW_ONELEVEL)) {
 		if (!(resolve_flags & RESOLVE_REF_ALLOW_BAD_NAME) ||
@@ -1727,6 +1727,8 @@ static const char *refs_resolve_ref_unsafe_errno(struct ref_store *refs,
 		if (refs_read_raw_ref(refs, refname, oid, &sb_refname,
 				      &read_flags, &read_failure)) {
 			*flags |= read_flags;
+
+			*failure_errno = read_failure;
 
 			/* In reading mode, refs must eventually resolve */
 			if (resolve_flags & RESOLVE_REF_READING)
@@ -1779,22 +1781,9 @@ const char *refs_resolve_ref_unsafe(struct ref_store *refs, const char *refname,
 				    int resolve_flags, struct object_id *oid,
 				    int *flags)
 {
-	const char *result = refs_resolve_ref_unsafe_errno(
-		refs, refname, resolve_flags, oid, flags);
-	errno = 0;
-	return result;
-}
-
-const char *refs_resolve_ref_unsafe_with_errno(struct ref_store *refs,
-					       const char *refname,
-					       int resolve_flags,
-					       struct object_id *oid,
-					       int *flags, int *failure_errno)
-{
-	const char *result = refs_resolve_ref_unsafe_errno(
-		refs, refname, resolve_flags, oid, flags);
-	*failure_errno = errno;
-	return result;
+	int ignore;
+	return refs_resolve_ref_unsafe_with_errno(refs, refname, resolve_flags,
+						  oid, flags, &ignore);
 }
 
 /* backend functions */
