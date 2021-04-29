@@ -3268,9 +3268,9 @@ _git_whatchanged ()
 __git_complete_worktree_paths ()
 {
 	local IFS=$'\n'
+	# Skip the first entry: it's the path of the main worktree,
+	# which can't be moved, removed, locked, etc.
 	__gitcomp_nl "$(git worktree list --porcelain |
-		# Skip the first entry: it's the path of the main worktree,
-		# which can't be moved, removed, locked, etc.
 		sed -n -e '2,$ s/^worktree //p')"
 }
 
