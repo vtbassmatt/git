@@ -139,6 +139,9 @@ deltabase::
 	given object, if it is stored as a delta.  Otherwise it
 	expands to the null object name (all zeroes).
 
+notes::
+	The notes associated with the ref.
+
 upstream::
 	The name of a local ref which can be considered ``upstream''
 	from the displayed ref. Respects `:short`, `:lstrip` and
@@ -302,6 +305,7 @@ git for-each-ref --count=3 --sort='-*authordate' \
 Subject: %(*subject)
 Date: %(*authordate)
 Ref: %(*refname)
+Notes: %(*notes)
 
 %(*body)
 ' 'refs/tags'

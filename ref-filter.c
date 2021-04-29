@@ -23,6 +23,7 @@
 #include "worktree.h"
 #include "hashmap.h"
 #include "strvec.h"
+#include "run-command.h"
 
 static struct ref_msg {
 	const char *gone;
@@ -506,6 +507,7 @@ static struct {
 	{ "objectsize", SOURCE_OTHER, FIELD_ULONG, objectsize_atom_parser },
 	{ "objectname", SOURCE_OTHER, FIELD_STR, oid_atom_parser },
 	{ "deltabase", SOURCE_OTHER, FIELD_STR, deltabase_atom_parser },
+	{ "notes", SOURCE_OTHER, FIELD_STR },
 	{ "tree", SOURCE_OBJ, FIELD_STR, oid_atom_parser },
 	{ "parent", SOURCE_OBJ, FIELD_STR, oid_atom_parser },
 	{ "numparent", SOURCE_OBJ, FIELD_ULONG },
@@ -953,6 +955,24 @@ static int grab_oid(const char *name, const char *field, const struct object_id 
 	return 0;
 }
 
+static int grab_notes(const struct object_id *oid, struct atom_value *v)
+{
+	struct child_process cmd = CHILD_PROCESS_INIT;
+	struct strbuf out = STRBUF_INIT;
+	struct strbuf err = STRBUF_INIT;
+	const char *args[] = { "notes", "show", NULL };
+	int ret;
+
+	cmd.git_cmd = 1;
+	strvec_pushv(&cmd.args, args);
+	strvec_push(&cmd.args, oid_to_hex(oid));
+	ret = pipe_command(&cmd, NULL, 0, &out, 0, &err, 0);
+	strbuf_trim_trailing_newline(&out);
+	v->s = strbuf_detach(&out, NULL);
+	strbuf_release(&err);
+	return ret;
+}
+
 /* See grab_values */
 static void grab_common_values(struct atom_value *val, int deref, struct expand_data *oi)
 {
@@ -975,8 +995,12 @@ static void grab_common_values(struct atom_value *val, int deref, struct expand_
 			v->s = xstrfmt("%"PRIuMAX , (uintmax_t)oi->size);
 		} else if (!strcmp(name, "deltabase"))
 			v->s = xstrdup(oid_to_hex(&oi->delta_base_oid));
-		else if (deref)
-			grab_oid(name, "objectname", &oi->oid, v, &used_atom[i]);
+		else if (deref) {
+			if (!strcmp(name, "notes"))
+				grab_notes(&oi->oid, v);
+			else
+				grab_oid(name, "objectname", &oi->oid, v, &used_atom[i]);
+		}
 	}
 }
 
@@ -1766,6 +1790,9 @@ static int populate_value(struct ref_array_item *ref, struct strbuf *err)
 			}
 			continue;
 		} else if (!deref && grab_oid(name, "objectname", &ref->objectname, v, atom)) {
+			continue;
+		} else if (!deref && !strcmp(name, "notes")) {
+			grab_notes(&ref->objectname, v);
 			continue;
 		} else if (!strcmp(name, "HEAD")) {
 			if (atom->u.head && !strcmp(ref->refname, atom->u.head))
