@@ -1706,7 +1706,6 @@ static const char *refs_resolve_ref_unsafe_errno(struct ref_store *refs,
 	if (check_refname_format(refname, REFNAME_ALLOW_ONELEVEL)) {
 		if (!(resolve_flags & RESOLVE_REF_ALLOW_BAD_NAME) ||
 		    !refname_is_safe(refname)) {
-			errno = EINVAL;
 			return NULL;
 		}
 
@@ -1766,7 +1765,6 @@ static const char *refs_resolve_ref_unsafe_errno(struct ref_store *refs,
 		if (check_refname_format(refname, REFNAME_ALLOW_ONELEVEL)) {
 			if (!(resolve_flags & RESOLVE_REF_ALLOW_BAD_NAME) ||
 			    !refname_is_safe(refname)) {
-				errno = EINVAL;
 				return NULL;
 			}
 
@@ -1774,7 +1772,6 @@ static const char *refs_resolve_ref_unsafe_errno(struct ref_store *refs,
 		}
 	}
 
-	errno = ELOOP;
 	return NULL;
 }
 
