@@ -988,12 +988,17 @@ again:
 }
 
 static void handle_filter_flowed(struct mailinfo *mi, struct strbuf *line,
-				 struct strbuf *prev)
+				 struct strbuf *prev, int *have_quoted_cr)
 {
 	size_t len = line->len;
 	const char *rest;
 
 	if (!mi->format_flowed) {
+		if (len >= 2 &&
+		    line->buf[len - 2] == '\r' &&
+		    line->buf[len - 1] == '\n') {
+			*have_quoted_cr = 1;
+		}
 		handle_filter(mi, line);
 		return;
 	}
@@ -1033,9 +1038,16 @@ static void handle_filter_flowed(struct mailinfo *mi, struct strbuf *line,
 	handle_filter(mi, line);
 }
 
+static void summarize_quoted_cr(struct mailinfo *mi, int have_quoted_cr)
+{
+	if (have_quoted_cr)
+		warning("quoted CR detected");
+}
+
 static void handle_body(struct mailinfo *mi, struct strbuf *line)
 {
 	struct strbuf prev = STRBUF_INIT;
+	int have_quoted_cr = 0;
 
 	/* Skip up to the first boundary */
 	if (*(mi->content_top)) {
@@ -1051,6 +1063,8 @@ static void handle_body(struct mailinfo *mi, struct strbuf *line)
 				handle_filter(mi, &prev);
 				strbuf_reset(&prev);
 			}
+			summarize_quoted_cr(mi, have_quoted_cr);
+			have_quoted_cr = 0;
 			if (!handle_boundary(mi, line))
 				goto handle_body_out;
 		}
@@ -1081,7 +1095,7 @@ static void handle_body(struct mailinfo *mi, struct strbuf *line)
 						strbuf_addbuf(&prev, sb);
 						break;
 					}
-				handle_filter_flowed(mi, sb, &prev);
+				handle_filter_flowed(mi, sb, &prev, &have_quoted_cr);
 			}
 			/*
 			 * The partial chunk is saved in "prev" and will be
@@ -1091,7 +1105,7 @@ static void handle_body(struct mailinfo *mi, struct strbuf *line)
 			break;
 		}
 		default:
-			handle_filter_flowed(mi, line, &prev);
+			handle_filter_flowed(mi, line, &prev, &have_quoted_cr);
 		}
 
 		if (mi->input_error)
@@ -1100,6 +1114,7 @@ static void handle_body(struct mailinfo *mi, struct strbuf *line)
 
 	if (prev.len)
 		handle_filter(mi, &prev);
+	summarize_quoted_cr(mi, have_quoted_cr);
 
 	flush_inbody_header_accum(mi);
 
