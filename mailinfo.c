@@ -998,6 +998,11 @@ static void handle_filter_flowed(struct mailinfo *mi, struct strbuf *line,
 		    line->buf[len - 2] == '\r' &&
 		    line->buf[len - 1] == '\n') {
 			*have_quoted_cr = 1;
+			if (mi->quoted_cr == quoted_cr_strip) {
+				strbuf_setlen(line, len - 2);
+				strbuf_addch(line, '\n');
+				len--;
+			}
 		}
 		handle_filter(mi, line);
 		return;
@@ -1228,6 +1233,8 @@ enum quoted_cr_action mailinfo_parse_quoted_cr_action(const char *action)
 		return quoted_cr_nowarn;
 	else if (!strcmp(action, "warn"))
 		return quoted_cr_warn;
+	else if (!strcmp(action, "strip"))
+		return quoted_cr_strip;
 	return quoted_cr_invalid_action;
 }
 

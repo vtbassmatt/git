@@ -100,6 +100,7 @@ The valid actions are:
 *	`nowarn`: Git will do nothing with this action.
 *	`warn`: Git will issue a warning for each message if such CR-LF is
 	found.
+*	`strip`: Git will convert those CR-LF to LF.
 --
 +
 The default action could be set by configuration option `mailinfo.quotedCR`.
