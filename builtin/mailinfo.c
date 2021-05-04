@@ -24,6 +24,7 @@ int cmd_mailinfo(int argc, const char **argv, const char *prefix)
 	mi.metainfo_charset = def_charset;
 
 	while (1 < argc && argv[1][0] == '-') {
+		const char *str;
 		if (!strcmp(argv[1], "-k"))
 			mi.keep_subject = 1;
 		else if (!strcmp(argv[1], "-b"))
@@ -34,8 +35,8 @@ int cmd_mailinfo(int argc, const char **argv, const char *prefix)
 			mi.metainfo_charset = def_charset;
 		else if (!strcmp(argv[1], "-n"))
 			mi.metainfo_charset = NULL;
-		else if (starts_with(argv[1], "--encoding="))
-			mi.metainfo_charset = argv[1] + 11;
+		else if (skip_prefix(argv[1], "--encoding=", &str))
+			mi.metainfo_charset = str;
 		else if (!strcmp(argv[1], "--scissors"))
 			mi.use_scissors = 1;
 		else if (!strcmp(argv[1], "--no-scissors"))
