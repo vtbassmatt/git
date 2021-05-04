@@ -1040,7 +1040,8 @@ static void handle_filter_flowed(struct mailinfo *mi, struct strbuf *line,
 
 static void summarize_quoted_cr(struct mailinfo *mi, int have_quoted_cr)
 {
-	if (have_quoted_cr)
+	if (have_quoted_cr
+	    && mi->quoted_cr == quoted_cr_warn)
 		warning("quoted CR detected");
 }
 
@@ -1221,15 +1222,32 @@ int mailinfo(struct mailinfo *mi, const char *msg, const char *patch)
 	return mi->input_error;
 }
 
+enum quoted_cr_action mailinfo_parse_quoted_cr_action(const char *action)
+{
+	if (!strcmp(action, "nowarn"))
+		return quoted_cr_nowarn;
+	else if (!strcmp(action, "warn"))
+		return quoted_cr_warn;
+	return quoted_cr_invalid_action;
+}
+
 static int git_mailinfo_config(const char *var, const char *value, void *mi_)
 {
 	struct mailinfo *mi = mi_;
+	const char *str;
 
 	if (!starts_with(var, "mailinfo."))
 		return git_default_config(var, value, NULL);
 	if (!strcmp(var, "mailinfo.scissors")) {
 		mi->use_scissors = git_config_bool(var, value);
 		return 0;
+	}
+	if (!strcmp(var, "mailinfo.quotedcr")) {
+		git_config_string(&str, var, value);
+		mi->quoted_cr = mailinfo_parse_quoted_cr_action(str);
+		if (mi->quoted_cr == quoted_cr_invalid_action)
+			die(_("bad action '%s' for '%s'"), str, var);
+		free((void *)str);
 	}
 	/* perhaps others here */
 	return 0;
@@ -1243,6 +1261,7 @@ void setup_mailinfo(struct mailinfo *mi)
 	strbuf_init(&mi->charset, 0);
 	strbuf_init(&mi->log_message, 0);
 	strbuf_init(&mi->inbody_header_accum, 0);
+	mi->quoted_cr = quoted_cr_warn;
 	mi->header_stage = 1;
 	mi->use_inbody_headers = 1;
 	mi->content_top = mi->content;
