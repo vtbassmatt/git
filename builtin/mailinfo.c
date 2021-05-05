@@ -9,7 +9,7 @@
 #include "mailinfo.h"
 
 static const char mailinfo_usage[] =
-	"git mailinfo [-k | -b] [-m | --message-id] [-u | --encoding=<encoding> | -n] [--scissors | --no-scissors] <msg> <patch> < mail >info";
+	"git mailinfo [-k | -b] [-m | --message-id] [-u | --encoding=<encoding> | -n] [--scissors | --no-scissors] [--quoted-cr=<action>] <msg> <patch> < mail >info";
 
 int cmd_mailinfo(int argc, const char **argv, const char *prefix)
 {
@@ -24,6 +24,7 @@ int cmd_mailinfo(int argc, const char **argv, const char *prefix)
 	mi.metainfo_charset = def_charset;
 
 	while (1 < argc && argv[1][0] == '-') {
+		const char *str;
 		if (!strcmp(argv[1], "-k"))
 			mi.keep_subject = 1;
 		else if (!strcmp(argv[1], "-b"))
@@ -34,15 +35,19 @@ int cmd_mailinfo(int argc, const char **argv, const char *prefix)
 			mi.metainfo_charset = def_charset;
 		else if (!strcmp(argv[1], "-n"))
 			mi.metainfo_charset = NULL;
-		else if (starts_with(argv[1], "--encoding="))
-			mi.metainfo_charset = argv[1] + 11;
+		else if (skip_prefix(argv[1], "--encoding=", &str))
+			mi.metainfo_charset = str;
 		else if (!strcmp(argv[1], "--scissors"))
 			mi.use_scissors = 1;
 		else if (!strcmp(argv[1], "--no-scissors"))
 			mi.use_scissors = 0;
 		else if (!strcmp(argv[1], "--no-inbody-headers"))
 			mi.use_inbody_headers = 0;
-		else
+		else if (skip_prefix(argv[1], "--quoted-cr=", &str)) {
+			mi.quoted_cr = mailinfo_parse_quoted_cr_action(str);
+			if (mi.quoted_cr == quoted_cr_invalid_action)
+				usage(mailinfo_usage);
+		} else
 			usage(mailinfo_usage);
 		argc--; argv++;
 	}

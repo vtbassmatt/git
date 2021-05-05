@@ -988,12 +988,22 @@ again:
 }
 
 static void handle_filter_flowed(struct mailinfo *mi, struct strbuf *line,
-				 struct strbuf *prev)
+				 struct strbuf *prev, int *have_quoted_cr)
 {
 	size_t len = line->len;
 	const char *rest;
 
 	if (!mi->format_flowed) {
+		if (len >= 2 &&
+		    line->buf[len - 2] == '\r' &&
+		    line->buf[len - 1] == '\n') {
+			*have_quoted_cr = 1;
+			if (mi->quoted_cr == quoted_cr_strip) {
+				strbuf_setlen(line, len - 2);
+				strbuf_addch(line, '\n');
+				len--;
+			}
+		}
 		handle_filter(mi, line);
 		return;
 	}
@@ -1033,9 +1043,17 @@ static void handle_filter_flowed(struct mailinfo *mi, struct strbuf *line,
 	handle_filter(mi, line);
 }
 
+static void summarize_quoted_cr(struct mailinfo *mi, int have_quoted_cr)
+{
+	if (have_quoted_cr
+	    && mi->quoted_cr == quoted_cr_warn)
+		warning("quoted CR detected");
+}
+
 static void handle_body(struct mailinfo *mi, struct strbuf *line)
 {
 	struct strbuf prev = STRBUF_INIT;
+	int have_quoted_cr = 0;
 
 	/* Skip up to the first boundary */
 	if (*(mi->content_top)) {
@@ -1051,6 +1069,8 @@ static void handle_body(struct mailinfo *mi, struct strbuf *line)
 				handle_filter(mi, &prev);
 				strbuf_reset(&prev);
 			}
+			summarize_quoted_cr(mi, have_quoted_cr);
+			have_quoted_cr = 0;
 			if (!handle_boundary(mi, line))
 				goto handle_body_out;
 		}
@@ -1081,7 +1101,7 @@ static void handle_body(struct mailinfo *mi, struct strbuf *line)
 						strbuf_addbuf(&prev, sb);
 						break;
 					}
-				handle_filter_flowed(mi, sb, &prev);
+				handle_filter_flowed(mi, sb, &prev, &have_quoted_cr);
 			}
 			/*
 			 * The partial chunk is saved in "prev" and will be
@@ -1091,7 +1111,7 @@ static void handle_body(struct mailinfo *mi, struct strbuf *line)
 			break;
 		}
 		default:
-			handle_filter_flowed(mi, line, &prev);
+			handle_filter_flowed(mi, line, &prev, &have_quoted_cr);
 		}
 
 		if (mi->input_error)
@@ -1100,6 +1120,7 @@ static void handle_body(struct mailinfo *mi, struct strbuf *line)
 
 	if (prev.len)
 		handle_filter(mi, &prev);
+	summarize_quoted_cr(mi, have_quoted_cr);
 
 	flush_inbody_header_accum(mi);
 
@@ -1206,15 +1227,34 @@ int mailinfo(struct mailinfo *mi, const char *msg, const char *patch)
 	return mi->input_error;
 }
 
+enum quoted_cr_action mailinfo_parse_quoted_cr_action(const char *action)
+{
+	if (!strcmp(action, "nowarn"))
+		return quoted_cr_nowarn;
+	else if (!strcmp(action, "warn"))
+		return quoted_cr_warn;
+	else if (!strcmp(action, "strip"))
+		return quoted_cr_strip;
+	return quoted_cr_invalid_action;
+}
+
 static int git_mailinfo_config(const char *var, const char *value, void *mi_)
 {
 	struct mailinfo *mi = mi_;
+	const char *str;
 
 	if (!starts_with(var, "mailinfo."))
 		return git_default_config(var, value, NULL);
 	if (!strcmp(var, "mailinfo.scissors")) {
 		mi->use_scissors = git_config_bool(var, value);
 		return 0;
+	}
+	if (!strcmp(var, "mailinfo.quotedcr")) {
+		git_config_string(&str, var, value);
+		mi->quoted_cr = mailinfo_parse_quoted_cr_action(str);
+		if (mi->quoted_cr == quoted_cr_invalid_action)
+			die(_("bad action '%s' for '%s'"), str, var);
+		free((void *)str);
 	}
 	/* perhaps others here */
 	return 0;
@@ -1228,6 +1268,7 @@ void setup_mailinfo(struct mailinfo *mi)
 	strbuf_init(&mi->charset, 0);
 	strbuf_init(&mi->log_message, 0);
 	strbuf_init(&mi->inbody_header_accum, 0);
+	mi->quoted_cr = quoted_cr_warn;
 	mi->header_stage = 1;
 	mi->use_inbody_headers = 1;
 	mi->content_top = mi->content;
