@@ -117,6 +117,24 @@ test_expect_success '%(color) must fail' '
 	test_must_fail git for-each-ref --format="%(color)%(refname)"
 '
 
+test_expect_success '%(color:#aa22ac) must successed' '
+	test_when_finished "cd .. && rm -rf ./test" &&
+	mkdir test &&
+	cd test &&
+	git init &&
+	cat >expect <<-\EOF &&
+	refs/heads/main
+	EOF
+	git add . &&
+	git branch -M main &&
+	git commit -m "test" &&
+	git remote add origin nowhere &&
+	git config branch.main.remote origin &&
+	git config branch.main.merge refs/heads/main &&
+	git for-each-ref --format="%(color:#aa22ac)%(refname)" >actual &&
+	test_cmp expect actual
+'
+
 test_expect_success 'left alignment is default' '
 	cat >expect <<-\EOF &&
 	refname is refs/heads/main    |refs/heads/main
