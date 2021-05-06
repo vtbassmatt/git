@@ -746,4 +746,44 @@ test_expect_success 'clean untracked paths by pathspec' '
 	test_must_be_empty actual
 '
 
+test_expect_failure 'avoid traversing into ignored directories' '
+	test_when_finished rm -f output error &&
+	test_create_repo avoid-traversing-deep-hierarchy &&
+	(
+		cd avoid-traversing-deep-hierarchy &&
+
+		>directory-random-file.txt &&
+		# Put this file under directory400/directory399/.../directory1/
+		depth=400 &&
+		for x in $(test_seq 1 $depth); do
+			mkdir "tmpdirectory$x" &&
+			mv directory* "tmpdirectory$x" &&
+			mv "tmpdirectory$x" "directory$x"
+		done &&
+
+		git clean -ffdxn -e directory$depth >../output 2>../error &&
+
+		test_must_be_empty ../output &&
+		# We especially do not want things like
+		#   "warning: could not open directory "
+		# appearing in the error output.  It is true that directories
+		# that are too long cannot be opened, but we should not be
+		# recursing into those directories anyway since the very first
+		# level is ignored.
+		test_must_be_empty ../error &&
+
+		# alpine-linux-musl fails to "rm -rf" a directory with such
+		# a deeply nested hierarchy.  Help it out by deleting the
+		# leading directories ourselves.  Super slow, but, what else
+		# can we do?  Without this, we will hit a
+		#     error: Tests passed but test cleanup failed; aborting
+		# so do this ugly manual cleanup...
+		while test ! -f directory-random-file.txt; do
+			name=$(ls -d directory*) &&
+			mv $name/* . &&
+			rmdir $name
+		done
+	)
+'
+
 test_done
