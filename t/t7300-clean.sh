@@ -746,4 +746,26 @@ test_expect_success 'clean untracked paths by pathspec' '
 	test_must_be_empty actual
 '
 
+test_expect_failure 'avoid traversing into ignored directories' '
+	test_when_finished rm -f output error trace.* &&
+	test_create_repo avoid-traversing-deep-hierarchy &&
+	(
+		cd avoid-traversing-deep-hierarchy &&
+
+		mkdir -p untracked/subdir/with/a &&
+		>untracked/subdir/with/a/random-file.txt &&
+
+		GIT_TRACE2_PERF="$TRASH_DIRECTORY/trace.output" \
+		git clean -ffdxn -e untracked
+	) &&
+
+	grep data.*read_directo.*visited trace.output \
+		| cut -d "|" -f 9 >trace.relevant &&
+	cat >trace.expect <<-EOF &&
+	 directories-visited:1
+	 paths-visited:4
+	EOF
+	test_cmp trace.expect trace.relevant
+'
+
 test_done
