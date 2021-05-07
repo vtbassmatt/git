@@ -65,6 +65,7 @@ get_relevant_traces() {
 	INPUT_FILE=$1
 	OUTPUT_FILE=$2
 	grep data.*read_directo $INPUT_FILE \
+	    | grep -v visited \
 	    | cut -d "|" -f 9 \
 	    >$OUTPUT_FILE
 }
