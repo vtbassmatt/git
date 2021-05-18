@@ -4,6 +4,8 @@
 #include "pkt-line.h"
 #include "thread-utils.h"
 
+#ifdef SUPPORTS_SIMPLE_IPC
+
 #ifndef GIT_WINDOWS_NATIVE
 #error This file can only be compiled on Windows
 #endif
@@ -749,3 +751,5 @@ void ipc_server_free(struct ipc_server_data *server_data)
 
 	free(server_data);
 }
+
+#endif /* SUPPORTS_SIMPLE_IPC */

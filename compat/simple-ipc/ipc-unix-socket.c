@@ -6,8 +6,14 @@
 #include "unix-socket.h"
 #include "unix-stream-server.h"
 
+#ifdef SUPPORTS_SIMPLE_IPC
+
 #ifdef NO_UNIX_SOCKETS
 #error compat/simple-ipc/ipc-unix-socket.c requires Unix sockets
+#endif
+
+#ifdef NO_PTHREADS
+#error compat/simple-ipc/ipc-unix-socket.c requires pthreads
 #endif
 
 enum ipc_active_state ipc_get_active_state(const char *path)
@@ -997,3 +1003,5 @@ void ipc_server_free(struct ipc_server_data *server_data)
 	free(server_data->fifo_fds);
 	free(server_data);
 }
+
+#endif /* SUPPORTS_SIMPLE_IPC */
