@@ -146,7 +146,7 @@ current branch integrates with) obviously do not work, as there is no
 	<<def_revision,revision>> and you are "merging" another
 	<<def_branch,branch>>'s changes that happen to be a descendant of what
 	you have. In such a case, you do not make a new <<def_merge,merge>>
-	<<def_commit,commit>> but instead just update to his
+	<<def_commit,commit>> but instead just update to this
 	revision. This will happen frequently on a
 	<<def_remote_tracking_branch,remote-tracking branch>> of a remote
 	<<def_repository,repository>>.
