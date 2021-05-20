@@ -133,7 +133,7 @@ static struct used_atom {
 			unsigned int nobracket : 1, push : 1, push_remote : 1;
 		} remote_ref;
 		struct {
-			enum { C_BARE, C_BODY, C_BODY_DEP, C_LENGTH, C_LINES,
+			enum { C_RAW, C_BARE, C_BODY, C_BODY_DEP, C_LENGTH, C_LINES,
 			       C_SIG, C_SUB, C_SUB_SANITIZE, C_TRAILERS } option;
 			struct process_trailer_options trailer_opts;
 			unsigned int nlines;
@@ -347,6 +347,8 @@ static int contents_atom_parser(const struct ref_format *format, struct used_ato
 {
 	if (!arg)
 		atom->u.contents.option = C_BARE;
+	else if (!strcmp(arg, "raw"))
+		atom->u.contents.option = C_RAW;
 	else if (!strcmp(arg, "body"))
 		atom->u.contents.option = C_BODY;
 	else if (!strcmp(arg, "size"))
@@ -1292,7 +1294,8 @@ static void append_lines(struct strbuf *out, const char *buf, unsigned long size
 }
 
 /* See grab_values */
-static void grab_sub_body_contents(struct atom_value *val, int deref, void *buf)
+static void grab_sub_body_contents(struct atom_value *val, int deref, void *buf,
+				   unsigned long buf_size, enum object_type object_type)
 {
 	int i;
 	const char *subpos = NULL, *bodypos = NULL, *sigpos = NULL;
@@ -1312,6 +1315,13 @@ static void grab_sub_body_contents(struct atom_value *val, int deref, void *buf)
 		    !starts_with(name, "trailers") &&
 		    !starts_with(name, "contents"))
 			continue;
+		if (atom->u.contents.option == C_RAW) {
+			v->s = xmemdupz(buf, buf_size);
+			continue;
+		}
+		if (object_type != OBJ_TAG && object_type != OBJ_COMMIT)
+			continue;
+
 		if (!subpos)
 			find_subpos(buf,
 				    &subpos, &sublen,
@@ -1374,25 +1384,30 @@ static void fill_missing_values(struct atom_value *val)
  * pointed at by the ref itself; otherwise it is the object the
  * ref (which is a tag) refers to.
  */
-static void grab_values(struct atom_value *val, int deref, struct object *obj, void *buf)
+static void grab_values(struct atom_value *val, int deref, struct object *obj, struct expand_data *data)
 {
+	void *buf = data->content;
+	unsigned long buf_size = data->size;
+
 	switch (obj->type) {
 	case OBJ_TAG:
 		grab_tag_values(val, deref, obj);
-		grab_sub_body_contents(val, deref, buf);
+		grab_sub_body_contents(val, deref, buf, buf_size, obj->type);
 		grab_person("tagger", val, deref, buf);
 		break;
 	case OBJ_COMMIT:
 		grab_commit_values(val, deref, obj);
-		grab_sub_body_contents(val, deref, buf);
+		grab_sub_body_contents(val, deref, buf, buf_size, obj->type);
 		grab_person("author", val, deref, buf);
 		grab_person("committer", val, deref, buf);
 		break;
 	case OBJ_TREE:
 		/* grab_tree_values(val, deref, obj, buf, sz); */
+		grab_sub_body_contents(val, deref, buf, buf_size, obj->type);
 		break;
 	case OBJ_BLOB:
 		/* grab_blob_values(val, deref, obj, buf, sz); */
+		grab_sub_body_contents(val, deref, buf, buf_size, obj->type);
 		break;
 	default:
 		die("Eh?  Object of type %d?", obj->type);
@@ -1614,7 +1629,7 @@ static int get_object(struct ref_array_item *ref, int deref, struct object **obj
 			return strbuf_addf_ret(err, -1, _("parse_object_buffer failed on %s for %s"),
 					       oid_to_hex(&oi->oid), ref->refname);
 		}
-		grab_values(ref->value, deref, *obj, oi->content);
+		grab_values(ref->value, deref, *obj, oi);
 	}
 
 	grab_common_values(ref->value, deref, oi);
