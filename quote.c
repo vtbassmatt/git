@@ -43,6 +43,39 @@ void sq_quote_buf(struct strbuf *dst, const char *src)
 	free(to_free);
 }
 
+void sq_quote_buf_with_size(struct strbuf *dst, const char *src, size_t size)
+{
+	char *to_free = NULL;
+	size_t cur_size = 0;
+
+	if (dst->buf == src)
+		to_free = strbuf_detach(dst, NULL);
+
+	strbuf_addch(dst, '\'');
+	while (cur_size < size) {
+		size_t len = strcspn(src, "'!");
+		if (!len) {
+			strbuf_add(dst, src, 1);
+			src++;
+			cur_size++;
+		} else {
+			strbuf_add(dst, src, len);
+			src += len;
+			cur_size += len;
+		}
+		if (cur_size >= size)
+			break;
+		while (need_bs_quote(*src)) {
+			strbuf_addstr(dst, "'\\");
+			strbuf_addch(dst, *src++);
+			cur_size++;
+			strbuf_addch(dst, '\'');
+		}
+	}
+	strbuf_addch(dst, '\'');
+	free(to_free);
+}
+
 void sq_quote_buf_pretty(struct strbuf *dst, const char *src)
 {
 	static const char ok_punct[] = "+,-./:=@_^";
@@ -471,6 +504,25 @@ void perl_quote_buf(struct strbuf *sb, const char *src)
 	strbuf_addch(sb, sq);
 }
 
+void perl_quote_buf_with_size(struct strbuf *sb, const char *src, size_t size)
+{
+	const char sq = '\'';
+	const char bq = '\\';
+	char c;
+	size_t cur_size = 0;
+
+	strbuf_addch(sb, sq);
+	while (cur_size < size) {
+		c = *src++;
+		cur_size++;
+
+		if (c == sq || c == bq)
+			strbuf_addch(sb, bq);
+		strbuf_addch(sb, c);
+	}
+	strbuf_addch(sb, sq);
+}
+
 void python_quote_buf(struct strbuf *sb, const char *src)
 {
 	const char sq = '\'';
@@ -492,12 +544,76 @@ void python_quote_buf(struct strbuf *sb, const char *src)
 	strbuf_addch(sb, sq);
 }
 
+void python_quote_buf_with_size(struct strbuf *sb, const char *src, size_t size)
+{
+	const char sq = '\'';
+	const char bq = '\\';
+	const char nl = '\n';
+	char c;
+	size_t cur_size = 0;
+
+	strbuf_addch(sb, sq);
+	while (cur_size < size) {
+		c = *src++;
+		cur_size++;
+
+		if (c == nl) {
+			strbuf_addch(sb, bq);
+			strbuf_addch(sb, 'n');
+			continue;
+		}
+		if (c == sq || c == bq)
+			strbuf_addch(sb, bq);
+		strbuf_addch(sb, c);
+	}
+	strbuf_addch(sb, sq);
+}
+
 void tcl_quote_buf(struct strbuf *sb, const char *src)
 {
 	char c;
 
 	strbuf_addch(sb, '"');
 	while ((c = *src++)) {
+		switch (c) {
+		case '[': case ']':
+		case '{': case '}':
+		case '$': case '\\': case '"':
+			strbuf_addch(sb, '\\');
+			/* fallthrough */
+		default:
+			strbuf_addch(sb, c);
+			break;
+		case '\f':
+			strbuf_addstr(sb, "\\f");
+			break;
+		case '\r':
+			strbuf_addstr(sb, "\\r");
+			break;
+		case '\n':
+			strbuf_addstr(sb, "\\n");
+			break;
+		case '\t':
+			strbuf_addstr(sb, "\\t");
+			break;
+		case '\v':
+			strbuf_addstr(sb, "\\v");
+			break;
+		}
+	}
+	strbuf_addch(sb, '"');
+}
+
+void tcl_quote_buf_with_size(struct strbuf *sb, const char *src, size_t size)
+{
+	char c;
+	size_t cur_size = 0;
+
+	strbuf_addch(sb, '"');
+	while (cur_size < size) {
+		c = *src++;
+		cur_size++;
+
 		switch (c) {
 		case '[': case ']':
 		case '{': case '}':

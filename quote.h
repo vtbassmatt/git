@@ -30,6 +30,7 @@ struct strbuf;
  */
 
 void sq_quote_buf(struct strbuf *, const char *src);
+void sq_quote_buf_with_size(struct strbuf *, const char *src, size_t size);
 void sq_quote_argv(struct strbuf *, const char **argv);
 void sq_quotef(struct strbuf *, const char *fmt, ...);
 
@@ -94,8 +95,11 @@ char *quote_path(const char *in, const char *prefix, struct strbuf *out, unsigne
 
 /* quoting as a string literal for other languages */
 void perl_quote_buf(struct strbuf *sb, const char *src);
+void perl_quote_buf_with_size(struct strbuf *sb, const char *src, size_t size);
 void python_quote_buf(struct strbuf *sb, const char *src);
+void python_quote_buf_with_size(struct strbuf *sb, const char *src, size_t size);
 void tcl_quote_buf(struct strbuf *sb, const char *src);
+void tcl_quote_buf_with_size(struct strbuf *sb, const char *src, size_t size);
 void basic_regex_quote_buf(struct strbuf *sb, const char *src);
 
 #endif
