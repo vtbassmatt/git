@@ -564,6 +564,7 @@ struct ref_formatting_state {
 
 struct atom_value {
 	const char *s;
+	size_t s_size;
 	int (*handler)(struct atom_value *atomv, struct ref_formatting_state *state,
 		       struct strbuf *err);
 	uintmax_t value; /* used for sorting when not FIELD_STR */
@@ -652,23 +653,38 @@ static int parse_ref_filter_atom(const struct ref_format *format,
 	return at;
 }
 
-static void quote_formatting(struct strbuf *s, const char *str, int quote_style)
+static void quote_formatting(struct strbuf *s, const char *str, size_t len, int quote_style)
 {
 	switch (quote_style) {
 	case QUOTE_NONE:
-		strbuf_addstr(s, str);
+		if (len)
+			strbuf_add(s, str, len);
+		else
+			strbuf_addstr(s, str);
 		break;
 	case QUOTE_SHELL:
-		sq_quote_buf(s, str);
+		if (len)
+			sq_quote_buf_with_size(s, str, len);
+		else
+			sq_quote_buf(s, str);
 		break;
 	case QUOTE_PERL:
-		perl_quote_buf(s, str);
+		if (len)
+			perl_quote_buf_with_size(s, str, len);
+		else
+			perl_quote_buf(s, str);
 		break;
 	case QUOTE_PYTHON:
-		python_quote_buf(s, str);
+		if (len)
+			python_quote_buf_with_size(s, str, len);
+		else
+			python_quote_buf(s, str);
 		break;
 	case QUOTE_TCL:
-		tcl_quote_buf(s, str);
+		if (len)
+			tcl_quote_buf_with_size(s, str, len);
+		else
+			tcl_quote_buf(s, str);
 		break;
 	}
 }
@@ -683,9 +699,12 @@ static int append_atom(struct atom_value *v, struct ref_formatting_state *state,
 	 * encountered.
 	 */
 	if (!state->stack->prev)
-		quote_formatting(&state->stack->output, v->s, state->quote_style);
+		quote_formatting(&state->stack->output, v->s, v->s_size, state->quote_style);
 	else
-		strbuf_addstr(&state->stack->output, v->s);
+		if (v->s_size)
+			strbuf_add(&state->stack->output, v->s, v->s_size);
+		else
+			strbuf_addstr(&state->stack->output, v->s);
 	return 0;
 }
 
@@ -785,14 +804,16 @@ static int if_atom_handler(struct atom_value *atomv, struct ref_formatting_state
 	return 0;
 }
 
-static int is_empty(const char *s)
+static int is_empty(struct strbuf *buf)
 {
-	while (*s != '\0') {
-		if (!isspace(*s))
-			return 0;
+	const char *s = buf->buf;
+	size_t cur_len = 0;
+
+	while ((cur_len != buf->len) && (isspace(*s) || *s == '\0')) {
 		s++;
+		cur_len++;
 	}
-	return 1;
+	return cur_len == buf->len;
 }
 
 static int then_atom_handler(struct atom_value *atomv, struct ref_formatting_state *state,
@@ -800,6 +821,7 @@ static int then_atom_handler(struct atom_value *atomv, struct ref_formatting_sta
 {
 	struct ref_formatting_stack *cur = state->stack;
 	struct if_then_else *if_then_else = NULL;
+	size_t str_len = 0;
 
 	if (cur->at_end == if_then_else_handler)
 		if_then_else = (struct if_then_else *)cur->at_end_data;
@@ -810,18 +832,30 @@ static int then_atom_handler(struct atom_value *atomv, struct ref_formatting_sta
 	if (if_then_else->else_atom_seen)
 		return strbuf_addf_ret(err, -1, _("format: %%(then) atom used after %%(else)"));
 	if_then_else->then_atom_seen = 1;
+	if (if_then_else->str)
+		str_len = strlen(if_then_else->str);
 	/*
 	 * If the 'equals' or 'notequals' attribute is used then
 	 * perform the required comparison. If not, only non-empty
 	 * strings satisfy the 'if' condition.
 	 */
 	if (if_then_else->cmp_status == COMPARE_EQUAL) {
-		if (!strcmp(if_then_else->str, cur->output.buf))
+		if (cur->output.len > str_len)
+			str_len = cur->output.len;
+		if (!if_then_else->str)
+			BUG("when if_then_else->cmp_status == COMPARE_EQUAL,"
+			    "if_then_else->str must not be null");
+		if (!memcmp(if_then_else->str, cur->output.buf, str_len))
 			if_then_else->condition_satisfied = 1;
 	} else if (if_then_else->cmp_status == COMPARE_UNEQUAL) {
-		if (strcmp(if_then_else->str, cur->output.buf))
+		if (cur->output.len > str_len)
+			str_len = cur->output.len;
+		if (!if_then_else->str)
+			BUG("when if_then_else->cmp_status == COMPARE_UNEQUAL,"
+			    "if_then_else->str must not be null");
+		if (memcmp(if_then_else->str, cur->output.buf, str_len))
 			if_then_else->condition_satisfied = 1;
-	} else if (cur->output.len && !is_empty(cur->output.buf))
+	} else if (cur->output.len && !is_empty(&cur->output))
 		if_then_else->condition_satisfied = 1;
 	strbuf_reset(&cur->output);
 	return 0;
@@ -867,7 +901,7 @@ static int end_atom_handler(struct atom_value *atomv, struct ref_formatting_stat
 	 * only on the topmost supporting atom.
 	 */
 	if (!current->prev->prev) {
-		quote_formatting(&s, current->output.buf, state->quote_style);
+		quote_formatting(&s, current->output.buf, current->output.len, state->quote_style);
 		strbuf_swap(&current->output, &s);
 	}
 	strbuf_release(&s);
@@ -1292,7 +1326,8 @@ static void append_lines(struct strbuf *out, const char *buf, unsigned long size
 }
 
 /* See grab_values */
-static void grab_sub_body_contents(struct atom_value *val, int deref, void *buf)
+static void grab_contents(struct atom_value *val, int deref, void *buf,
+			  unsigned long buf_size, enum object_type object_type)
 {
 	int i;
 	const char *subpos = NULL, *bodypos = NULL, *sigpos = NULL;
@@ -1312,43 +1347,60 @@ static void grab_sub_body_contents(struct atom_value *val, int deref, void *buf)
 		    !starts_with(name, "trailers") &&
 		    !starts_with(name, "contents"))
 			continue;
-		if (!subpos)
-			find_subpos(buf,
-				    &subpos, &sublen,
-				    &bodypos, &bodylen, &nonsiglen,
-				    &sigpos, &siglen);
 
-		if (atom->u.contents.option == C_SUB)
-			v->s = copy_subject(subpos, sublen);
-		else if (atom->u.contents.option == C_SUB_SANITIZE) {
-			struct strbuf sb = STRBUF_INIT;
-			format_sanitized_subject(&sb, subpos, sublen);
-			v->s = strbuf_detach(&sb, NULL);
-		} else if (atom->u.contents.option == C_BODY_DEP)
-			v->s = xmemdupz(bodypos, bodylen);
-		else if (atom->u.contents.option == C_LENGTH)
-			v->s = xstrfmt("%"PRIuMAX, (uintmax_t)strlen(subpos));
-		else if (atom->u.contents.option == C_BODY)
-			v->s = xmemdupz(bodypos, nonsiglen);
-		else if (atom->u.contents.option == C_SIG)
-			v->s = xmemdupz(sigpos, siglen);
-		else if (atom->u.contents.option == C_LINES) {
-			struct strbuf s = STRBUF_INIT;
-			const char *contents_end = bodypos + nonsiglen;
+		switch (object_type) {
+		case OBJ_TAG:
+		case OBJ_COMMIT: {
+			if (!subpos)
+				find_subpos(buf,
+					&subpos, &sublen,
+					&bodypos, &bodylen, &nonsiglen,
+					&sigpos, &siglen);
 
-			/*  Size is the length of the message after removing the signature */
-			append_lines(&s, subpos, contents_end - subpos, atom->u.contents.nlines);
-			v->s = strbuf_detach(&s, NULL);
-		} else if (atom->u.contents.option == C_TRAILERS) {
-			struct strbuf s = STRBUF_INIT;
+			if (atom->u.contents.option == C_SUB)
+				v->s = copy_subject(subpos, sublen);
+			else if (atom->u.contents.option == C_SUB_SANITIZE) {
+				struct strbuf sb = STRBUF_INIT;
+				format_sanitized_subject(&sb, subpos, sublen);
+				v->s = strbuf_detach(&sb, NULL);
+			} else if (atom->u.contents.option == C_BODY_DEP)
+				v->s = xmemdupz(bodypos, bodylen);
+			else if (atom->u.contents.option == C_LENGTH)
+				v->s = xstrfmt("%"PRIuMAX, (uintmax_t)strlen(subpos));
+			else if (atom->u.contents.option == C_BODY)
+				v->s = xmemdupz(bodypos, nonsiglen);
+			else if (atom->u.contents.option == C_SIG)
+				v->s = xmemdupz(sigpos, siglen);
+			else if (atom->u.contents.option == C_LINES) {
+				struct strbuf s = STRBUF_INIT;
+				const char *contents_end = bodypos + nonsiglen;
 
-			/* Format the trailer info according to the trailer_opts given */
-			format_trailers_from_commit(&s, subpos, &atom->u.contents.trailer_opts);
+				/*  Size is the length of the message after removing the signature */
+				append_lines(&s, subpos, contents_end - subpos, atom->u.contents.nlines);
+				v->s = strbuf_detach(&s, NULL);
+			} else if (atom->u.contents.option == C_TRAILERS) {
+				struct strbuf s = STRBUF_INIT;
 
-			v->s = strbuf_detach(&s, NULL);
-		} else if (atom->u.contents.option == C_BARE)
-			v->s = xstrdup(subpos);
+				/* Format the trailer info according to the trailer_opts given */
+				format_trailers_from_commit(&s, subpos, &atom->u.contents.trailer_opts);
 
+				v->s = strbuf_detach(&s, NULL);
+			} else if (atom->u.contents.option == C_BARE)
+				v->s = xstrdup(subpos);
+			break;
+		}
+		case OBJ_BLOB:
+		case OBJ_TREE: {
+			if (atom->u.contents.option == C_BARE) {
+				v->s_size = buf_size;
+				v->s = xmemdupz(buf, buf_size);
+			} else if (atom->u.contents.option == C_LENGTH)
+				v->s = xstrfmt("%"PRIuMAX, buf_size);
+			break;
+		}
+		default:
+			BUG("unknown object type");
+		}
 	}
 	free((void *)sigpos);
 }
@@ -1374,25 +1426,30 @@ static void fill_missing_values(struct atom_value *val)
  * pointed at by the ref itself; otherwise it is the object the
  * ref (which is a tag) refers to.
  */
-static void grab_values(struct atom_value *val, int deref, struct object *obj, void *buf)
+static void grab_values(struct atom_value *val, int deref, struct object *obj, struct expand_data *data)
 {
+	void *buf = data->content;
+	unsigned long buf_size = data->size;
+
 	switch (obj->type) {
 	case OBJ_TAG:
 		grab_tag_values(val, deref, obj);
-		grab_sub_body_contents(val, deref, buf);
+		grab_contents(val, deref, buf, buf_size, obj->type);
 		grab_person("tagger", val, deref, buf);
 		break;
 	case OBJ_COMMIT:
 		grab_commit_values(val, deref, obj);
-		grab_sub_body_contents(val, deref, buf);
+		grab_contents(val, deref, buf, buf_size, obj->type);
 		grab_person("author", val, deref, buf);
 		grab_person("committer", val, deref, buf);
 		break;
 	case OBJ_TREE:
 		/* grab_tree_values(val, deref, obj, buf, sz); */
+		grab_contents(val, deref, buf, buf_size, obj->type);
 		break;
 	case OBJ_BLOB:
 		/* grab_blob_values(val, deref, obj, buf, sz); */
+		grab_contents(val, deref, buf, buf_size, obj->type);
 		break;
 	default:
 		die("Eh?  Object of type %d?", obj->type);
@@ -1614,7 +1671,7 @@ static int get_object(struct ref_array_item *ref, int deref, struct object **obj
 			return strbuf_addf_ret(err, -1, _("parse_object_buffer failed on %s for %s"),
 					       oid_to_hex(&oi->oid), ref->refname);
 		}
-		grab_values(ref->value, deref, *obj, oi->content);
+		grab_values(ref->value, deref, *obj, oi);
 	}
 
 	grab_common_values(ref->value, deref, oi);
@@ -2297,6 +2354,25 @@ static int compare_detached_head(struct ref_array_item *a, struct ref_array_item
 	return 0;
 }
 
+static int memcasecmp(const void *vs1, const void *vs2, size_t n)
+{
+  size_t i;
+  const char *s1 = (const char *)vs1;
+  const char *s2 = (const char *)vs2;
+
+  for (i = 0; i < n; i++) {
+	unsigned char u1 = s1[i];
+	unsigned char u2 = s2[i];
+	int U1 = toupper (u1);
+	int U2 = toupper (u2);
+	int diff = (UCHAR_MAX <= INT_MAX ? U1 - U2
+		    : U1 < U2 ? -1 : U2 < U1);
+	if (diff)
+		return diff;
+	}
+	return 0;
+}
+
 static int cmp_ref_sorting(struct ref_sorting *s, struct ref_array_item *a, struct ref_array_item *b)
 {
 	struct atom_value *va, *vb;
@@ -2304,6 +2380,7 @@ static int cmp_ref_sorting(struct ref_sorting *s, struct ref_array_item *a, stru
 	int cmp_detached_head = 0;
 	cmp_type cmp_type = used_atom[s->atom].type;
 	struct strbuf err = STRBUF_INIT;
+	size_t slen = 0;
 
 	if (get_ref_atom_value(a, s->atom, &va, &err))
 		die("%s", err.buf);
@@ -2317,10 +2394,28 @@ static int cmp_ref_sorting(struct ref_sorting *s, struct ref_array_item *a, stru
 	} else if (s->sort_flags & REF_SORTING_VERSION) {
 		cmp = versioncmp(va->s, vb->s);
 	} else if (cmp_type == FIELD_STR) {
-		int (*cmp_fn)(const char *, const char *);
-		cmp_fn = s->sort_flags & REF_SORTING_ICASE
-			? strcasecmp : strcmp;
-		cmp = cmp_fn(va->s, vb->s);
+		if (!va->s_size && !vb->s_size) {
+			int (*cmp_fn)(const char *, const char *);
+			cmp_fn = s->sort_flags & REF_SORTING_ICASE
+				? strcasecmp : strcmp;
+			cmp = cmp_fn(va->s, vb->s);
+		} else {
+			int (*cmp_fn)(const void *, const void *, size_t);
+			cmp_fn = s->sort_flags & REF_SORTING_ICASE
+				? memcasecmp : memcmp;
+			if (va->s_size && vb->s_size) {
+				cmp = cmp_fn(va->s, vb->s, va->s_size > vb->s_size ?
+					     va->s_size : vb->s_size);
+			} else if (!va->s_size) {
+				slen = strlen(va->s);
+				cmp = cmp_fn(va->s, vb->s, slen > vb->s_size ?
+					     slen : vb->s_size);
+			} else {
+				slen = strlen(vb->s);
+				cmp = cmp_fn(va->s, vb->s, va->s_size > slen ?
+					     va->s_size : slen);
+			}
+		}
 	} else {
 		if (va->value < vb->value)
 			cmp = -1;
@@ -2420,6 +2515,7 @@ int format_ref_array_item(struct ref_array_item *info,
 	}
 	if (format->need_color_reset_at_eol) {
 		struct atom_value resetv;
+		resetv.s_size = 0;
 		resetv.s = GIT_COLOR_RESET;
 		if (append_atom(&resetv, &state, error_buf)) {
 			pop_stack_element(&state.stack);
