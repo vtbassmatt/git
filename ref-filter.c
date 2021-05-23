@@ -134,7 +134,7 @@ static struct used_atom {
 		} remote_ref;
 		struct {
 			enum { C_BARE, C_BODY, C_BODY_DEP, C_LENGTH, C_LINES,
-			       C_SIG, C_SUB, C_SUB_SANITIZE, C_TRAILERS } option;
+			       C_RAW, C_SIG, C_SUB, C_SUB_SANITIZE, C_TRAILERS } option;
 			struct process_trailer_options trailer_opts;
 			unsigned int nlines;
 		} contents;
@@ -347,6 +347,8 @@ static int contents_atom_parser(const struct ref_format *format, struct used_ato
 {
 	if (!arg)
 		atom->u.contents.option = C_BARE;
+	else if (!strcmp(arg,"raw"))
+		atom->u.contents.option = C_RAW;
 	else if (!strcmp(arg, "body"))
 		atom->u.contents.option = C_BODY;
 	else if (!strcmp(arg, "size"))
@@ -1387,11 +1389,16 @@ static void grab_contents(struct atom_value *val, int deref, void *buf,
 				v->s = strbuf_detach(&s, NULL);
 			} else if (atom->u.contents.option == C_BARE)
 				v->s = xstrdup(subpos);
+			else if (atom->u.contents.option == C_RAW) {
+				v->s_size = buf_size;
+				v->s = xmemdupz(buf, buf_size);
+			}
 			break;
 		}
 		case OBJ_BLOB:
 		case OBJ_TREE: {
-			if (atom->u.contents.option == C_BARE) {
+			if (atom->u.contents.option == C_BARE ||
+			    atom->u.contents.option == C_RAW) {
 				v->s_size = buf_size;
 				v->s = xmemdupz(buf, buf_size);
 			} else if (atom->u.contents.option == C_LENGTH)

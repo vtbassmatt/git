@@ -159,6 +159,8 @@ test_atom head subject 'Initial'
 test_atom head subject:sanitize 'Initial'
 test_atom head contents:subject 'Initial'
 test_atom head body ''
+test_atom head contents:raw "$(git cat-file commit refs/heads/main)
+"
 test_atom head contents:body ''
 test_atom head contents:signature ''
 test_atom head contents 'Initial
@@ -688,6 +690,18 @@ test_atom refs/tags/signed-empty contents:body ''
 test_atom refs/tags/signed-empty contents:signature "$sig"
 test_atom refs/tags/signed-empty contents "$sig"
 
+test_expect_success 'basic atom: refs/tags/signed-empty contents:raw' '
+	git cat-file tag refs/tags/signed-empty >expected &&
+	git for-each-ref --format="%(contents:raw)" refs/tags/signed-empty >actual &&
+	sanitize_pgp <expected >expected.clean &&
+	sanitize_pgp <actual >actual.clean &&
+	echo "" >>expected.clean &&
+	test_cmp expected.clean actual.clean
+'
+
+test_atom refs/tags/signed-empty '*contents:raw' "$(git cat-file commit HEAD)
+"
+
 test_atom refs/tags/signed-short subject 'subject line'
 test_atom refs/tags/signed-short subject:sanitize 'subject-line'
 test_atom refs/tags/signed-short contents:subject 'subject line'
@@ -696,6 +710,15 @@ test_atom refs/tags/signed-short contents:body ''
 test_atom refs/tags/signed-short contents:signature "$sig"
 test_atom refs/tags/signed-short contents "subject line
 $sig"
+
+test_expect_success 'basic atom: refs/tags/signed-short contents:raw' '
+	git cat-file tag refs/tags/signed-short >expected &&
+	git for-each-ref --format="%(contents:raw)" refs/tags/signed-short >actual &&
+	sanitize_pgp <expected >expected.clean &&
+	sanitize_pgp <actual >actual.clean &&
+	echo "" >>expected.clean &&
+	test_cmp expected.clean actual.clean
+'
 
 test_atom refs/tags/signed-long subject 'subject line'
 test_atom refs/tags/signed-long subject:sanitize 'subject-line'
@@ -709,6 +732,15 @@ test_atom refs/tags/signed-long contents "subject line
 
 body contents
 $sig"
+
+test_expect_success 'basic atom: refs/tags/signed-long contents:raw' '
+	git cat-file tag refs/tags/signed-long >expected &&
+	git for-each-ref --format="%(contents:raw)" refs/tags/signed-long >actual &&
+	sanitize_pgp <expected >expected.clean &&
+	sanitize_pgp <actual >actual.clean &&
+	echo "" >>expected.clean &&
+	test_cmp expected.clean actual.clean
+'
 
 test_expect_success 'set up refs pointing to tree and blob' '
 	git update-ref refs/mytrees/first refs/heads/main^{tree} &&
@@ -729,6 +761,14 @@ test_expect_success 'basic atom: refs/mytrees/first contents' '
 	test_cmp expected actual &&
 	git for-each-ref --format="%(contents:size)" refs/mytrees/first >actual &&
 	test_cmp size_expected actual
+'
+
+test_expect_success 'basic atom: refs/mytrees/first contents:raw' '
+	git cat-file tree refs/mytrees/first >expected &&
+	cat expected | wc -c >size_expected &&
+	echo "" >>expected &&
+	git for-each-ref --format="%(contents:raw)" refs/mytrees/first >actual &&
+	test_cmp expected actual
 '
 
 test_expect_success 'basic atom: refs/mytrees/first contents with --python' '
@@ -801,6 +841,14 @@ test_expect_success 'basic atom: refs/myblobs/first contents' '
 	test_cmp expected actual &&
 	git for-each-ref --format="%(contents:size)" refs/myblobs/first >actual &&
 	test_cmp size_expected actual
+'
+
+test_expect_success 'basic atom: refs/myblobs/first contents:raw' '
+	git cat-file blob refs/myblobs/first >expected &&
+	cat expected | wc -c >size_expected &&
+	echo "" >>expected &&
+	git for-each-ref --format="%(contents:raw)" refs/myblobs/first >actual &&
+	test_cmp expected actual
 '
 
 test_expect_success 'set up refs pointing to binary blob' '

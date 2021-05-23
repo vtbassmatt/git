@@ -260,7 +260,15 @@ contents:signature::
 contents:lines=N::
 	The first `N` lines of the message of the commit or tag message.
 
-Note: blob and tree objects only support `%(contents)` and `%(contents:size)`.
+contents:raw::
+	The raw data of the object. For blob and tree, it priont all object data,
+	its output is equivalent to `%(contents)`; For commit and tag, it not only
+	print objects’ messages (as `%(contents)` does), but also print objects
+	headers, like the "tree XXX", "parent YYY", etc lines in commits, and the
+	"object OOO", "type TTT", etc lines in tags.
+
+Note: blob and tree objects only support `%(contents)`, `%(contents:raw)` and
+`%(contents:size)`.
 
 Additionally, the trailers as interpreted by linkgit:git-interpret-trailers[1]
 are obtained as `trailers[:options]` (or by using the historical alias
