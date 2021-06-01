@@ -2101,7 +2101,7 @@ int stat_tracking_info(struct branch *branch, int *num_ours, int *num_theirs,
 int format_tracking_info(struct branch *branch, struct strbuf *sb,
 			 enum ahead_behind_flags abf)
 {
-	int ours, theirs, sti;
+	int ours = 0, theirs = 0, sti = 0;
 	const char *full_base;
 	char *base;
 	int upstream_is_gone = 0;
