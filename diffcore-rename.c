@@ -889,6 +889,38 @@ static void basename_prefetch(void *prefetch_options)
 	oid_array_clear(&to_fetch);
 }
 
+static void bump_unknown_count(struct dir_rename_info *info,
+			       struct strintmap *dirs_removed,
+			       const char *path,
+			       int amount)
+{
+	char *old_dir;
+
+	if (!dirs_removed)
+		return;
+
+	old_dir = get_dirname(path);
+
+	while (*old_dir != '\0' &&
+	       NOT_RELEVANT != strintmap_get(dirs_removed, old_dir)) {
+		char *freeme = old_dir;
+
+		increment_count(info, old_dir, UNKNOWN_DIR, amount);
+		old_dir = get_dirname(old_dir);
+
+		/* Free resources we don't need anymore */
+		free(freeme);
+	}
+
+	/*
+	 * old_dir and new_dir free'd in increment_count, but
+	 * get_dirname() gives us a new pointer we need to free for
+	 * old_dir.  Also, if the loop runs 0 times we need old_dir
+	 * to be freed.
+	 */
+	free(old_dir);
+}
+
 static int find_basename_matches(struct diff_options *options,
 				 int minimum_score,
 				 struct dir_rename_info *info,
@@ -1033,6 +1065,8 @@ static int find_basename_matches(struct diff_options *options,
 			renames++;
 			update_dir_rename_counts(info, dirs_removed,
 						 one->path, two->path);
+			bump_unknown_count(info, dirs_removed, one->path, -1);
+
 
 			/*
 			 * Found a rename so don't need text anymore; if we
@@ -1200,31 +1234,29 @@ static void remove_unneeded_paths_from_src(int detecting_copies,
 	rename_src_nr = new_num_src;
 }
 
-static void bump_unknown_count(struct dir_rename_info *info,
-			       struct strintmap *dirs_removed,
-			       const char *path,
-			       int amount)
+static void initialize_unknown_count(struct dir_rename_info *info,
+				     struct strintmap *dirs_removed)
 {
-	char *old_dir = get_dirname(path);
+	int i;
 
-	while (*old_dir != '\0' &&
-	       NOT_RELEVANT != strintmap_get(dirs_removed, old_dir)) {
-		char *freeme = old_dir;
-
-		increment_count(info, old_dir, UNKNOWN_DIR, amount);
-		old_dir = get_dirname(old_dir);
-
-		/* Free resources we don't need anymore */
-		free(freeme);
-	}
+	if (!dirs_removed)
+		return; /* nothing to cull */
 
 	/*
-	 * old_dir and new_dir free'd in increment_count, but
-	 * get_dirname() gives us a new pointer we need to free for
-	 * old_dir.  Also, if the loop runs 0 times we need old_dir
-	 * to be freed.
+	 * Supplement dir_rename_count with number of potential renames,
+	 * marking all potential rename sources as mapping to UNKNOWN_DIR.
 	 */
-	free(old_dir);
+	for (i = 0; i < rename_src_nr; i++) {
+		struct diff_filespec *one = rename_src[i].p->one;
+
+		/*
+		 * sources that are part of a rename will have already been
+		 * removed by a prior call to remove_unneeded_paths_from_src()
+		 */
+		assert(!one->rename_used);
+
+		bump_unknown_count(info, dirs_removed, one->path, 1);
+	}
 }
 
 static void handle_early_known_dir_renames(struct dir_rename_info *info,
@@ -1247,22 +1279,6 @@ static void handle_early_known_dir_renames(struct dir_rename_info *info,
 		return; /* nothing to cull */
 	if (break_idx)
 		return; /* culling incompatbile with break detection */
-
-	/*
-	 * Supplement dir_rename_count with number of potential renames,
-	 * marking all potential rename sources as mapping to UNKNOWN_DIR.
-	 */
-	for (i = 0; i < rename_src_nr; i++) {
-		struct diff_filespec *one = rename_src[i].p->one;
-
-		/*
-		 * sources that are part of a rename will have already been
-		 * removed by a prior call to remove_unneeded_paths_from_src()
-		 */
-		assert(!one->rename_used);
-
-		bump_unknown_count(info, dirs_removed, one->path, 1);
-	}
 
 	/*
 	 * For any directory which we need a potential rename detected for
@@ -1291,13 +1307,6 @@ static void handle_early_known_dir_renames(struct dir_rename_info *info,
 		int val;
 
 		val = strintmap_get(relevant_sources, one->path);
-
-		/*
-		 * sources that were not found in relevant_sources should
-		 * have already been removed by a prior call to
-		 * remove_unneeded_paths_from_src()
-		 */
-		assert(val != -1);
 
 		if (val == RELEVANT_LOCATION) {
 			int removable = 1;
@@ -1453,20 +1462,28 @@ void diffcore_rename_extended(struct diff_options *options,
 		min_basename_score = minimum_score +
 			(int)(factor * (MAX_SCORE - minimum_score));
 
-		/*
-		 * Cull sources:
-		 *   - remove ones involved in renames (found via exact match)
-		 */
-		trace2_region_enter("diff", "cull after exact", options->repo);
-		remove_unneeded_paths_from_src(want_copies, NULL);
-		trace2_region_leave("diff", "cull after exact", options->repo);
-
 		/* Preparation for basename-driven matching. */
 		trace2_region_enter("diff", "dir rename setup", options->repo);
 		initialize_dir_rename_info(&info, relevant_sources,
 					   dirs_removed, dir_rename_count,
 					   cached_pairs);
 		trace2_region_leave("diff", "dir rename setup", options->repo);
+
+		/*
+		 * Cull sources:
+		 *   - remove ones involved in renames (found via exact match)
+		 * and
+		 *   - remove ones in relevant_sources which are needed only
+		 *     for directory renames IF no ancestory directory
+		 *     actually needs to know any more individual path
+		 *     renames under them than found in exact renames
+		 */
+		trace2_region_enter("diff", "cull after exact", options->repo);
+		remove_unneeded_paths_from_src(want_copies, NULL);
+		initialize_unknown_count(&info, dirs_removed);
+		handle_early_known_dir_renames(&info, relevant_sources,
+					       dirs_removed);
+		trace2_region_leave("diff", "cull after exact", options->repo);
 
 		/* Utilize file basenames to quickly find renames. */
 		trace2_region_enter("diff", "basename matches", options->repo);
