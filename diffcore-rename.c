@@ -424,7 +424,8 @@ static int dir_rename_already_determinable(struct strintmap *counts)
 
 static void increment_count(struct dir_rename_info *info,
 			    char *old_dir,
-			    char *new_dir)
+			    char *new_dir,
+			    int amount)
 {
 	struct strintmap *counts;
 	struct strmap_entry *e;
@@ -440,7 +441,7 @@ static void increment_count(struct dir_rename_info *info,
 	}
 
 	/* Increment the count for new_dir */
-	strintmap_incr(counts, new_dir, 1);
+	strintmap_incr(counts, new_dir, amount);
 }
 
 static void update_dir_rename_counts(struct dir_rename_info *info,
@@ -543,7 +544,7 @@ static void update_dir_rename_counts(struct dir_rename_info *info,
 		if (dirs_removed)
 			drd_flag = strintmap_get(dirs_removed, old_dir);
 		if (drd_flag == RELEVANT_FOR_SELF || first_time_in_loop)
-			increment_count(info, old_dir, new_dir);
+			increment_count(info, old_dir, new_dir, 1);
 
 		first_time_in_loop = 0;
 		if (drd_flag == NOT_RELEVANT)
@@ -1239,7 +1240,7 @@ static void handle_early_known_dir_renames(struct dir_rename_info *info,
 		       NOT_RELEVANT != strintmap_get(dirs_removed, old_dir)) {
 			char *freeme = old_dir;
 
-			increment_count(info, old_dir, UNKNOWN_DIR);
+			increment_count(info, old_dir, UNKNOWN_DIR, 1);
 			old_dir = get_dirname(old_dir);
 
 			/* Free resources we don't need anymore */
