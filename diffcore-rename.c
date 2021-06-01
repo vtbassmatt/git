@@ -1200,6 +1200,33 @@ static void remove_unneeded_paths_from_src(int detecting_copies,
 	rename_src_nr = new_num_src;
 }
 
+static void bump_unknown_count(struct dir_rename_info *info,
+			       struct strintmap *dirs_removed,
+			       const char *path,
+			       int amount)
+{
+	char *old_dir = get_dirname(path);
+
+	while (*old_dir != '\0' &&
+	       NOT_RELEVANT != strintmap_get(dirs_removed, old_dir)) {
+		char *freeme = old_dir;
+
+		increment_count(info, old_dir, UNKNOWN_DIR, amount);
+		old_dir = get_dirname(old_dir);
+
+		/* Free resources we don't need anymore */
+		free(freeme);
+	}
+
+	/*
+	 * old_dir and new_dir free'd in increment_count, but
+	 * get_dirname() gives us a new pointer we need to free for
+	 * old_dir.  Also, if the loop runs 0 times we need old_dir
+	 * to be freed.
+	 */
+	free(old_dir);
+}
+
 static void handle_early_known_dir_renames(struct dir_rename_info *info,
 					   struct strintmap *relevant_sources,
 					   struct strintmap *dirs_removed)
@@ -1226,7 +1253,6 @@ static void handle_early_known_dir_renames(struct dir_rename_info *info,
 	 * marking all potential rename sources as mapping to UNKNOWN_DIR.
 	 */
 	for (i = 0; i < rename_src_nr; i++) {
-		char *old_dir;
 		struct diff_filespec *one = rename_src[i].p->one;
 
 		/*
@@ -1235,24 +1261,7 @@ static void handle_early_known_dir_renames(struct dir_rename_info *info,
 		 */
 		assert(!one->rename_used);
 
-		old_dir = get_dirname(one->path);
-		while (*old_dir != '\0' &&
-		       NOT_RELEVANT != strintmap_get(dirs_removed, old_dir)) {
-			char *freeme = old_dir;
-
-			increment_count(info, old_dir, UNKNOWN_DIR, 1);
-			old_dir = get_dirname(old_dir);
-
-			/* Free resources we don't need anymore */
-			free(freeme);
-		}
-		/*
-		 * old_dir and new_dir free'd in increment_count, but
-		 * get_dirname() gives us a new pointer we need to free for
-		 * old_dir.  Also, if the loop runs 0 times we need old_dir
-		 * to be freed.
-		 */
-		free(old_dir);
+		bump_unknown_count(info, dirs_removed, one->path, 1);
 	}
 
 	/*
