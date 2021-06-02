@@ -1187,6 +1187,30 @@ test_expect_success 'basic atom: head contents:trailers' '
 	test_cmp expect actual.clean
 '
 
+test_expect_success 'bacic atom: rest with --rest' '
+	git for-each-ref --format="###refname=%(refname)
+###oid=%(objectname)
+###type=%(objecttype)
+###size=%(objectsize)" refs/heads/main refs/tags/subject-body >expect &&
+	git for-each-ref --rest="###" --format="%(rest)refname=%(refname)
+%(rest)oid=%(objectname)
+%(rest)type=%(objecttype)
+%(rest)size=%(objectsize)" refs/heads/main refs/tags/subject-body >actual &&
+	test_cmp expect actual
+'
+
+test_expect_success 'bacic atom: *rest with --rest' '
+	git for-each-ref --format="###refname=%(refname)
+###oid=%(objectname)
+###type=%(objecttype)
+###size=%(objectsize)" refs/heads/main refs/tags/subject-body >expect &&
+	git for-each-ref --rest="###" --format="%(*rest)refname=%(refname)
+%(rest)oid=%(objectname)
+%(rest)type=%(objecttype)
+%(rest)size=%(objectsize)" refs/heads/main refs/tags/subject-body >actual &&
+	test_cmp expect actual
+'
+
 test_expect_success 'trailer parsing not fooled by --- line' '
 	git commit --allow-empty -F - <<-\EOF &&
 	this is the subject

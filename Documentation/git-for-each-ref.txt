@@ -10,7 +10,7 @@ SYNOPSIS
 [verse]
 'git for-each-ref' [--count=<count>] [--shell|--perl|--python|--tcl]
 		   [(--sort=<key>)...] [--format=<format>] [<pattern>...]
-		   [--points-at=<object>]
+		   [--points-at=<object>] [--rest=<rest>]
 		   [--merged[=<object>]] [--no-merged[=<object>]]
 		   [--contains[=<object>]] [--no-contains[=<object>]]
 
@@ -73,6 +73,10 @@ OPTIONS
 
 --points-at=<object>::
 	Only list refs which points at the given object.
+
+--rest=<rest>::
+	If given, the `%(rest)` placeholders in the `--format` option
+	will be replaced by its contents.
 
 --merged[=<object>]::
 	Only list refs whose tips are reachable from the
@@ -234,6 +238,10 @@ and `date` to extract the named component.  For email fields (`authoremail`,
 `committeremail` and `taggeremail`), `:trim` can be appended to get the email
 without angle brackets, and `:localpart` to get the part before the `@` symbol
 out of the trimmed email.
+
+rest::
+	The placeholder for `--rest` specified string. If no `--rest`, nothing
+	is printed.
 
 The raw data in a object is `raw`.
 

@@ -37,6 +37,7 @@ int cmd_for_each_ref(int argc, const char **argv, const char *prefix)
 
 		OPT_GROUP(""),
 		OPT_INTEGER( 0 , "count", &maxcount, N_("show only <n> matched refs")),
+		OPT_STRING(  0 , "rest", &format.rest, N_("rest"), N_("specify %(rest) contents")),
 		OPT_STRING(  0 , "format", &format.format, N_("format"), N_("format to use for the output")),
 		OPT__COLOR(&format.use_color, N_("respect format colors")),
 		OPT_REF_SORT(sorting_tail),
@@ -78,6 +79,11 @@ int cmd_for_each_ref(int argc, const char **argv, const char *prefix)
 	filter.name_patterns = argv;
 	filter.match_as_path = 1;
 	filter_refs(&array, &filter, FILTER_REFS_ALL | FILTER_REFS_INCLUDE_BROKEN);
+
+	if (format.use_rest)
+		for (i = 0; i < array.nr; i++)
+			array.items[i]->rest = format.rest;
+
 	ref_array_sort(sorting, &array);
 
 	if (!maxcount || array.nr < maxcount)
