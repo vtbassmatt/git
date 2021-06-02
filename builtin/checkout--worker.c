@@ -56,6 +56,17 @@ static void report_result(struct parallel_checkout_item *pc_item)
 	struct pc_item_result res;
 	size_t size;
 
+#if defined(__has_feature)
+#  if __has_feature(memory_sanitizer)
+	// MSAN workaround: res contains padding bytes, which will remain
+	// permanently unintialised. Later, we read all of res in order to send
+	// it to the parent process - and MSAN (rightly) complains that we're
+	// reading those unintialised padding bytes. By memset'ing res we
+	// guarantee that there are no uninitialised bytes.
+	memset(&res, 0, sizeof(res));
+#endif
+#endif
+
 	res.id = pc_item->id;
 	res.status = pc_item->status;
 
