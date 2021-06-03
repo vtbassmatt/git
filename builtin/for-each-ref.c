@@ -5,6 +5,7 @@
 #include "object.h"
 #include "parse-options.h"
 #include "ref-filter.h"
+#include "userdiff.h"
 
 static char const * const for_each_ref_usage[] = {
 	N_("git for-each-ref [<options>] [<pattern>]"),
@@ -13,6 +14,14 @@ static char const * const for_each_ref_usage[] = {
 	N_("git for-each-ref [--contains [<commit>]] [--no-contains [<commit>]]"),
 	NULL
 };
+
+static int git_for_each_ref_config(const char *var, const char *value, void *cb)
+{
+	if (userdiff_config(var, value) < 0)
+		return -1;
+
+	return git_default_config(var, value, cb);
+}
 
 int cmd_for_each_ref(int argc, const char **argv, const char *prefix)
 {
@@ -57,7 +66,7 @@ int cmd_for_each_ref(int argc, const char **argv, const char *prefix)
 
 	format.format = "%(objectname) %(objecttype)\t%(refname)";
 
-	git_config(git_default_config, NULL);
+	git_config(git_for_each_ref_config, NULL);
 
 	parse_options(argc, argv, prefix, opts, for_each_ref_usage, 0);
 	if (maxcount < 0) {

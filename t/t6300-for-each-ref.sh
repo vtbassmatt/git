@@ -1365,6 +1365,69 @@ test_expect_success 'for-each-ref --ignore-case works on multiple sort keys' '
 	test_cmp expect actual
 '
 
+test_expect_success 'ref-filter raw:textconv and raw:filter setup ' '
+	echo "*.txt eol=crlf diff=txt" >.gitattributes &&
+	echo "hello" | append_cr >world.txt &&
+	git add .gitattributes world.txt &&
+	test_tick &&
+	git commit -m "Initial commit" &&
+	git update-ref refs/myblobs/world_blob HEAD:world.txt
+'
+
+test_expect_success 'basic atom raw:filters with --rest' '
+	sha1=$(git rev-parse -q --verify HEAD:world.txt) &&
+	git for-each-ref --format="%(objectname) %(raw:filters)" --rest="HEAD:world.txt" \
+	    refs/myblobs/world_blob >actual &&
+	printf "%s hello\r\n\n" $sha1 >expect &&
+	test_cmp expect actual &&
+	git for-each-ref --format="%(objectname) %(raw:filters)" --rest="HEAD:world.txt2" \
+	    refs/myblobs/world_blob >actual &&
+	printf "%s hello\n\n" $sha1 >expect &&
+	test_cmp expect actual
+
+'
+
+test_expect_success 'basic atom raw:textconv with --rest' '
+	sha1=$(git rev-parse -q --verify HEAD:world.txt) &&
+	git -c diff.txt.textconv="tr A-Za-z N-ZA-Mn-za-m <" \
+	    for-each-ref --format="%(objectname) %(raw:textconv)" --rest="HEAD:world.txt" \
+	    refs/myblobs/world_blob >actual &&
+	printf "%s uryyb\r\n\n" $sha1 >expect &&
+	test_cmp expect actual &&
+	git for-each-ref --format="%(objectname) %(raw:textconv)" --rest="HEAD:world.txt2" \
+	    refs/myblobs/world_blob >actual &&
+	printf "%s hello\n\n" $sha1 >expect &&
+	test_cmp expect actual
+'
+
+test_expect_success '%(raw:textconv) without --rest must failed' '
+	test_must_fail git for-each-ref --format="%(raw:textconv)"
+'
+
+test_expect_success '%(raw:filters) without --rest must failed' '
+	test_must_fail git for-each-ref --format="%(raw:filters)"
+'
+
+test_expect_success '%(raw:textconv) with --shell must failed' '
+	test_must_fail git for-each-ref --format="%(raw:textconv)" \
+			   --shell --rest="HEAD:world.txt"
+'
+
+test_expect_success '%(raw:filters) with --shell must failed' '
+	test_must_fail git for-each-ref --format="%(raw:filters)" \
+			   --shell --rest="HEAD:world.txt"
+'
+
+test_expect_success '%(raw:textconv) with --shell and --sort=raw:textconv must failed' '
+	test_must_fail git for-each-ref --format="%(raw:textconv)" \
+			   --sort=raw:textconv --shell --rest="HEAD:world.txt"
+'
+
+test_expect_success '%(raw:filters) with --shell and --sort=raw:filters must failed' '
+	test_must_fail git for-each-ref --format="%(raw:filters)" \
+			   --sort=raw:filters --shell --rest="HEAD:world.txt"
+'
+
 test_expect_success 'for-each-ref reports broken tags' '
 	git tag -m "good tag" broken-tag-good HEAD &&
 	git cat-file tag broken-tag-good >good &&

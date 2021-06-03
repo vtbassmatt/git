@@ -1,3 +1,4 @@
+#define USE_THE_INDEX_COMPATIBILITY_MACROS
 #include "builtin.h"
 #include "cache.h"
 #include "parse-options.h"
@@ -192,7 +193,7 @@ static struct used_atom {
 			unsigned int nlines;
 		} contents;
 		struct {
-			enum { RAW_BARE, RAW_LENGTH } option;
+			enum { RAW_BARE, RAW_FILTERS, RAW_LENGTH, RAW_TEXT_CONV } option;
 		} raw_data;
 		struct {
 			cmp_status cmp_status;
@@ -434,12 +435,19 @@ static int contents_atom_parser(struct ref_format *format, struct used_atom *ato
 static int raw_atom_parser(struct ref_format *format, struct used_atom *atom,
 				const char *arg, struct strbuf *err)
 {
-	if (!arg)
+	if (!arg) {
 		atom->u.raw_data.option = RAW_BARE;
-	else if (!strcmp(arg, "size"))
+	} else if (!strcmp(arg, "size")) {
 		atom->u.raw_data.option = RAW_LENGTH;
-	else
+	} else if (!strcmp(arg, "filters")) {
+		atom->u.raw_data.option = RAW_FILTERS;
+		format->use_rest = 1;
+	} else if (!strcmp(arg, "textconv")) {
+		atom->u.raw_data.option = RAW_TEXT_CONV;
+		format->use_rest = 1;
+	} else {
 		return strbuf_addf_ret(err, -1, _("unrecognized %%(raw) argument: %s"), arg);
+	}
 	return 0;
 }
 
@@ -1018,7 +1026,9 @@ int verify_ref_format(struct ref_format *format)
 		if (at < 0)
 			die("%s", err.buf);
 		if (format->quote_style && used_atom[at].atom_type == ATOM_RAW &&
-		    used_atom[at].u.raw_data.option == RAW_BARE)
+		    (used_atom[at].u.raw_data.option == RAW_BARE ||
+		     used_atom[at].u.raw_data.option == RAW_FILTERS ||
+		     used_atom[at].u.raw_data.option == RAW_TEXT_CONV))
 			die(_("--format=%.*s cannot be used with"
 			      "--python, --shell, --tcl, --perl"), (int)(ep - sp - 2), sp + 2);
 		cp = ep + 1;
@@ -1403,7 +1413,7 @@ static void append_lines(struct strbuf *out, const char *buf, unsigned long size
 }
 
 /* See grab_values */
-static int grab_sub_body_contents(struct atom_value *val, int deref, struct expand_data *data,
+static int grab_sub_body_contents(struct ref_array_item *ref, int deref, struct expand_data *data,
 				  struct strbuf *err)
 {
 	int i;
@@ -1411,6 +1421,7 @@ static int grab_sub_body_contents(struct atom_value *val, int deref, struct expa
 	size_t sublen = 0, bodylen = 0, nonsiglen = 0, siglen = 0;
 	void *buf = data->content;
 	unsigned long buf_size = data->size;
+	struct atom_value *val = ref->value;
 
 	for (i = 0; i < used_atom_cnt; i++) {
 		struct used_atom *atom = &used_atom[i];
@@ -1425,11 +1436,38 @@ static int grab_sub_body_contents(struct atom_value *val, int deref, struct expa
 
 		if (atom_type == ATOM_RAW) {
 			if (atom->u.raw_data.option == RAW_BARE) {
-				v->s = xmemdupz(buf, buf_size);
-				v->s_size = buf_size;
+				goto bare;
 			} else if (atom->u.raw_data.option == RAW_LENGTH) {
 				v->s = xstrfmt("%"PRIuMAX, (uintmax_t)buf_size);
+			} else if (atom->u.raw_data.option == RAW_FILTERS ||
+				   atom->u.raw_data.option == RAW_TEXT_CONV) {
+				if (!ref->rest)
+					return strbuf_addf_ret(err, -1, _("missing path for '%s'"),
+							       oid_to_hex(&data->oid));
+				if (data->type != OBJ_BLOB)
+					goto bare;
+				if (atom->u.raw_data.option == RAW_FILTERS) {
+					struct strbuf strbuf = STRBUF_INIT;
+					struct checkout_metadata meta;
+
+					init_checkout_metadata(&meta, NULL, NULL, &data->oid);
+					if (convert_to_working_tree(&the_index, ref->rest, buf, data->size, &strbuf, &meta)) {
+						v->s_size = strbuf.len;
+						v->s = strbuf_detach(&strbuf, NULL);
+					} else {
+						goto bare;
+					}
+				} else if (atom->u.raw_data.option == RAW_TEXT_CONV) {
+					if (!textconv_object(the_repository,
+							ref->rest, 0100644, &data->oid,
+							1, (char **)(&v->s), &v->s_size))
+						goto bare;
+				}
 			}
+			continue;
+bare:
+			v->s = xmemdupz(buf, buf_size);
+			v->s_size = buf_size;
 			continue;
 		}
 
@@ -1503,33 +1541,35 @@ static void fill_missing_values(struct atom_value *val)
  * pointed at by the ref itself; otherwise it is the object the
  * ref (which is a tag) refers to.
  */
-static int grab_values(struct atom_value *val, int deref, struct object *obj, struct expand_data *data, struct strbuf *err)
+static int grab_values(struct ref_array_item *ref, int deref, struct object *obj,
+		       struct expand_data *data, struct strbuf *err)
 {
 	void *buf = data->content;
+	struct atom_value *val = ref->value;
 	int ret = 0;
 
 	switch (obj->type) {
 	case OBJ_TAG:
 		grab_tag_values(val, deref, obj);
-		if ((ret = grab_sub_body_contents(val, deref, data, err)))
+		if ((ret = grab_sub_body_contents(ref, deref, data, err)))
 			return ret;
 		grab_person("tagger", val, deref, buf);
 		break;
 	case OBJ_COMMIT:
 		grab_commit_values(val, deref, obj);
-		if ((ret = grab_sub_body_contents(val, deref, data, err)))
+		if ((ret = grab_sub_body_contents(ref, deref, data, err)))
 			return ret;
 		grab_person("author", val, deref, buf);
 		grab_person("committer", val, deref, buf);
 		break;
 	case OBJ_TREE:
 		/* grab_tree_values(val, deref, obj, buf, sz); */
-		if ((ret = grab_sub_body_contents(val, deref, data, err)))
+		if ((ret = grab_sub_body_contents(ref, deref, data, err)))
 			return ret;
 		break;
 	case OBJ_BLOB:
 		/* grab_blob_values(val, deref, obj, buf, sz); */
-		if ((ret = grab_sub_body_contents(val, deref, data, err)))
+		if ((ret = grab_sub_body_contents(ref, deref, data, err)))
 			return ret;
 		break;
 	default:
@@ -1755,7 +1795,7 @@ static int get_object(struct ref_array_item *ref, int deref, struct object **obj
 			return strbuf_addf_ret(err, -1, _("parse_object_buffer failed on %s for %s"),
 					       oid_to_hex(&oi->oid), ref->refname);
 		}
-		ret = grab_values(ref->value, deref, *obj, oi, err);
+		ret = grab_values(ref, deref, *obj, oi, err);
 	}
 
 	grab_common_values(ref->value, deref, oi);
