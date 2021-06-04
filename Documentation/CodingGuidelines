@@ -648,3 +648,10 @@ Writing Documentation:
  inline substituted text+ instead of `monospaced literal text`, and with
  the former, the part that should not get substituted must be
  quoted/escaped.
+
+ Refer to an anonymous user in a gender neutral way. Singular "they/them"
+ pronouns are preferred over "he/him" and "she/her". Do not use more
+ complicated constructs such as "he or she" or "s/he". When in doubt about
+ how to use this pronoun, then change your sentence to use singular "you"
+ (e.g. "When you want to do X, do Y") or plural "they" (e.g. "When users
+ want to do X, they can do Y.").
