@@ -338,7 +338,7 @@ const char *strbuf_join_argv(struct strbuf *buf, int argc,
  *
  * In order to facilitate caching and to make it possible to give
  * parameters to the callback, `strbuf_expand()` passes a context pointer,
- * which can be used by the programmer of the callback as she sees fit.
+ * which can be used by the programmer of the callback as they see fit.
  */
 typedef size_t (*expand_fn_t) (struct strbuf *sb,
 			       const char *placeholder,

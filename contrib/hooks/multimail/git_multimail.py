@@ -3219,7 +3219,7 @@ class GitoliteEnvironmentLowPrecMixin(
     def get_repo_shortname(self):
         # The gitolite environment variable $GL_REPO is a pretty good
         # repo_shortname (though it's probably not as good as a value
-        # the user might have explicitly put in his config).
+        # the user might have explicitly put in their config).
         return (
             self.osenv.get('GL_REPO', None) or
             super(GitoliteEnvironmentLowPrecMixin, self).get_repo_shortname()
@@ -3361,7 +3361,7 @@ class GerritEnvironmentHighPrecMixin(Environment):
                 # __submitter into an RFC 2822 string already.
                 return re.match(r'(.*?)\s*<', self.__submitter).group(1)
             else:
-                # Submitter has no configured email, it's just his name.
+                # Submitter has no configured email, it's just their name.
                 return self.__submitter
         else:
             # If we arrive here, this means someone pushed "Submit" from
