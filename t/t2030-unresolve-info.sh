@@ -46,6 +46,7 @@ prime_resolve_undo () {
 }
 
 test_expect_success setup '
+	git config rerere.enabled false &&
 	mkdir fi &&
 	printf "a\0a" >binary &&
 	git add binary &&
@@ -127,6 +128,8 @@ test_expect_success 'unmerge with plumbing' '
 '
 
 test_expect_success 'rerere and rerere forget' '
+	# from here on, use rerere.
+	git config rerere.enabled true &&
 	mkdir .git/rr-cache &&
 	prime_resolve_undo &&
 	echo record the resolution &&

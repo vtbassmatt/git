@@ -18,8 +18,7 @@
 #define THREE_STAGED 2
 void *RERERE_RESOLVED = &RERERE_RESOLVED;
 
-/* if rerere_enabled == -1, fall back to detection of .git/rr-cache */
-static int rerere_enabled = -1;
+static int rerere_enabled = 1; /* default to true */
 
 /* automatically update cleanly resolved paths to the index */
 static int rerere_autoupdate;
@@ -852,16 +851,11 @@ static GIT_PATH_FUNC(git_path_rr_cache, "rr-cache")
 
 static int is_rerere_enabled(void)
 {
-	int rr_cache_exists;
-
 	if (!rerere_enabled)
 		return 0;
 
-	rr_cache_exists = is_directory(git_path_rr_cache());
-	if (rerere_enabled < 0)
-		return rr_cache_exists;
-
-	if (!rr_cache_exists && mkdir_in_gitdir(git_path_rr_cache()))
+	if (!is_directory(git_path_rr_cache()) &&
+	    mkdir_in_gitdir(git_path_rr_cache()))
 		die(_("could not create directory '%s'"), git_path_rr_cache());
 	return 1;
 }
