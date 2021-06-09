@@ -5,7 +5,13 @@
 # Copyright (C) 2009 Avery Pennarun <apenwarr@gmail.com>
 #
 
-if test -z "$GIT_EXEC_PATH" || test "${PATH#"${GIT_EXEC_PATH}:"}" = "$PATH" || ! test -f "$GIT_EXEC_PATH/git-sh-setup"
+if test -z "$GIT_EXEC_PATH" || {
+	test "${PATH#"${GIT_EXEC_PATH}:"}" = "$PATH" && {
+		# On Windows, PATH might be Unix-style, GIT_EXEC_PATH not
+		! type -p cygpath >/dev/null 2>&1 ||
+		test "${PATH#$(cygpath -au "$GIT_EXEC_PATH"):}" = "$PATH"
+	}
+} || ! test -f "$GIT_EXEC_PATH/git-sh-setup"
 then
 	echo >&2 'It looks like either your git installation or your'
 	echo >&2 'git-subtree installation is broken.'
