@@ -377,6 +377,11 @@ static int batch_objects(struct batch_options *opt, const struct option *options
 	if (opt->print_contents)
 		strbuf_addstr(&format, "\n%(raw)");
 	opt->format.format = format.buf;
+	if (opt->cmdmode == 'c')
+		opt->format.use_textconv = 1;
+	if (opt->cmdmode == 'w')
+		opt->format.use_filters = 1;
+
 	if (verify_ref_format(&opt->format))
 		usage_with_options(cat_file_usage, options);
 
