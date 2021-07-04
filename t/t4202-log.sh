@@ -1616,6 +1616,16 @@ test_expect_success GPGSM 'setup signed branch x509' '
 	git commit -S -m signed_commit
 '
 
+test_expect_success GPGSSH 'setup sshkey signed branch' '
+	test_config gpg.format ssh &&
+	test_config user.signingkey "${SIGNING_KEY_PRIMARY}" &&
+	test_when_finished "git reset --hard && git checkout main" &&
+	git checkout -b signed-ssh main &&
+	echo foo >foo &&
+	git add foo &&
+	git commit -S -m signed_commit
+'
+
 test_expect_success GPGSM 'log x509 fingerprint' '
 	echo "F8BF62E0693D0694816377099909C779FA23FD65 | " >expect &&
 	git log -n1 --format="%GF | %GP" signed-x509 >actual &&
@@ -1638,6 +1648,13 @@ test_expect_success GPGSM 'log --graph --show-signature x509' '
 	git log --graph --show-signature -n1 signed-x509 >actual &&
 	grep "^| gpgsm: Signature made" actual &&
 	grep "^| gpgsm: Good signature" actual
+'
+
+test_expect_success GPGSSH 'log ssh key fingerprint' '
+	test_config gpg.ssh.keyring "${SIGNING_KEYRING}" &&
+	ssh-keygen -lf  "${SIGNING_KEY_PRIMARY}" | awk "{print \$2\" | \"}" >expect &&
+	git log -n1 --format="%GF | %GP" signed-ssh >actual &&
+	test_cmp expect actual
 '
 
 test_expect_success GPG 'log --graph --show-signature for merged tag' '
