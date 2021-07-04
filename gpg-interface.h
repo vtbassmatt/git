@@ -7,6 +7,8 @@ struct strbuf;
 #define GPG_VERIFY_RAW			2
 #define GPG_VERIFY_OMIT_STATUS	4
 
+#define GPG_SSH_ALLOWED_SIGNERS ".gitsigners"
+
 enum signature_trust_level {
 	TRUST_UNDEFINED,
 	TRUST_NEVER,
@@ -64,6 +66,7 @@ int sign_buffer(struct strbuf *buffer, struct strbuf *signature,
 int git_gpg_config(const char *, const char *, void *);
 void set_signing_key(const char *);
 const char *get_signing_key(void);
+const char *get_ssh_allowed_signers(void);
 int check_signature(const char *payload, size_t plen,
 		    const char *signature, size_t slen,
 		    struct signature_check *sigc);

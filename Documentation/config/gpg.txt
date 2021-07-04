@@ -11,13 +11,13 @@ gpg.program::
 
 gpg.format::
 	Specifies which key format to use when signing with `--gpg-sign`.
-	Default is "openpgp" and another possible value is "x509".
+	Default is "openpgp". Other possible values are "x509", "ssh".
 
 gpg.<format>.program::
 	Use this to customize the program used for the signing format you
 	chose. (see `gpg.program` and `gpg.format`) `gpg.program` can still
 	be used as a legacy synonym for `gpg.openpgp.program`. The default
-	value for `gpg.x509.program` is "gpgsm".
+	value for `gpg.x509.program` is "gpgsm" and `gpg.ssh.program` is "ssh-keygen".
 
 gpg.minTrustLevel::
 	Specifies a minimum trust level for signature verification.  If
@@ -27,6 +27,15 @@ gpg.minTrustLevel::
 	with at least `undefined` trust.  Setting this option overrides
 	the required trust-level for all operations.  Supported values,
 	in increasing order of significance:
+
+gpg.ssh.allowedSigners::
+	A file containing all valid SSH signing principals. 
+	Similar to an .ssh/authorized_keys file. See ssh-keygen(1) for details.
+	Defaults to .gitsigners
+
+gpg.ssh.revocationFile::
+	Either a SSH KRL or a list of revoked public keys.
+	See ssh-keygen(1) for details.
 +
 * `undefined`
 * `never`
