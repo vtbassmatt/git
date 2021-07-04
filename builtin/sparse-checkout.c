@@ -15,6 +15,7 @@
 #include "wt-status.h"
 #include "quote.h"
 #include "sparse-index.h"
+#include "run-command.h"
 
 static const char *empty_base = "";
 
@@ -100,6 +101,71 @@ static int sparse_checkout_list(int argc, const char **argv)
 	return 0;
 }
 
+static void clean_tracked_sparse_directories(struct repository *r)
+{
+	int i;
+	struct strbuf path = STRBUF_INIT;
+	size_t pathlen;
+
+	/*
+	 * If we are not using cone mode patterns, then we cannot
+	 * delete directories outside of the sparse cone.
+	 */
+	if (!r || !r->index || !r->index->sparse_checkout_patterns ||
+	    !r->index->sparse_checkout_patterns->use_cone_patterns)
+		return;
+	/*
+	 * NEEDSWORK: For now, only use this behavior when index.sparse
+	 * is enabled. We may want this behavior enabled whenever using
+	 * cone mode patterns.
+	 */
+	prepare_repo_settings(r);
+	if (!r->worktree || !r->settings.sparse_index)
+		return;
+
+	/*
+	 * Since we now depend on the sparse index to enable this
+	 * behavior, use it to our advantage. This process is more
+	 * complicated without it.
+	 */
+	convert_to_sparse(r->index);
+
+	strbuf_addstr(&path, r->worktree);
+	strbuf_complete(&path, '/');
+	pathlen = path.len;
+
+	for (i = 0; i < r->index->cache_nr; i++) {
+		struct cache_entry *ce = r->index->cache[i];
+
+		/*
+		 * Is this a sparse directory? If so, then definitely
+		 * include it. All contained content is outside of the
+		 * patterns.
+		 */
+		if (S_ISSPARSEDIR(ce->ce_mode) &&
+		    repo_file_exists(r, ce->name)) {
+			strbuf_setlen(&path, pathlen);
+			strbuf_addstr(&path, ce->name);
+
+			/*
+			 * Removal is "best effort". If something blocks
+			 * the deletion, then continue with a warning.
+			 */
+			if (remove_dir_recursively(&path, 0))
+				warning(_("failed to remove directory '%s'"), path.buf);
+		}
+	}
+
+	strbuf_release(&path);
+
+	/*
+	 * This is temporary: the sparse-checkout builtin is not
+	 * integrated with the sparse-index yet, so we need to keep
+	 * it full during the process.
+	 */
+	ensure_full_index(r->index);
+}
+
 static int update_working_directory(struct pattern_list *pl)
 {
 	enum update_sparsity_result result;
@@ -140,6 +206,8 @@ static int update_working_directory(struct pattern_list *pl)
 		write_locked_index(r->index, &lock_file, COMMIT_LOCK);
 	else
 		rollback_lock_file(&lock_file);
+
+	clean_tracked_sparse_directories(r);
 
 	r->index->sparse_checkout_patterns = NULL;
 	return result;
@@ -540,7 +608,10 @@ static int modify_pattern_list(int argc, const char **argv, enum modify_type m)
 {
 	int result;
 	int changed_config = 0;
+	struct pattern_list *old_pl = xcalloc(1, sizeof(*old_pl));
 	struct pattern_list *pl = xcalloc(1, sizeof(*pl));
+
+	get_sparse_checkout_patterns(old_pl);
 
 	switch (m) {
 	case ADD:
@@ -567,7 +638,9 @@ static int modify_pattern_list(int argc, const char **argv, enum modify_type m)
 		set_config(MODE_NO_PATTERNS);
 
 	clear_pattern_list(pl);
+	clear_pattern_list(old_pl);
 	free(pl);
+	free(old_pl);
 	return result;
 }
 

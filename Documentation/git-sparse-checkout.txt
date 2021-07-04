@@ -210,6 +210,12 @@ case-insensitive check. This corrects for case mismatched filenames in the
 'git sparse-checkout set' command to reflect the expected cone in the working
 directory.
 
+When the sparse index is enabled through the `index.sparse` config option,
+the cone mode sparse-checkout patterns will also remove ignored files that
+are not within the sparse-checkout definition. This is important behavior
+to preserve the performance of the sparse index, but also matches that
+cone mode patterns care about directories, not files.
+
 
 SUBMODULES
 ----------
