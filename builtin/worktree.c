@@ -305,7 +305,7 @@ static int add_worktree(const char *path, const char *refname,
 	if (!opts->keep_locked)
 		write_file(sb.buf, "initializing");
 	else
-		write_file(sb.buf, "added with --lock");
+		write_file(sb.buf, _("added with --lock"));
 
 	strbuf_addf(&sb_git, "%s/.git", path);
 	if (safe_create_leading_directories_const(sb_git.buf))
