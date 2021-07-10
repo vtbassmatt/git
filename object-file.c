@@ -1974,11 +1974,16 @@ static int freshen_loose_object(const struct object_id *oid)
 static int freshen_packed_object(const struct object_id *oid)
 {
 	struct pack_entry e;
+	struct strbuf name_buf = STRBUF_INIT;
+	const char *filename;
+
 	if (!find_pack_entry(the_repository, oid, &e))
 		return 0;
 	if (e.p->freshened)
 		return 1;
-	if (!freshen_file(e.p->pack_name))
+
+	filename = derive_pack_filename(e.p->pack_name, "pack", "idx", &name_buf);
+	if (!freshen_file(filename))
 		return 0;
 	e.p->freshened = 1;
 	return 1;

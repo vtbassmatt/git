@@ -106,7 +106,7 @@ test_expect_success 'do not bother loosening old objects' '
 	git prune-packed &&
 	git cat-file -p $obj1 &&
 	git cat-file -p $obj2 &&
-	test-tool chmtime =-86400 .git/objects/pack/pack-$pack2.pack &&
+	test-tool chmtime =-86400 .git/objects/pack/pack-$pack2.idx &&
 	git repack -A -d --unpack-unreachable=1.hour.ago &&
 	git cat-file -p $obj1 &&
 	test_must_fail git cat-file -p $obj2
