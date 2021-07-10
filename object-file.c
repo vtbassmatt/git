@@ -1974,12 +1974,41 @@ static int freshen_loose_object(const struct object_id *oid)
 static int freshen_packed_object(const struct object_id *oid)
 {
 	struct pack_entry e;
+	struct stat st;
+	struct strbuf name_buf = STRBUF_INIT;
+	const char *filename;
+
 	if (!find_pack_entry(the_repository, oid, &e))
 		return 0;
 	if (e.p->freshened)
 		return 1;
-	if (!freshen_file(e.p->pack_name))
-		return 0;
+
+	filename = e.p->pack_name;
+	if (!strcasecmp(pack_mtime_suffix, "pack")) {
+		if (!freshen_file(filename))
+			return 0;
+		e.p->freshened = 1;
+		return 1;
+	}
+
+	/* If we want to freshen different file instead of .pack file, we need
+	 * to make sure the file exists and create it if needed.
+	 */
+	filename = derive_pack_filename(filename, "pack", pack_mtime_suffix, &name_buf);
+	if (lstat(filename, &st) < 0) {
+		int fd = open(filename, O_CREAT|O_EXCL|O_WRONLY, 0664);
+		if (fd < 0) {
+			// here we need to check it again because other git process may created it
+			if (lstat(filename, &st) < 0)
+				die_errno("unable to create '%s'", filename);
+		} else {
+			close(fd);
+		}
+	} else {
+		if (!freshen_file(filename))
+			return 0;
+	}
+
 	e.p->freshened = 1;
 	return 1;
 }

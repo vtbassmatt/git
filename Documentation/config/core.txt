@@ -398,6 +398,18 @@ the largest projects.  You probably do not need to adjust this value.
 +
 Common unit suffixes of 'k', 'm', or 'g' are supported.
 
+core.packMtimeSuffix::
+	Normally we avoid writing existing object by freshening the mtime
+	of the *.pack file which contains it in order to aid some processes
+	such like prune. Use different file instead of *.pack file will
+	avoid file system cache re-sync the large packfiles, and consequently
+	make git commands faster.
++
+The default is 'pack' which means the *.pack file will be freshened by
+default. You can configure a different suffix to use, the file with the
+suffix will be created automatically, it's better not using any known
+suffix such like 'idx', 'keep', 'promisor'.
+
 core.deltaBaseCacheLimit::
 	Maximum number of bytes per thread to reserve for caching base objects
 	that may be referenced by multiple deltified objects.  By storing the

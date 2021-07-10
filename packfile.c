@@ -40,6 +40,19 @@ char *sha1_pack_index_name(const unsigned char *sha1)
 	return odb_pack_name(&buf, sha1, "idx");
 }
 
+const char *derive_pack_filename(const char *pack_name, const char *strip,
+				const char *suffix, struct strbuf *buf)
+{
+	size_t len;
+	if (!strip_suffix(pack_name, strip, &len) || !len ||
+	    pack_name[len - 1] != '.')
+		die(_("packfile name '%s' does not end with '.%s'"),
+		    pack_name, strip);
+	strbuf_add(buf, pack_name, len);
+	strbuf_addstr(buf, suffix);
+	return buf->buf;
+}
+
 static unsigned int pack_used_ctr;
 static unsigned int pack_mmap_calls;
 static unsigned int peak_pack_open_windows;
@@ -727,6 +740,17 @@ struct packed_git *add_packed_git(const char *path, size_t path_len, int local)
 	 */
 	p->pack_size = st.st_size;
 	p->pack_local = local;
+
+	/* If we have different file used to freshen the mtime, we should
+	 * use it at a higher priority.
+	 */
+	if (!!strcasecmp(pack_mtime_suffix, "pack")) {
+		struct strbuf name_buf = STRBUF_INIT;
+		const char *filename;
+
+		filename = derive_pack_filename(path, "idx", pack_mtime_suffix, &name_buf);
+		stat(filename, &st);
+	}
 	p->mtime = st.st_mtime;
 	if (path_len < the_hash_algo->hexsz ||
 	    get_sha1_hex(path + path_len - the_hash_algo->hexsz, p->hash))
