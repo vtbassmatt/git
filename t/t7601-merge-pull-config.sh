@@ -197,11 +197,11 @@ test_attempts_fast_forward() {
 # Rule 1: --ff-only takes precedence over --[no-]rebase
 # (Corollary: pull.ff=only overrides pull.rebase)
 #
-test_expect_failure '--ff-only takes precedence over --rebase' '
+test_expect_success '--ff-only takes precedence over --rebase' '
 	test_attempts_fast_forward pull --rebase --ff-only
 '
 
-test_expect_failure '--ff-only takes precedence over --rebase even if first' '
+test_expect_success '--ff-only takes precedence over --rebase even if first' '
 	test_attempts_fast_forward pull --ff-only --rebase
 '
 
@@ -209,7 +209,7 @@ test_expect_success '--ff-only takes precedence over --no-rebase' '
 	test_attempts_fast_forward pull --ff-only --no-rebase
 '
 
-test_expect_failure 'pull.ff=only overrides pull.rebase=true' '
+test_expect_success 'pull.ff=only overrides pull.rebase=true' '
 	test_attempts_fast_forward -c pull.ff=only -c pull.rebase=true pull
 '
 
@@ -236,7 +236,7 @@ test_expect_success 'pull.rebase=true takes precedence over pull.ff=true' '
 '
 
 # Rule 3: command line flags take precedence over config
-test_expect_failure '--ff-only takes precedence over pull.rebase=true' '
+test_expect_success '--ff-only takes precedence over pull.rebase=true' '
 	test_attempts_fast_forward -c pull.rebase=true pull --ff-only
 '
 
@@ -248,7 +248,7 @@ test_expect_failure '--no-rebase overrides pull.ff=only' '
 	test_does_need_full_merge -c pull.ff=only pull --no-rebase
 '
 
-test_expect_success '--rebase takes precedence over pull.ff=only' '
+test_expect_failure '--rebase takes precedence over pull.ff=only' '
 	test_does_rebase -c pull.ff=only pull --rebase
 '
 
