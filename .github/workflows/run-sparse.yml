@@ -1,0 +1,22 @@
+name: Run `sparse`
+
+on: [push, pull_request]
+
+jobs:
+  sparse:
+    runs-on: ubuntu-20.04
+    steps:
+    - name: Download the `sparse` package
+      uses: git-for-windows/get-azure-pipelines-artifact@v0
+      with:
+        repository: git/git
+        definitionId: 10
+        artifact: sparse-20.04
+    - name: Install the `sparse` package
+      run: sudo dpkg -i sparse-20.04/sparse_*.deb
+    - name: Install a couple of dependencies
+      run: |
+        sudo apt-get install -q -y libssl-dev libcurl4-openssl-dev libexpat-dev gettext zlib1g-dev
+    - uses: actions/checkout@v2
+    - name: make sparse
+      run: make sparse
