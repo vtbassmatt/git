@@ -505,30 +505,96 @@ const char *get_ssh_allowed_signers(void)
 
 int sign_buffer(struct strbuf *buffer, struct strbuf *signature, const char *signing_key)
 {
-	struct child_process gpg = CHILD_PROCESS_INIT;
+	struct child_process signer = CHILD_PROCESS_INIT;
 	int ret;
 	size_t i, j, bottom;
-	struct strbuf gpg_status = STRBUF_INIT;
+	struct strbuf signer_stderr = STRBUF_INIT;
+	struct tempfile *temp = NULL, *buffer_file = NULL;
+	char *ssh_signing_key_file = NULL;
+	struct strbuf ssh_signature_filename = STRBUF_INIT;
 
-	strvec_pushl(&gpg.args,
-		     use_format->program,
+	if (!strcmp(use_format->name, "ssh")) {
+		if (!signing_key || signing_key[0] == '\0')
+			return error(_("user.signingkey needs to be set for ssh signing"));
+
+
+		if (istarts_with(signing_key, "ssh-")) {
+			/* A literal ssh key */
+			temp = mks_tempfile_t(".git_signing_key_tmpXXXXXX");
+			if (!temp)
+				return error_errno(_("could not create temporary file"));
+			if (write_in_full(temp->fd, signing_key, strlen(signing_key)) < 0 ||
+				close_tempfile_gently(temp) < 0) {
+				error_errno(_("failed writing ssh signing key to '%s'"),
+					temp->filename.buf);
+				delete_tempfile(&temp);
+				return -1;
+			}
+			ssh_signing_key_file= temp->filename.buf;
+		} else {
+			/* We assume a file */
+			ssh_signing_key_file = expand_user_path(signing_key, 1);
+		}
+
+		buffer_file = mks_tempfile_t(".git_signing_buffer_tmpXXXXXX");
+		if (!buffer_file)
+			return error_errno(_("could not create temporary file"));
+		if (write_in_full(buffer_file->fd, buffer->buf, buffer->len) < 0 ||
+			close_tempfile_gently(buffer_file) < 0) {
+			error_errno(_("failed writing ssh signing key buffer to '%s'"),
+				buffer_file->filename.buf);
+			delete_tempfile(&buffer_file);
+			return -1;
+		}
+
+		strvec_pushl(&signer.args, use_format->program ,
+					"-Y", "sign",
+					"-n", "git",
+					"-f", ssh_signing_key_file,
+					buffer_file->filename.buf,
+					NULL);
+
+		sigchain_push(SIGPIPE, SIG_IGN);
+		ret = pipe_command(&signer, NULL, 0, NULL, 0, &signer_stderr, 0);
+		sigchain_pop(SIGPIPE);
+
+		strbuf_addbuf(&ssh_signature_filename, &buffer_file->filename);
+		strbuf_addstr(&ssh_signature_filename, ".sig");
+		if (strbuf_read_file(signature, ssh_signature_filename.buf, 2048) < 0) {
+			error_errno(_("failed reading ssh signing data buffer from '%s'"),
+				ssh_signature_filename.buf);
+		}
+		unlink_or_warn(ssh_signature_filename.buf);
+		strbuf_release(&ssh_signature_filename);
+		delete_tempfile(&buffer_file);
+	} else {
+		strvec_pushl(&signer.args, use_format->program ,
 		     "--status-fd=2",
 		     "-bsau", signing_key,
 		     NULL);
-
-	bottom = signature->len;
 
 	/*
 	 * When the username signingkey is bad, program could be terminated
 	 * because gpg exits without reading and then write gets SIGPIPE.
 	 */
 	sigchain_push(SIGPIPE, SIG_IGN);
-	ret = pipe_command(&gpg, buffer->buf, buffer->len,
-			   signature, 1024, &gpg_status, 0);
+		ret = pipe_command(&signer, buffer->buf, buffer->len, signature, 1024, &signer_stderr, 0);
 	sigchain_pop(SIGPIPE);
+	}
 
-	ret |= !strstr(gpg_status.buf, "\n[GNUPG:] SIG_CREATED ");
-	strbuf_release(&gpg_status);
+	bottom = signature->len;
+
+	if (temp)
+		delete_tempfile(&temp);
+
+	if (!strcmp(use_format->name, "ssh")) {
+		if (strstr(signer_stderr.buf, "usage:")) {
+			error(_("openssh version > 8.2p1 is needed for ssh signing (ssh-keygen needs -Y sign option)"));
+		}
+	} else {
+		ret |= !strstr(signer_stderr.buf, "\n[GNUPG:] SIG_CREATED ");
+	}
+	strbuf_release(&signer_stderr);
 	if (ret)
 		return error(_("gpg failed to sign the data"));
 
