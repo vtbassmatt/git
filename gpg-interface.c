@@ -3,6 +3,7 @@
 #include "config.h"
 #include "run-command.h"
 #include "strbuf.h"
+#include "dir.h"
 #include "gpg-interface.h"
 #include "sigchain.h"
 #include "tempfile.h"
@@ -156,6 +157,42 @@ static int parse_gpg_trust_level(const char *level,
 	return 1;
 }
 
+static void parse_ssh_output(struct signature_check *sigc)
+{
+	struct string_list parts = STRING_LIST_INIT_DUP;
+	char *line = NULL;
+
+	/*
+	 * ssh-keysign output should be:
+	 * Good "git" signature for PRINCIPAL with RSA key SHA256:FINGERPRINT
+	 * or for valid but unknown keys:
+	 * Good "git" signature with RSA key SHA256:FINGERPRINT
+	 */
+	sigc->result = 'B';
+	sigc->trust_level = TRUST_NEVER;
+
+	line = xmemdupz(sigc->output, strcspn(sigc->output, "\n"));
+	string_list_split(&parts, line, ' ', 8);
+	if (parts.nr >= 9 && starts_with(line, "Good \"git\" signature for ")) {
+		/* Valid signature for a trusted signer */
+		sigc->result = 'G';
+		sigc->trust_level = TRUST_FULLY;
+		sigc->signer = xstrdup(parts.items[4].string);
+		sigc->fingerprint = xstrdup(parts.items[8].string);
+		sigc->key = xstrdup(sigc->fingerprint);
+	} else if (parts.nr >= 7 && starts_with(line, "Good \"git\" signature with ")) {
+		/* Valid signature, but key unknown */
+		sigc->result = 'G';
+		sigc->trust_level = TRUST_UNDEFINED;
+		sigc->fingerprint = xstrdup(parts.items[6].string);
+		sigc->key = xstrdup(sigc->fingerprint);
+	}
+	trace_printf("trace: sigc result %c/%d - %s %s %s", sigc->result, sigc->trust_level, sigc->signer, sigc->fingerprint, sigc->key);
+
+	string_list_clear(&parts, 0);
+	FREE_AND_NULL(line);
+}
+
 static void parse_gpg_output(struct signature_check *sigc)
 {
 	const char *buf = sigc->gpg_status;
@@ -267,6 +304,108 @@ error:
 	FREE_AND_NULL(sigc->fingerprint);
 	FREE_AND_NULL(sigc->signer);
 	FREE_AND_NULL(sigc->key);
+}
+
+static int verify_ssh_signature(struct signature_check *sigc,
+	struct gpg_format *fmt,
+	const char *payload, size_t payload_size,
+	const char *signature, size_t signature_size)
+{
+	struct child_process ssh_keygen = CHILD_PROCESS_INIT;
+	struct tempfile *temp;
+	int ret;
+	const char *line;
+	size_t trust_size;
+	char *principal;
+	struct strbuf ssh_keygen_out = STRBUF_INIT;
+	struct strbuf ssh_keygen_err = STRBUF_INIT;
+
+	temp = mks_tempfile_t(".git_vtag_tmpXXXXXX");
+	if (!temp)
+		return error_errno(_("could not create temporary file"));
+	if (write_in_full(temp->fd, signature, signature_size) < 0 ||
+	    close_tempfile_gently(temp) < 0) {
+		error_errno(_("failed writing detached signature to '%s'"),
+			    temp->filename.buf);
+		delete_tempfile(&temp);
+		return -1;
+	}
+
+	/* Find the principal from the signers */
+	strvec_pushl(&ssh_keygen.args,  fmt->program,
+					"-Y", "find-principals",
+					"-f", get_ssh_allowed_signers(),
+					"-s", temp->filename.buf,
+					NULL);
+	ret = pipe_command(&ssh_keygen, NULL, 0, &ssh_keygen_out, 0, &ssh_keygen_err, 0);
+	if (strstr(ssh_keygen_err.buf, "usage:")) {
+		error(_("openssh version > 8.2p1 is needed for ssh signature verification (ssh-keygen needs -Y find-principals/verify option)"));
+	}
+	if (ret || !ssh_keygen_out.len) {
+		/* We did not find a matching principal in the keyring - Check without validation */
+		child_process_init(&ssh_keygen);
+		strvec_pushl(&ssh_keygen.args,  fmt->program,
+						"-Y", "check-novalidate",
+						"-n", "git",
+						"-s", temp->filename.buf,
+						NULL);
+		ret = pipe_command(&ssh_keygen, payload, payload_size, &ssh_keygen_out, 0, &ssh_keygen_err, 0);
+	} else {
+		/* Check every principal we found (one per line) */
+		for (line = ssh_keygen_out.buf; *line; line = strchrnul(line + 1, '\n')) {
+			while (*line == '\n')
+				line++;
+			if (!*line)
+				break;
+
+			trust_size = strcspn(line, " \n");
+			principal = xmemdupz(line, trust_size);
+
+			child_process_init(&ssh_keygen);
+			strbuf_release(&ssh_keygen_out);
+			strbuf_release(&ssh_keygen_err);
+			strvec_push(&ssh_keygen.args,fmt->program);
+			/* We found principals - Try with each until we find a match */
+			strvec_pushl(&ssh_keygen.args,  "-Y", "verify",
+							"-n", "git",
+							"-f", get_ssh_allowed_signers(),
+							"-I", principal,
+							"-s", temp->filename.buf,
+							NULL);
+
+			if (ssh_revocation_file) {
+				if (file_exists(ssh_revocation_file)) {
+					strvec_pushl(&ssh_keygen.args, "-r", ssh_revocation_file, NULL);
+				} else {
+					warning(_("ssh signing revocation file configured but not found: %s"), ssh_revocation_file);
+				}
+			}
+
+			sigchain_push(SIGPIPE, SIG_IGN);
+			ret = pipe_command(&ssh_keygen, payload, payload_size,
+					&ssh_keygen_out, 0, &ssh_keygen_err, 0);
+			sigchain_pop(SIGPIPE);
+
+			ret &= starts_with(ssh_keygen_out.buf, "Good");
+			if (ret == 0)
+				break;
+		}
+	}
+
+	sigc->payload = xmemdupz(payload, payload_size);
+	strbuf_stripspace(&ssh_keygen_out, 0);
+	strbuf_stripspace(&ssh_keygen_err, 0);
+	strbuf_add(&ssh_keygen_out, ssh_keygen_err.buf, ssh_keygen_err.len);
+	sigc->output = strbuf_detach(&ssh_keygen_out, NULL);
+	sigc->gpg_status = xstrdup(sigc->output);
+
+	parse_ssh_output(sigc);
+
+	delete_tempfile(&temp);
+	strbuf_release(&ssh_keygen_out);
+	strbuf_release(&ssh_keygen_err);
+
+	return ret;
 }
 
 static int verify_gpg_signature(struct signature_check *sigc, struct gpg_format *fmt,
