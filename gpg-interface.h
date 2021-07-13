@@ -17,8 +17,8 @@ enum signature_trust_level {
 
 struct signature_check {
 	char *payload;
-	char *gpg_output;
-	char *gpg_status;
+	char *output;
+	char *gpg_status; /* Only used internally -> remove from this public api */
 
 	/*
 	 * possible "result":
@@ -64,6 +64,7 @@ int sign_buffer(struct strbuf *buffer, struct strbuf *signature,
 int git_gpg_config(const char *, const char *, void *);
 void set_signing_key(const char *);
 const char *get_signing_key(void);
+const char *get_ssh_allowed_signers(void);
 int check_signature(const char *payload, size_t plen,
 		    const char *signature, size_t slen,
 		    struct signature_check *sigc);

@@ -8,6 +8,7 @@
 #include "tempfile.h"
 
 static char *configured_signing_key;
+const char *ssh_allowed_signers, *ssh_revocation_file;
 static enum signature_trust_level configured_min_trust_level = TRUST_UNDEFINED;
 
 struct gpg_format {
@@ -35,6 +36,14 @@ static const char *x509_sigs[] = {
 	NULL
 };
 
+static const char *ssh_verify_args[] = {
+	NULL
+};
+static const char *ssh_sigs[] = {
+	"-----BEGIN SSH SIGNATURE-----",
+	NULL
+};
+
 static struct gpg_format gpg_format[] = {
 	{ .name = "openpgp", .program = "gpg",
 	  .verify_args = openpgp_verify_args,
@@ -44,6 +53,9 @@ static struct gpg_format gpg_format[] = {
 	  .verify_args = x509_verify_args,
 	  .sigs = x509_sigs
 	},
+	{ .name = "ssh", .program = "ssh-keygen",
+	  .verify_args = ssh_verify_args,
+	  .sigs = ssh_sigs },
 };
 
 static struct gpg_format *use_format = &gpg_format[0];
@@ -72,7 +84,7 @@ static struct gpg_format *get_format_by_sig(const char *sig)
 void signature_check_clear(struct signature_check *sigc)
 {
 	FREE_AND_NULL(sigc->payload);
-	FREE_AND_NULL(sigc->gpg_output);
+	FREE_AND_NULL(sigc->output);
 	FREE_AND_NULL(sigc->gpg_status);
 	FREE_AND_NULL(sigc->signer);
 	FREE_AND_NULL(sigc->key);
@@ -257,16 +269,15 @@ error:
 	FREE_AND_NULL(sigc->key);
 }
 
-static int verify_signed_buffer(const char *payload, size_t payload_size,
-				const char *signature, size_t signature_size,
-				struct strbuf *gpg_output,
-				struct strbuf *gpg_status)
+static int verify_gpg_signature(struct signature_check *sigc, struct gpg_format *fmt,
+	const char *payload, size_t payload_size,
+	const char *signature, size_t signature_size)
 {
 	struct child_process gpg = CHILD_PROCESS_INIT;
-	struct gpg_format *fmt;
 	struct tempfile *temp;
 	int ret;
-	struct strbuf buf = STRBUF_INIT;
+	struct strbuf gpg_out = STRBUF_INIT;
+	struct strbuf gpg_err = STRBUF_INIT;
 
 	temp = mks_tempfile_t(".git_vtag_tmpXXXXXX");
 	if (!temp)
@@ -279,29 +290,28 @@ static int verify_signed_buffer(const char *payload, size_t payload_size,
 		return -1;
 	}
 
-	fmt = get_format_by_sig(signature);
-	if (!fmt)
-		BUG("bad signature '%s'", signature);
-
 	strvec_push(&gpg.args, fmt->program);
 	strvec_pushv(&gpg.args, fmt->verify_args);
 	strvec_pushl(&gpg.args,
-		     "--status-fd=1",
-		     "--verify", temp->filename.buf, "-",
-		     NULL);
-
-	if (!gpg_status)
-		gpg_status = &buf;
+			"--status-fd=1",
+			"--verify", temp->filename.buf, "-",
+			NULL);
 
 	sigchain_push(SIGPIPE, SIG_IGN);
-	ret = pipe_command(&gpg, payload, payload_size,
-			   gpg_status, 0, gpg_output, 0);
+	ret = pipe_command(&gpg, payload, payload_size, &gpg_out, 0,
+				&gpg_err, 0);
 	sigchain_pop(SIGPIPE);
+	ret |= !strstr(gpg_out.buf, "\n[GNUPG:] GOODSIG ");
+
+	sigc->payload = xmemdupz(payload, payload_size);
+	sigc->output = strbuf_detach(&gpg_err, NULL);
+	sigc->gpg_status = strbuf_detach(&gpg_out, NULL);
+
+	parse_gpg_output(sigc);
 
 	delete_tempfile(&temp);
-
-	ret |= !strstr(gpg_status->buf, "\n[GNUPG:] GOODSIG ");
-	strbuf_release(&buf); /* no matter it was used or not */
+	strbuf_release(&gpg_out);
+	strbuf_release(&gpg_err);
 
 	return ret;
 }
@@ -309,27 +319,28 @@ static int verify_signed_buffer(const char *payload, size_t payload_size,
 int check_signature(const char *payload, size_t plen, const char *signature,
 	size_t slen, struct signature_check *sigc)
 {
-	struct strbuf gpg_output = STRBUF_INIT;
-	struct strbuf gpg_status = STRBUF_INIT;
+	struct gpg_format *fmt;
 	int status;
 
 	sigc->result = 'N';
 	sigc->trust_level = -1;
 
-	status = verify_signed_buffer(payload, plen, signature, slen,
-				      &gpg_output, &gpg_status);
-	if (status && !gpg_output.len)
-		goto out;
-	sigc->payload = xmemdupz(payload, plen);
-	sigc->gpg_output = strbuf_detach(&gpg_output, NULL);
-	sigc->gpg_status = strbuf_detach(&gpg_status, NULL);
-	parse_gpg_output(sigc);
+	fmt = get_format_by_sig(signature);
+	if (!fmt) {
+		error(_("bad/incompatible signature '%s'"), signature);
+		return -1;
+	}
+
+	if (!strcmp(fmt->name, "ssh")) {
+		status = verify_ssh_signature(sigc, fmt, payload, plen, signature, slen);
+	} else {
+		status = verify_gpg_signature(sigc, fmt, payload, plen, signature, slen);
+	}
+	if (status && !sigc->output)
+		return !!status;
+
 	status |= sigc->result != 'G';
 	status |= sigc->trust_level < configured_min_trust_level;
-
- out:
-	strbuf_release(&gpg_status);
-	strbuf_release(&gpg_output);
 
 	return !!status;
 }
@@ -337,7 +348,7 @@ int check_signature(const char *payload, size_t plen, const char *signature,
 void print_signature_buffer(const struct signature_check *sigc, unsigned flags)
 {
 	const char *output = flags & GPG_VERIFY_RAW ?
-		sigc->gpg_status : sigc->gpg_output;
+		sigc->gpg_status : sigc->output;
 
 	if (flags & GPG_VERIFY_VERBOSE && sigc->payload)
 		fputs(sigc->payload, stdout);
@@ -388,10 +399,30 @@ int git_gpg_config(const char *var, const char *value, void *cb)
 	int ret;
 
 	if (!strcmp(var, "user.signingkey")) {
+		/*
+		 * user.signingkey can contain one of the following
+		 * when format = openpgp/x509
+		 *   - GPG KeyID
+		 * when format = ssh
+		 *   - literal ssh public key (e.g. ssh-rsa XXXKEYXXX comment)
+		 *   - path to a file containing a public or a private ssh key
+		 */
 		if (!value)
 			return config_error_nonbool(var);
 		set_signing_key(value);
 		return 0;
+	}
+
+	if (!strcmp(var, "gpg.ssh.keyring")) {
+		if (!value)
+			return config_error_nonbool(var);
+		return git_config_string(&ssh_allowed_signers, var, value);
+	}
+
+	if (!strcmp(var, "gpg.ssh.revocationkeyring")) {
+		if (!value)
+			return config_error_nonbool(var);
+		return git_config_string(&ssh_revocation_file, var, value);
 	}
 
 	if (!strcmp(var, "gpg.format")) {
@@ -425,6 +456,9 @@ int git_gpg_config(const char *var, const char *value, void *cb)
 	if (!strcmp(var, "gpg.x509.program"))
 		fmtname = "x509";
 
+	if (!strcmp(var, "gpg.ssh.program"))
+		fmtname = "ssh";
+
 	if (fmtname) {
 		fmt = get_format_by_name(fmtname);
 		return git_config_string(&fmt->program, var, value);
@@ -437,7 +471,19 @@ const char *get_signing_key(void)
 {
 	if (configured_signing_key)
 		return configured_signing_key;
-	return git_committer_info(IDENT_STRICT|IDENT_NO_DATE);
+	if (!strcmp(use_format->name, "ssh")) {
+		return get_default_ssh_signing_key();
+	} else {
+		return git_committer_info(IDENT_STRICT | IDENT_NO_DATE);
+	}
+}
+
+const char *get_ssh_allowed_signers(void)
+{
+	if (ssh_allowed_signers)
+		return ssh_allowed_signers;
+
+	die("A Path to an allowed signers ssh keyring is needed for validation");
 }
 
 int sign_buffer(struct strbuf *buffer, struct strbuf *signature, const char *signing_key)
