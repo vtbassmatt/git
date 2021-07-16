@@ -143,6 +143,160 @@ test_expect_success 'pull.rebase not set and --ff-only given (not-fast-forward)'
 	test_i18ngrep ! "Pulling without specifying how to reconcile" err
 '
 
+test_does_rebase() {
+	git reset --hard c2 &&
+	git "$@" . c1 &&
+	# Check that we actually did a rebase
+	git rev-list --count HEAD >actual &&
+	git rev-list --merges --count HEAD >>actual &&
+	test_write_lines 3 0 >expect &&
+	test_cmp expect actual &&
+	rm actual expect
+}
+
+test_does_merge_noff() {
+	git reset --hard c0 &&
+	git "$@" . c1 &&
+	# Check that we actually did a merge
+	git rev-list --count HEAD >actual &&
+	git rev-list --merges --count HEAD >>actual &&
+	test_write_lines 3 1 >expect &&
+	test_cmp expect actual &&
+	rm actual expect
+}
+
+test_does_merge_ff() {
+	git reset --hard c0 &&
+	git "$@" . c1 &&
+	# Check that we actually did a merge
+	git rev-list --count HEAD >actual &&
+	git rev-list --merges --count HEAD >>actual &&
+	test_write_lines 2 0 >expect &&
+	test_cmp expect actual &&
+	rm actual expect
+}
+
+test_does_need_full_merge() {
+	git reset --hard c2 &&
+	git "$@" . c1 &&
+	# Check that we actually did a merge
+	git rev-list --count HEAD >actual &&
+	git rev-list --merges --count HEAD >>actual &&
+	test_write_lines 4 1 >expect &&
+	test_cmp expect actual &&
+	rm actual expect
+}
+
+test_attempts_fast_forward() {
+	git reset --hard c2 &&
+	test_must_fail git "$@" . c1 2>err &&
+	test_i18ngrep "Not possible to fast-forward, aborting" err
+}
+
+#
+# Rule 1: --ff-only takes precedence over --[no-]rebase
+# (Corollary: pull.ff=only overrides pull.rebase)
+#
+test_expect_failure '--ff-only takes precedence over --rebase' '
+	test_attempts_fast_forward pull --rebase --ff-only
+'
+
+test_expect_failure '--ff-only takes precedence over --rebase even if first' '
+	test_attempts_fast_forward pull --ff-only --rebase
+'
+
+test_expect_success '--ff-only takes precedence over --no-rebase' '
+	test_attempts_fast_forward pull --ff-only --no-rebase
+'
+
+test_expect_failure 'pull.ff=only overrides pull.rebase=true' '
+	test_attempts_fast_forward -c pull.ff=only -c pull.rebase=true pull
+'
+
+test_expect_success 'pull.ff=only overrides pull.rebase=false' '
+	test_attempts_fast_forward -c pull.ff=only -c pull.rebase=false pull
+'
+
+# Rule 2: --rebase=[!false] takes precedence over --no-ff and --ff
+# (Corollary: pull.rebase=!false overrides pull.ff=!only)
+test_expect_success '--rebase takes precedence over --no-ff' '
+	test_does_rebase pull --rebase --no-ff
+'
+
+test_expect_success '--rebase takes precedence over --ff' '
+	test_does_rebase pull --rebase --ff
+'
+
+test_expect_success 'pull.rebase=true takes precedence over pull.ff=false' '
+	test_does_rebase -c pull.rebase=true -c pull.ff=false pull
+'
+
+test_expect_success 'pull.rebase=true takes precedence over pull.ff=true' '
+	test_does_rebase -c pull.rebase=true -c pull.ff=true pull
+'
+
+# Rule 3: command line flags take precedence over config
+test_expect_failure '--ff-only takes precedence over pull.rebase=true' '
+	test_attempts_fast_forward -c pull.rebase=true pull --ff-only
+'
+
+test_expect_success '--ff-only takes precedence over pull.rebase=false' '
+	test_attempts_fast_forward -c pull.rebase=false pull --ff-only
+'
+
+test_expect_failure '--no-rebase overrides pull.ff=only' '
+	test_does_need_full_merge -c pull.ff=only pull --no-rebase
+'
+
+test_expect_success '--rebase takes precedence over pull.ff=only' '
+	test_does_rebase -c pull.ff=only pull --rebase
+'
+
+test_expect_success '--rebase takes precedence over pull.ff=true' '
+	test_does_rebase -c pull.ff=true pull --rebase
+'
+
+test_expect_success '--rebase takes precedence over pull.ff=false' '
+	test_does_rebase -c pull.ff=false pull --rebase
+'
+
+test_expect_success '--rebase takes precedence over pull.ff unset' '
+	test_does_rebase pull --rebase
+'
+
+# Rule 4: --no-rebase heeds pull.ff=!only or explict --ff or --no-ff
+
+test_expect_success '--no-rebase works with --no-ff' '
+	test_does_merge_noff pull --no-rebase --no-ff
+'
+
+test_expect_success '--no-rebase works with --ff' '
+	test_does_merge_ff pull --no-rebase --ff
+'
+
+test_expect_success '--no-rebase does ff if pull.ff unset' '
+	test_does_merge_ff pull --no-rebase
+'
+
+test_expect_success '--no-rebase heeds pull.ff=true' '
+	test_does_merge_ff -c pull.ff=true pull --no-rebase
+'
+
+test_expect_success '--no-rebase heeds pull.ff=false' '
+	test_does_merge_noff -c pull.ff=false pull --no-rebase
+'
+
+# Rule 5: pull.rebase=!false takes precedence over --no-ff and --ff
+test_expect_success 'pull.rebase=true takes precedence over --no-ff' '
+	test_does_rebase -c pull.rebase=true pull --no-ff
+'
+
+test_expect_success 'pull.rebase=true takes precedence over --ff' '
+	test_does_rebase -c pull.rebase=true pull --ff
+'
+
+# End of precedence rules
+
 test_expect_success 'merge c1 with c2' '
 	git reset --hard c1 &&
 	test -f c0.c &&
