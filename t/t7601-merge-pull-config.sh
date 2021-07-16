@@ -297,6 +297,26 @@ test_expect_success 'pull.rebase=true takes precedence over --ff' '
 
 # End of precedence rules
 
+test_expect_failure 'Multiple heads does not warn about fast forwarding' '
+	git reset --hard c1 &&
+	git pull . c2 c3 2>err &&
+	test_i18ngrep ! "Pulling without specifying how to reconcile" err
+'
+
+test_expect_success 'Cannot fast-forward with multiple heads' '
+	git reset --hard c0 &&
+	test_must_fail git -c pull.ff=only pull . c1 c2 c3 2>err &&
+	test_i18ngrep ! "Pulling without specifying how to reconcile" err &&
+	test_i18ngrep "Not possible to fast-forward, aborting" err
+'
+
+test_expect_success 'Cannot rebase with multiple heads' '
+	git reset --hard c0 &&
+	test_must_fail git -c pull.rebase=true pull . c1 c2 c3 2>err &&
+	test_i18ngrep ! "Pulling without specifying how to reconcile" err &&
+	test_i18ngrep "Cannot rebase onto multiple branches." err
+'
+
 test_expect_success 'merge c1 with c2' '
 	git reset --hard c1 &&
 	test -f c0.c &&
