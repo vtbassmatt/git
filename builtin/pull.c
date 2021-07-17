@@ -1070,13 +1070,7 @@ int cmd_pull(int argc, const char **argv, const char *prefix)
 		    submodule_touches_in_range(the_repository, &upstream, &curr_head))
 			die(_("cannot rebase with locally recorded submodule modifications"));
 
-		if (can_ff) {
-			/* we can fast-forward this without invoking rebase */
-			opt_ff = "--ff-only";
-			ret = run_merge();
-		} else {
-			ret = run_rebase(&newbase, &upstream);
-		}
+		ret = run_rebase(&newbase, &upstream);
 
 		if (!ret && (recurse_submodules == RECURSE_SUBMODULES_ON ||
 			     recurse_submodules == RECURSE_SUBMODULES_ON_DEMAND))
