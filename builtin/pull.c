@@ -966,8 +966,11 @@ int cmd_pull(int argc, const char **argv, const char *prefix)
 
 	parse_repo_refspecs(argc, argv, &repo, &refspecs);
 
-	if (!opt_ff)
+	if (!opt_ff) {
 		opt_ff = xstrdup_or_null(config_get_ff());
+		if (opt_rebase >= 0 && opt_ff && !strcmp(opt_ff, "--ff-only"))
+			opt_ff = "--ff";
+	}
 
 	if (opt_rebase < 0)
 		opt_rebase = config_get_rebase(&rebase_unspecified);
