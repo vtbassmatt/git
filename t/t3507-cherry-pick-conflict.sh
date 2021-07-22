@@ -109,14 +109,29 @@ test_expect_success \
 	test_must_fail git rev-parse --verify CHERRY_PICK_HEAD
 '
 
-test_expect_success 'GIT_CHERRY_PICK_HELP suppresses CHERRY_PICK_HEAD' '
-	pristine_detach initial &&
+test_expect_success 'GIT_CHERRY_PICK_HELP respects CHERRY_PICK_HEAD' '
+	git init repo &&
 	(
+		cd repo &&
+		git branch -M main &&
+		echo 1 >file &&
+		git add file &&
+		git commit -m 1 &&
+		echo 2 >file &&
+		git add file &&
+		git commit -m 2 &&
+		git checkout HEAD~ &&
+		echo 3 >file &&
+		git add file &&
+		git commit -m 3 &&
 		GIT_CHERRY_PICK_HELP="and then do something else" &&
 		export GIT_CHERRY_PICK_HELP &&
-		test_must_fail git cherry-pick picked
-	) &&
-	test_must_fail git rev-parse --verify CHERRY_PICK_HEAD
+		test_must_fail git cherry-pick main &&
+		git rev-parse --verify CHERRY_PICK_HEAD >actual &&
+		git rev-parse --verify main >expect &&
+		test_cmp expect actual &&
+		git cherry-pick --abort
+	)
 '
 
 test_expect_success 'git reset clears CHERRY_PICK_HEAD' '
