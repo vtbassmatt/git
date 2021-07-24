@@ -84,6 +84,7 @@ struct rebase_options {
 		REBASE_FORCE = 1<<3,
 		REBASE_INTERACTIVE_EXPLICIT = 1<<4,
 	} flags;
+	int delete_cherry_pick_head;
 	struct strvec git_am_opts;
 	const char *action;
 	int signoff;
@@ -152,6 +153,7 @@ static struct replay_opts get_replay_opts(const struct rebase_options *opts)
 		oidcpy(&replay.squash_onto, opts->squash_onto);
 		replay.have_squash_onto = 1;
 	}
+	replay.delete_cherry_pick_head = opts->delete_cherry_pick_head;
 
 	return replay;
 }
@@ -948,6 +950,7 @@ static int run_specific_rebase(struct rebase_options *opts, enum action action)
 	if (opts->type == REBASE_MERGE) {
 		/* Run sequencer-based rebase */
 		setenv("GIT_CHERRY_PICK_HELP", resolvemsg, 1);
+		opts->delete_cherry_pick_head = 1;
 		if (!(opts->flags & REBASE_INTERACTIVE_EXPLICIT)) {
 			setenv("GIT_SEQUENCE_EDITOR", ":", 1);
 			opts->autosquash = 0;
