@@ -397,13 +397,11 @@ static void free_message(struct commit *commit, struct commit_message *msg)
 	unuse_commit_buffer(commit, msg->message);
 }
 
-static void print_advice(struct repository *r, int show_hint,
-			 struct replay_opts *opts)
+static char *check_need_delete_cherry_pick_head(struct repository *r)
 {
 	char *msg = getenv("GIT_CHERRY_PICK_HELP");
 
 	if (msg) {
-		fprintf(stderr, "%s\n", msg);
 		/*
 		 * A conflict has occurred but the porcelain
 		 * (typically rebase --interactive) wants to take care
@@ -411,18 +409,22 @@ static void print_advice(struct repository *r, int show_hint,
 		 */
 		refs_delete_ref(get_main_ref_store(r), "", "CHERRY_PICK_HEAD",
 				NULL, 0);
-		return;
+		return msg;
 	}
+	return NULL;
+}
 
-	if (show_hint) {
-		if (opts->no_commit)
-			advise(_("after resolving the conflicts, mark the corrected paths\n"
-				 "with 'git add <paths>' or 'git rm <paths>'"));
-		else
-			advise(_("after resolving the conflicts, mark the corrected paths\n"
-				 "with 'git add <paths>' or 'git rm <paths>'\n"
-				 "and commit the result with 'git commit'"));
-	}
+static void print_advice(struct replay_opts *opts, const char *help_msgs)
+{
+	if (help_msgs)
+		advise("%s\n", help_msgs);
+	else if (opts->no_commit)
+		advise(_("after resolving the conflicts, mark the corrected paths\n"
+			 "with 'git add <paths>' or 'git rm <paths>'"));
+	else
+		advise(_("after resolving the conflicts, mark the corrected paths\n"
+			 "with 'git add <paths>' or 'git rm <paths>'\n"
+			 "and commit the result with 'git commit'"));
 }
 
 static int write_message(const void *buf, size_t len, const char *filename,
@@ -2261,11 +2263,17 @@ static int do_pick_commit(struct repository *r,
 		res = -1;
 
 	if (res) {
+		const char *help_msgs = NULL;
+
 		error(command == TODO_REVERT
 		      ? _("could not revert %s... %s")
 		      : _("could not apply %s... %s"),
 		      short_commit_name(commit), msg.subject);
-		print_advice(r, res == 1, opts);
+		if (((opts->action == REPLAY_PICK &&
+		      !opts->rebase_preserve_merges_mode) ||
+		      (help_msgs = check_need_delete_cherry_pick_head(r))) &&
+		      res == 1)
+			print_advice(opts, help_msgs);
 		repo_rerere(r, opts->allow_rerere_auto);
 		goto leave;
 	}
