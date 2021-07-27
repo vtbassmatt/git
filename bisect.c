@@ -23,7 +23,7 @@ static struct oid_array skipped_revs;
 static struct object_id *current_bad_oid;
 
 static const char *argv_checkout[] = {"checkout", "-q", NULL, "--", NULL};
-static const char *argv_show_branch[] = {"show-branch", NULL, NULL};
+static const char *argv_show_branch[] = {"-P", "show-branch", NULL, NULL};
 
 static const char *term_bad;
 static const char *term_good;
@@ -748,7 +748,7 @@ static enum bisect_error bisect_checkout(const struct object_id *bisect_rev, int
 			return -abs(res);
 	}
 
-	argv_show_branch[1] = bisect_rev_hex;
+	argv_show_branch[2] = bisect_rev_hex;
 	res = run_command_v_opt(argv_show_branch, RUN_GIT_CMD);
 	/*
 	 * Errors in `run_command()` itself, signaled by res < 0,
