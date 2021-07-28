@@ -276,7 +276,7 @@ branch of some repository for search indexing.
 	This option can be given multiple times for pathspecs consisting
 	of multiple entries.  The resulting clone has `submodule.active` set to
 	the provided pathspec, or "." (meaning all submodules) if no
-	pathspec is provided.
+	pathspec is provided. In addition, `submodule.recurse` is set to true.
 +
 Submodules are initialized and cloned using their default settings. This is
 equivalent to running

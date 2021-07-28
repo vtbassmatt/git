@@ -16,6 +16,13 @@ test_expect_success 'setup' '
 
 '
 
+test_expect_success 'clone --recurse-submodules sets submodule.recurse=true' '
+
+	git clone --recurse-submodules parent clone-rec-submodule &&
+	test_cmp_config -C clone-rec-submodule true submodule.recurse
+
+'
+
 test_expect_success 'clone -o' '
 
 	git clone -o foo parent clone-o &&
