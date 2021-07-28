@@ -39,6 +39,16 @@
 
 static const char sign_off_header[] = "Signed-off-by: ";
 static const char cherry_picked_prefix[] = "(cherry picked from commit ";
+static const char *no_commit_advice = N_("after resolving the conflicts, mark the corrected paths\n"
+				"with 'git add <paths>' or 'git rm <paths>'");
+static const char *commit_advice = N_("after resolving the conflicts, mark the corrected paths\n"
+			    "with 'git add <paths>' or 'git rm <paths>'\n"
+			    "and commit the result with 'git commit'");
+static const char *cherry_pick_advice = N_("Resolve all conflicts manually, mark them as resolved with\n"
+					"\"git add/rm <conflicted_files>\", then run \"git cherry-pick --continue\".\n"
+					"You can instead skip this commit: run \"git cherry-pick --skip\".\n"
+					"To abort and get back to the state before \"git cherry-pick\",\n"
+					"run \"git cherry-pick --abort\".");
 
 GIT_PATH_FUNC(git_path_commit_editmsg, "COMMIT_EDITMSG")
 
@@ -419,12 +429,9 @@ static void print_advice(struct replay_opts *opts, const char *help_msgs)
 	if (help_msgs)
 		advise("%s\n", help_msgs);
 	else if (opts->no_commit)
-		advise(_("after resolving the conflicts, mark the corrected paths\n"
-			 "with 'git add <paths>' or 'git rm <paths>'"));
+		advise("%s\n", _(no_commit_advice));
 	else
-		advise(_("after resolving the conflicts, mark the corrected paths\n"
-			 "with 'git add <paths>' or 'git rm <paths>'\n"
-			 "and commit the result with 'git commit'"));
+		advise("%s\n", _(commit_advice));
 }
 
 static int write_message(const void *buf, size_t len, const char *filename,
@@ -2269,6 +2276,8 @@ static int do_pick_commit(struct repository *r,
 		      ? _("could not revert %s... %s")
 		      : _("could not apply %s... %s"),
 		      short_commit_name(commit), msg.subject);
+		if (opts->action == REPLAY_PICK)
+			help_msgs = _(cherry_pick_advice);
 		if (((opts->action == REPLAY_PICK &&
 		      !opts->rebase_preserve_merges_mode) ||
 		      (help_msgs = check_need_delete_cherry_pick_head(r))) &&
