@@ -341,6 +341,21 @@ int mingw_rmdir(const char *pathname)
 {
 	int ret, tries = 0;
 	wchar_t wpathname[MAX_PATH];
+	struct stat st;
+
+	/*
+	* Contrary to Linux rmdir(), Windows' _wrmdir() and _rmdir()
+	* will remove the directory at the path if it is a symbolic link
+	* which leads to issues when symlinks are used in the .git folder
+	* (in the context of git-repo for instance). So before calling _wrmdir()
+	* we first check if the path is a symbolic link. If it is, we exit
+	* and return the same error as Linux rmdir() in this case (ENOTDIR).
+	*/
+	if (!mingw_lstat(pathname, &st) && S_ISLNK(st.st_mode)) {
+		errno = ENOTDIR;
+		return -1;
+	}
+
 	if (xutftowcs_path(wpathname, pathname) < 0)
 		return -1;
 
