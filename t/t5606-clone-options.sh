@@ -19,7 +19,7 @@ test_expect_success 'setup' '
 test_expect_success 'clone --recurse-submodules sets submodule.recurse=true' '
 
         git clone --recurse-submodules parent clone-rec-submodule &&
-        test_config_global submodule.recurse true 
+        git config submodule.recurse true
 
 '
 
