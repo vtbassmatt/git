@@ -37,8 +37,6 @@
 #include "unpack-trees.h"
 #include "xdiff-interface.h"
 
-#define USE_MEMORY_POOL 1 /* faster, but obscures memory leak hunting */
-
 /*
  * We have many arrays of size 3.  Whenever we have such an array, the
  * indices refer to one of the sides of the three-way merge.  This is so
@@ -623,11 +621,9 @@ static void clear_or_reinit_internal_opts(struct merge_options_internal *opti,
 		strmap_clear(&opti->output, 0);
 	}
 
-#if USE_MEMORY_POOL
 	mem_pool_discard(&opti->internal_pool, 0);
 	if (!reinitialize)
 		opti->pool = NULL;
-#endif
 
 	/* Clean out callback_data as well. */
 	FREE_AND_NULL(renames->callback_data);
@@ -693,12 +689,10 @@ static void path_msg(struct merge_options *opt,
 static struct diff_filespec *pool_alloc_filespec(struct mem_pool *pool,
 						 const char *path)
 {
+	/* Similar to alloc_filespec(), but allocate from pool and reuse path */
 	struct diff_filespec *spec;
 
-	if (!pool)
-		return alloc_filespec(path);
-
-	/* Similar to alloc_filespec, but allocate from pool and reuse path */
+	assert(pool != NULL);
 	spec = mem_pool_calloc(pool, 1, sizeof(*spec));
 	spec->path = (char*)path; /* spec won't modify it */
 
@@ -712,39 +706,16 @@ static struct diff_filepair *pool_diff_queue(struct mem_pool *pool,
 					     struct diff_filespec *one,
 					     struct diff_filespec *two)
 {
+	/* Same code as diff_queue(), except allocate from pool */
 	struct diff_filepair *dp;
 
-	if (!pool)
-		return diff_queue(queue, one, two);
-
-	/* Same code as diff_queue, except allocate from pool */
+	assert(pool != NULL);
 	dp = mem_pool_calloc(pool, 1, sizeof(*dp));
 	dp->one = one;
 	dp->two = two;
 	if (queue)
 		diff_q(queue, dp);
 	return dp;
-}
-
-static void *pool_calloc(struct mem_pool *pool, size_t count, size_t size)
-{
-	if (!pool)
-		return xcalloc(count, size);
-	return mem_pool_calloc(pool, count, size);
-}
-
-static void *pool_alloc(struct mem_pool *pool, size_t size)
-{
-	if (!pool)
-		return xmalloc(size);
-	return mem_pool_alloc(pool, size);
-}
-
-static void *pool_strndup(struct mem_pool *pool, const char *str, size_t len)
-{
-	if (!pool)
-		return xstrndup(str, len);
-	return mem_pool_strndup(pool, str, len);
 }
 
 /* add a string to a strbuf, but converting "/" to "_" */
@@ -875,9 +846,9 @@ static void setup_path_info(struct merge_options *opt,
 	assert(!df_conflict || !resolved); /* df_conflict implies !resolved */
 	assert(resolved == (merged_version != NULL));
 
-	mi = pool_calloc(opt->priv->pool, 1,
-			 resolved ? sizeof(struct merged_info) :
-				    sizeof(struct conflict_info));
+	mi = mem_pool_calloc(opt->priv->pool, 1,
+			     resolved ? sizeof(struct merged_info) :
+					sizeof(struct conflict_info));
 	mi->directory_name = current_dir_name;
 	mi->basename_offset = current_dir_name_len;
 	mi->clean = !!resolved;
@@ -1170,7 +1141,7 @@ static int collect_merge_info_callback(int n,
 	len = traverse_path_len(info, p->pathlen);
 
 	/* +1 in both of the following lines to include the NUL byte */
-	fullpath = pool_alloc(opt->priv->pool, len + 1);
+	fullpath = mem_pool_alloc(opt->priv->pool, len + 1);
 	make_traverse_path(fullpath, len + 1, info, p->path, p->pathlen);
 
 	/*
@@ -2389,9 +2360,9 @@ static void apply_directory_rename_modifications(struct merge_options *opt,
 		/* Find the parent directory of cur_path */
 		char *last_slash = strrchr(cur_path, '/');
 		if (last_slash) {
-			parent_name = pool_strndup(opt->priv->pool,
-						   cur_path,
-						   last_slash - cur_path);
+			parent_name = mem_pool_strndup(opt->priv->pool,
+						       cur_path,
+						       last_slash - cur_path);
 		} else {
 			parent_name = opt->priv->toplevel_dir;
 			break;
@@ -3701,7 +3672,7 @@ static void process_entry(struct merge_options *opt,
 		 * the directory to remain here, so we need to move this
 		 * path to some new location.
 		 */
-		new_ci = pool_calloc(opt->priv->pool, 1, sizeof(*new_ci));
+		new_ci = mem_pool_calloc(opt->priv->pool, 1, sizeof(*new_ci));
 
 		/* We don't really want new_ci->merged.result copied, but it'll
 		 * be overwritten below so it doesn't matter.  We also don't
@@ -3794,7 +3765,8 @@ static void process_entry(struct merge_options *opt,
 			const char *a_path = NULL, *b_path = NULL;
 			int rename_a = 0, rename_b = 0;
 
-			new_ci = pool_alloc(opt->priv->pool, sizeof(*new_ci));
+			new_ci = mem_pool_alloc(opt->priv->pool,
+						sizeof(*new_ci));
 
 			if (S_ISREG(a_mode))
 				rename_a = 1;
@@ -4482,13 +4454,8 @@ static void merge_start(struct merge_options *opt, struct merge_result *result)
 
 	/* Initialization of various renames fields */
 	renames = &opt->priv->renames;
-#if USE_MEMORY_POOL
 	mem_pool_init(&opt->priv->internal_pool, 0);
-	opt->priv->pool = &opt->priv->internal_pool;
-#else
-	opt->priv->pool = NULL;
-#endif
-	pool = opt->priv->pool;
+	pool = opt->priv->pool = &opt->priv->internal_pool;
 	for (i = MERGE_SIDE1; i <= MERGE_SIDE2; i++) {
 		strintmap_init_with_options(&renames->dirs_removed[i],
 					    NOT_RELEVANT, pool, 0);
