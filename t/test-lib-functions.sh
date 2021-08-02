@@ -895,7 +895,7 @@ list_contains () {
 # accepted by test_must_fail(). If the command is run with env, the env
 # and its corresponding variable settings will be stripped before we
 # test the command being run.
-test_must_fail_acceptable () {
+is_git_command_name () {
 	if test "$1" = "env"
 	then
 		shift
@@ -943,7 +943,7 @@ test_must_fail_acceptable () {
 #     (Don't use 'success', use 'test_might_fail' instead.)
 #
 # Do not use this to run anything but "git" and other specific testable
-# commands (see test_must_fail_acceptable()).  We are not in the
+# commands (see is_git_command_name()).  We are not in the
 # business of vetting system supplied commands -- in other words, this
 # is wrong:
 #
@@ -963,7 +963,7 @@ test_must_fail () {
 		_test_ok=
 		;;
 	esac
-	if ! test_must_fail_acceptable "$@"
+	if ! is_git_command_name "$@"
 	then
 		echo >&7 "test_must_fail: only 'git' is allowed: $*"
 		return 1
