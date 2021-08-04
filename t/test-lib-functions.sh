@@ -1718,3 +1718,17 @@ test_region () {
 test_readlink () {
 	perl -le 'print readlink($_) for @ARGV' "$@"
 }
+
+# Test a with a given number of COLUMNS in the environment.
+test_with_columns () {
+	local columns=$1
+	shift
+
+	if ! is_git_command_name "$@"
+	then
+		echo >&7 "test_with_columns: only 'git' is allowed: $*"
+		return 1
+	fi
+
+	COLUMNS=$columns "$@" 2>&7
+} 7>&2 2>&4
