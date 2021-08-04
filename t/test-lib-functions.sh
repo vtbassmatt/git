@@ -1730,5 +1730,6 @@ test_with_columns () {
 		return 1
 	fi
 
+	GIT_TEST_COLUMNS= \
 	COLUMNS=$columns "$@" 2>&7
 } 7>&2 2>&4
