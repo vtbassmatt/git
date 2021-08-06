@@ -389,6 +389,7 @@ static int trivial_merge(const char *base,
 
 struct merge_tree_options {
 	int real;
+	char *messages_file;
 };
 
 static int real_merge(struct merge_tree_options *o,
@@ -442,8 +443,15 @@ static int real_merge(struct merge_tree_options *o,
 	 */
 
 	merge_incore_recursive(&opt, merge_bases, parent1, parent2, &result);
+
+	if (o->messages_file) {
+		FILE *fp = xfopen(o->messages_file, "w");
+		merge_display_update_messages(&opt, &result, fp);
+		fclose(fp);
+	}
 	printf("%s\n", oid_to_hex(&result.tree->object.oid));
-	merge_switch_to_result(&opt, NULL, &result, 0, 0);
+
+	merge_finalize(&opt, &result);
 	return result.clean ? 0 : 1;
 }
 
@@ -451,15 +459,18 @@ int cmd_merge_tree(int argc, const char **argv, const char *prefix)
 {
 	struct merge_tree_options o = { 0 };
 	int expected_remaining_argc;
+	int original_argc;
 
 	const char * const merge_tree_usage[] = {
-		N_("git merge-tree --real <branch1> <branch2>"),
+		N_("git merge-tree --real [<options>] <branch1> <branch2>"),
 		N_("git merge-tree <base-tree> <branch1> <branch2>"),
 		NULL
 	};
 	struct option mt_options[] = {
 		OPT_BOOL(0, "real", &o.real,
 			 N_("do a real merge instead of a trivial merge")),
+		OPT_STRING(0, "messages", &o.messages_file, N_("file"),
+			   N_("filename to write informational/conflict messages to")),
 		OPT_END()
 	};
 
@@ -468,8 +479,11 @@ int cmd_merge_tree(int argc, const char **argv, const char *prefix)
 		usage_with_options(merge_tree_usage, mt_options);
 
 	/* Parse arguments */
+	original_argc = argc;
 	argc = parse_options(argc, argv, prefix, mt_options,
 			     merge_tree_usage, 0);
+	if (!o.real && original_argc < argc)
+		die(_("--real must be specified if any other options are"));
 	expected_remaining_argc = (o.real ? 2 : 3);
 	if (argc != expected_remaining_argc)
 		usage_with_options(merge_tree_usage, mt_options);
