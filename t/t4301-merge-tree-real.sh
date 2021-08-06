@@ -96,4 +96,13 @@ test_expect_success '--messages gives us the conflict notices and such' '
 	test_cmp expect MSG_FILE
 '
 
+test_expect_success '--messages gives us the conflict notices and such' '
+	test_must_fail git merge-tree --real --conflicted-list=UNMERGED side1 side2 &&
+
+	cat UNMERGED | tr "\0" "\n" >actual &&
+	test_write_lines greeting whatever~side1 >expect &&
+
+	test_cmp expect actual
+'
+
 test_done
