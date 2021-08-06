@@ -3,26 +3,34 @@ git-merge-tree(1)
 
 NAME
 ----
-git-merge-tree - Show three-way merge without touching index
+git-merge-tree - Perform merge without touching index or working tree
 
 
 SYNOPSIS
 --------
 [verse]
+'git merge-tree' --real <branch1> <branch2>
 'git merge-tree' <base-tree> <branch1> <branch2>
 
 DESCRIPTION
 -----------
-Reads three tree-ish, and output trivial merge results and
-conflicting stages to the standard output.  This is similar to
-what three-way 'git read-tree -m' does, but instead of storing the
-results in the index, the command outputs the entries to the
-standard output.
+Performs a merge, but does not make any new commits and does not read
+from or write to either the working tree or index.
 
-This is meant to be used by higher level scripts to compute
-merge results outside of the index, and stuff the results back into the
-index.  For this reason, the output from the command omits
-entries that match the <branch1> tree.
+The first form will merge the two branches, doing a full recursive
+merge with rename detection.  If the merge is clean, the exit status
+will be `0`, and if the merge has conflicts, the exit status will be
+`1`.  The output will consist solely of the resulting toplevel tree
+(which may have files including conflict markers).
+
+The second form is meant for backward compatibility and will only do a
+trival merge.  It reads three tree-ish, and outputs trivial merge
+results and conflicting stages to the standard output in a semi-diff
+format.  Since this was designed for higher level scripts to consume
+and merge the results back into the index, it omits entries that match
+<branch1>.  The result of this second form is is similar to what
+three-way 'git read-tree -m' does, but instead of storing the results
+in the index, the command outputs the entries to the standard output.
 
 GIT
 ---
