@@ -391,6 +391,7 @@ static int trivial_merge(const char *base,
 struct merge_tree_options {
 	int real;
 	char *messages_file;
+	char *conflicted_file;
 };
 
 static int real_merge(struct merge_tree_options *o,
@@ -450,6 +451,19 @@ static int real_merge(struct merge_tree_options *o,
 		merge_display_update_messages(&opt, &result, fp);
 		fclose(fp);
 	}
+	if (o->conflicted_file) {
+		struct string_list conflicted_files = STRING_LIST_INIT_NODUP;
+		FILE *fp = xfopen(o->conflicted_file, "w");
+		int i;
+
+		merge_get_conflicted_files(&result, &conflicted_files);
+		for (i = 0; i < conflicted_files.nr; i++) {
+			fprintf(fp, "%s", conflicted_files.items[i].string);
+			fputc('\0', fp);
+		}
+		fclose(fp);
+		string_list_clear(&conflicted_files, 0);
+	}
 	printf("%s\n", oid_to_hex(&result.tree->object.oid));
 
 	merge_finalize(&opt, &result);
@@ -472,6 +486,8 @@ int cmd_merge_tree(int argc, const char **argv, const char *prefix)
 			 N_("do a real merge instead of a trivial merge")),
 		OPT_STRING(0, "messages", &o.messages_file, N_("file"),
 			   N_("filename to write informational/conflict messages to")),
+		OPT_STRING(0, "conflicted-list", &o.conflicted_file, N_("file"),
+			   N_("filename to write list of unmerged files")),
 		OPT_END()
 	};
 
