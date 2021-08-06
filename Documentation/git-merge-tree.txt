@@ -9,7 +9,7 @@ git-merge-tree - Perform merge without touching index or working tree
 SYNOPSIS
 --------
 [verse]
-'git merge-tree' --real <branch1> <branch2>
+'git merge-tree' --real [--messages=<file>] <branch1> <branch2>
 'git merge-tree' <base-tree> <branch1> <branch2>
 
 DESCRIPTION
@@ -21,7 +21,9 @@ The first form will merge the two branches, doing a full recursive
 merge with rename detection.  If the merge is clean, the exit status
 will be `0`, and if the merge has conflicts, the exit status will be
 `1`.  The output will consist solely of the resulting toplevel tree
-(which may have files including conflict markers).
+(which may have files including conflict markers).  With `--messages`,
+it will write any informational messages (such as "Auto-merging
+<path>" and conflict notices) to the given file.
 
 The second form is meant for backward compatibility and will only do a
 trival merge.  It reads three tree-ish, and outputs trivial merge
