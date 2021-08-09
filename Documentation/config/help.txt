@@ -9,13 +9,19 @@ help.format::
 
 help.autoCorrect::
 	If git detects typos and can identify exactly one valid command similar
-	to the error, git will automatically run the intended command after
-	waiting a duration of time defined by this configuration value in
-	deciseconds (0.1 sec).  If this value is 0, the suggested corrections
-	will be shown, but not executed. If it is a negative integer, or
-	"immediate", the suggested command
-	is run immediately. If "never", suggestions are not shown at all. The
-	default value is zero.
+	to the error, git will try to suggest the correct command or even
+	run the intended command.
+	If this config value is 0, then the suggested command will be shown.
+	If it is positive, the suggested command will automatically
+	run after waiting for that many deciseconds (0.1 sec).
+	If it is "immediate", the suggested command will be
+	run immediately.
+	If it is "prompt", then the user will be shown the
+	suggestion and will be prompted for confirmation before the command
+	is run.
+	If it is "never", then no suggestion will be shown and no command
+	will be run.
+	0 is the default value for this config.
 
 help.htmlPath::
 	Specify the path where the HTML documentation resides. File system paths
