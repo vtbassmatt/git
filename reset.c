@@ -8,8 +8,8 @@
 #include "tree.h"
 #include "unpack-trees.h"
 
-int reset_head(struct repository *r, struct object_id *oid, const char *action,
-	       const char *switch_to_branch, unsigned flags,
+int reset_head(struct repository *r, const struct object_id *oid,
+	       const char *action, const char *switch_to_branch, unsigned flags,
 	       const char *reflog_orig_head, const char *reflog_head,
 	       const char *default_reflog_action)
 {
