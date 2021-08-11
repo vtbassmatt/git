@@ -4193,8 +4193,7 @@ int apply_autostash_oid(const char *stash_oid)
 }
 
 static int checkout_onto(struct repository *r, struct replay_opts *opts,
-			 const char *onto_name, const struct object_id *onto,
-			 const struct object_id *orig_head)
+			 const char *onto_name, const struct object_id *onto)
 {
 	const char *action = reflog_message(opts, "start", "checkout %s", onto_name);
 
@@ -5567,9 +5566,8 @@ static int skip_unnecessary_picks(struct repository *r,
 
 int complete_action(struct repository *r, struct replay_opts *opts, unsigned flags,
 		    const char *shortrevisions, const char *onto_name,
-		    struct commit *onto, const struct object_id *orig_head,
-		    struct string_list *commands, unsigned autosquash,
-		    struct todo_list *todo_list)
+		    struct commit *onto, struct string_list *commands,
+		    unsigned autosquash, struct todo_list *todo_list)
 {
 	char shortonto[GIT_MAX_HEXSZ + 1];
 	const char *todo_file = rebase_path_todo();
@@ -5616,7 +5614,7 @@ int complete_action(struct repository *r, struct replay_opts *opts, unsigned fla
 
 		return error(_("nothing to do"));
 	} else if (res == -4) {
-		checkout_onto(r, opts, onto_name, &onto->object.oid, orig_head);
+		checkout_onto(r, opts, onto_name, &onto->object.oid);
 		todo_list_release(&new_todo);
 
 		return -1;
@@ -5644,7 +5642,7 @@ int complete_action(struct repository *r, struct replay_opts *opts, unsigned fla
 
 	res = -1;
 
-	if (checkout_onto(r, opts, onto_name, &oid, orig_head))
+	if (checkout_onto(r, opts, onto_name, &oid))
 		goto cleanup;
 
 	if (require_clean_work_tree(r, "rebase", "", 1, 1))
