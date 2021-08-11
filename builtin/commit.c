@@ -1246,8 +1246,6 @@ static int parse_and_validate_options(int argc, const char *argv[],
 
 	if (logfile || have_option_m || use_message)
 		use_editor = 0;
-	if (0 <= edit_flag)
-		use_editor = edit_flag;
 
 	/* Sanity check options */
 	if (amend && !current_head)
@@ -1336,6 +1334,9 @@ static int parse_and_validate_options(int argc, const char *argv[],
 			use_editor = 0;
 		}
 	}
+
+	if (0 <= edit_flag)
+		use_editor = edit_flag;
 
 	cleanup_mode = get_cleanup_mode(cleanup_arg, use_editor);
 
