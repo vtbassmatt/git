@@ -518,9 +518,8 @@ test_expect_success 'merge with conflict outside cone' '
 	test_all_match git status --porcelain=v2 &&
 
 	# 2. Add the file with conflict markers
-	# NEEDSWORK: Even though the merge conflict removed the
-	# SKIP_WORKTREE bit from the index entry for folder1/a, we should
-	# warn that this is a problematic add when --sparse is not set.
+	test_sparse_match test_must_fail git add folder1/a &&
+	test_i18ngrep "Disable or modify the sparsity rules" sparse-checkout-err &&
 	test_all_match git add --sparse folder1/a &&
 	test_all_match git status --porcelain=v2 &&
 
@@ -528,6 +527,7 @@ test_expect_success 'merge with conflict outside cone' '
 	#    accept conflict markers as resolved content.
 	run_on_all mv folder2/a folder2/z &&
 	test_sparse_match test_must_fail git add folder2 &&
+	test_i18ngrep "Disable or modify the sparsity rules" sparse-checkout-err &&
 	test_all_match git add --sparse folder2 &&
 	test_all_match git status --porcelain=v2 &&
 
