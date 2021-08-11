@@ -152,4 +152,12 @@ test_expect_success 'add obeys advice.updateSparsePath' '
 
 '
 
+test_expect_success 'add allows sparse entries with --sparse' '
+	git sparse-checkout set a &&
+	echo modified >sparse_entry &&
+	test_must_fail git add sparse_entry &&
+	git add --sparse sparse_entry 2>stderr &&
+	test_must_be_empty stderr
+'
+
 test_done
