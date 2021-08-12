@@ -24,6 +24,8 @@
 #include "hashmap.h"
 #include "strvec.h"
 
+static char ref_filter_slopbuf[1];
+
 static struct ref_msg {
 	const char *gone;
 	const char *ahead;
@@ -1209,7 +1211,7 @@ static const char *copy_name(const char *buf)
 		if (!strncmp(cp, " <", 2))
 			return xmemdupz(buf, cp - buf);
 	}
-	return xstrdup("");
+	return ref_filter_slopbuf;
 }
 
 static const char *copy_email(const char *buf, struct used_atom *atom)
@@ -1217,7 +1219,7 @@ static const char *copy_email(const char *buf, struct used_atom *atom)
 	const char *email = strchr(buf, '<');
 	const char *eoemail;
 	if (!email)
-		return xstrdup("");
+		return ref_filter_slopbuf;
 	switch (atom->u.email_option.option) {
 	case EO_RAW:
 		eoemail = strchr(email, '>');
@@ -1239,7 +1241,7 @@ static const char *copy_email(const char *buf, struct used_atom *atom)
 	}
 
 	if (!eoemail)
-		return xstrdup("");
+		return ref_filter_slopbuf;
 	return xmemdupz(email, eoemail - email);
 }
 
@@ -1293,7 +1295,7 @@ static void grab_date(const char *buf, struct atom_value *v, const char *atomnam
 	v->value = timestamp;
 	return;
  bad:
-	v->s = xstrdup("");
+	v->s = ref_filter_slopbuf;
 	v->value = 0;
 }
 
@@ -1503,7 +1505,7 @@ static void fill_missing_values(struct atom_value *val)
 	for (i = 0; i < used_atom_cnt; i++) {
 		struct atom_value *v = &val[i];
 		if (v->s == NULL)
-			v->s = xstrdup("");
+			v->s = ref_filter_slopbuf;
 	}
 }
 
@@ -1576,7 +1578,7 @@ static const char *lstrip_ref_components(const char *refname, int len)
 		switch (*start++) {
 		case '\0':
 			free((char *)to_free);
-			return xstrdup("");
+			return ref_filter_slopbuf;
 		case '/':
 			remaining--;
 			break;
@@ -1614,7 +1616,7 @@ static const char *rstrip_ref_components(const char *refname, int len)
 		char *p = strrchr(start, '/');
 		if (p == NULL) {
 			free((char *)to_free);
-			return xstrdup("");
+			return ref_filter_slopbuf;
 		} else
 			p[0] = '\0';
 	}
@@ -1645,7 +1647,7 @@ static void fill_remote_ref_details(struct used_atom *atom, const char *refname,
 				       AHEAD_BEHIND_FULL) < 0) {
 			v->s = xstrdup(msgs.gone);
 		} else if (!num_ours && !num_theirs)
-			v->s = xstrdup("");
+			v->s = ref_filter_slopbuf;
 		else if (!num_ours)
 			v->s = xstrfmt_len(&v->s_size, msgs.behind, num_theirs);
 		else if (!num_theirs)
@@ -1662,7 +1664,7 @@ static void fill_remote_ref_details(struct used_atom *atom, const char *refname,
 		if (stat_tracking_info(branch, &num_ours, &num_theirs,
 				       NULL, atom->u.remote_ref.push,
 				       AHEAD_BEHIND_FULL) < 0) {
-			v->s = xstrdup("");
+			v->s = ref_filter_slopbuf;
 			return;
 		}
 		if (!num_ours && !num_theirs)
@@ -1721,7 +1723,7 @@ char *get_head_description(void)
 static const char *get_symref(struct used_atom *atom, struct ref_array_item *ref)
 {
 	if (!ref->symref)
-		return xstrdup("");
+		return ref_filter_slopbuf;
 	else
 		return show_ref(&atom->u.refname, ref->symref);
 }
@@ -1805,7 +1807,7 @@ static char *get_worktree_path(const struct used_atom *atom, const struct ref_ar
 	e = hashmap_get(&(ref_to_worktree_map.map), &entry, ref->refname);
 
 	if (!e)
-		return xstrdup("");
+		return ref_filter_slopbuf;
 
 	lookup_result = container_of(e, struct ref_to_worktree_entry, ent);
 
@@ -1827,7 +1829,7 @@ static int populate_value(struct ref_array_item *ref, struct strbuf *err)
 		ref->symref = resolve_refdup(ref->refname, RESOLVE_REF_READING,
 					     NULL, NULL);
 		if (!ref->symref)
-			ref->symref = xstrdup("");
+			ref->symref = ref_filter_slopbuf;
 	}
 
 	/* Fill in specials first */
@@ -1855,7 +1857,7 @@ static int populate_value(struct ref_array_item *ref, struct strbuf *err)
 			if (ref->kind == FILTER_REFS_BRANCHES)
 				v->s = get_worktree_path(atom, ref);
 			else
-				v->s = xstrdup("");
+				v->s = ref_filter_slopbuf;
 			continue;
 		}
 		else if (atom_type == ATOM_SYMREF)
@@ -1865,7 +1867,7 @@ static int populate_value(struct ref_array_item *ref, struct strbuf *err)
 			/* only local branches may have an upstream */
 			if (!skip_prefix(ref->refname, "refs/heads/",
 					 &branch_name)) {
-				v->s = xstrdup("");
+				v->s = ref_filter_slopbuf;
 				continue;
 			}
 			branch = branch_get(branch_name);
@@ -1874,11 +1876,11 @@ static int populate_value(struct ref_array_item *ref, struct strbuf *err)
 			if (refname)
 				fill_remote_ref_details(atom, refname, branch, v);
 			else
-				v->s = xstrdup("");
+				v->s = ref_filter_slopbuf;
 			continue;
 		} else if (atom_type == ATOM_PUSH && atom->u.remote_ref.push) {
 			const char *branch_name;
-			v->s = xstrdup("");
+			v->s = ref_filter_slopbuf;
 			if (!skip_prefix(ref->refname, "refs/heads/",
 					 &branch_name))
 				continue;
@@ -1891,8 +1893,6 @@ static int populate_value(struct ref_array_item *ref, struct strbuf *err)
 				if (!refname)
 					continue;
 			}
-			/* We will definitely re-init v->s on the next line. */
-			free((char *)v->s);
 			fill_remote_ref_details(atom, refname, branch, v);
 			continue;
 		} else if (atom_type == ATOM_COLOR) {
@@ -1905,7 +1905,7 @@ static int populate_value(struct ref_array_item *ref, struct strbuf *err)
 			if (ref->flag & REF_ISPACKED)
 				cp = copy_advance(cp, ",packed");
 			if (cp == buf)
-				v->s = xstrdup("");
+				v->s = ref_filter_slopbuf;
 			else {
 				*cp = '\0';
 				v->s = xstrdup(buf + 1);
@@ -1922,33 +1922,33 @@ static int populate_value(struct ref_array_item *ref, struct strbuf *err)
 			continue;
 		} else if (atom_type == ATOM_ALIGN) {
 			v->handler = align_atom_handler;
-			v->s = xstrdup("");
+			v->s = ref_filter_slopbuf;
 			continue;
 		} else if (atom_type == ATOM_END) {
 			v->handler = end_atom_handler;
-			v->s = xstrdup("");
+			v->s = ref_filter_slopbuf;
 			continue;
 		} else if (atom_type == ATOM_IF) {
 			const char *s;
 			if (skip_prefix(name, "if:", &s))
 				v->s = xstrdup(s);
 			else
-				v->s = xstrdup("");
+				v->s = ref_filter_slopbuf;
 			v->handler = if_atom_handler;
 			continue;
 		} else if (atom_type == ATOM_THEN) {
 			v->handler = then_atom_handler;
-			v->s = xstrdup("");
+			v->s = ref_filter_slopbuf;
 			continue;
 		} else if (atom_type == ATOM_ELSE) {
 			v->handler = else_atom_handler;
-			v->s = xstrdup("");
+			v->s = ref_filter_slopbuf;
 			continue;
 		} else if (atom_type == ATOM_REST) {
 			if (ref->rest)
 				v->s = xstrdup(ref->rest);
 			else
-				v->s = xstrdup("");
+				v->s = ref_filter_slopbuf;
 			continue;
 		} else
 			continue;
@@ -2297,7 +2297,8 @@ static void free_array_item(struct ref_array_item *item)
 	if (item->value) {
 		int i;
 		for (i = 0; i < used_atom_cnt; i++)
-			free((char *)item->value[i].s);
+			if (item->value[i].s != ref_filter_slopbuf)
+				free((char *)item->value[i].s);
 		free(item->value);
 	}
 	free(item);
