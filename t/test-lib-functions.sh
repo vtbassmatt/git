@@ -163,7 +163,7 @@ debug () {
 		GIT_DEBUGGER=1
 		;;
 	esac &&
-	GIT_DEBUGGER="${GIT_DEBUGGER}" "$@" <&6 >&5 2>&7
+	TERM="$USER_TERM" HOME="$USER_HOME" GIT_DEBUGGER="${GIT_DEBUGGER}" "$@" <&6 >&5 2>&7
 }
 
 # Usage: test_commit [options] <message> [<file> [<contents> [<tag>]]]
