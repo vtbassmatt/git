@@ -16,7 +16,7 @@ test_expect_success 'setup' "
 	EOF
 
 	cat >sparse_hint <<-EOF &&
-	hint: Disable or modify the sparsity rules if you intend to update such entries.
+	hint: Disable or modify the sparsity rules or use the --sparse option if you intend to update such entries.
 	hint: Disable this message with \"git config advice.updateSparsePath false\"
 	EOF
 
