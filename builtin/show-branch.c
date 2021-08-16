@@ -888,7 +888,9 @@ int cmd_show_branch(int ac, const char **av, const char *prefix)
 				show_one_commit(rev[i], 1);
 			}
 			else
-				puts(reflog_msg[i]);
+				puts(reflog_msg[i]); /* XXX - this puts a
+							newline. Did we put two
+							newlines beforehand? */
 
 			if (is_head)
 				head_at = i;
