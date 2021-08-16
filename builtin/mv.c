@@ -133,6 +133,7 @@ int cmd_mv(int argc, const char **argv, const char *prefix)
 	struct string_list src_for_dst = STRING_LIST_INIT_NODUP;
 	struct lock_file lock_file = LOCK_INIT;
 	struct cache_entry *ce;
+	struct string_list only_match_skip_worktree = STRING_LIST_INIT_NODUP;
 
 	git_config(git_default_config, NULL);
 
@@ -176,9 +177,21 @@ int cmd_mv(int argc, const char **argv, const char *prefix)
 		const char *src = source[i], *dst = destination[i];
 		int length, src_is_dir;
 		const char *bad = NULL;
+		int skip_sparse = 0;
 
 		if (show_only)
 			printf(_("Checking rename of '%s' to '%s'\n"), src, dst);
+
+		if (!path_in_sparse_checkout(src, &the_index)) {
+			string_list_append(&only_match_skip_worktree, src);
+			skip_sparse = 1;
+		}
+		if (!path_in_sparse_checkout(dst, &the_index)) {
+			string_list_append(&only_match_skip_worktree, dst);
+			skip_sparse = 1;
+		}
+		if (skip_sparse)
+			continue;
 
 		length = strlen(src);
 		if (lstat(src, &st) < 0)
@@ -264,6 +277,12 @@ int cmd_mv(int argc, const char **argv, const char *prefix)
 				n * sizeof(char *));
 			i--;
 		}
+	}
+
+	if (only_match_skip_worktree.nr) {
+		advise_on_updating_sparse_paths(&only_match_skip_worktree);
+		if (!ignore_errors)
+			return 1;
 	}
 
 	for (i = 0; i < argc; i++) {
