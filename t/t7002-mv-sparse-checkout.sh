@@ -31,7 +31,9 @@ test_expect_success 'mv refuses to move sparse-to-sparse' '
 	echo b >>expect &&
 	echo e >>expect &&
 	cat sparse_hint >>expect &&
-	test_cmp expect stderr
+	test_cmp expect stderr &&
+	git mv --sparse b e 2>stderr &&
+	test_must_be_empty stderr
 '
 
 test_expect_success 'mv refuses to move sparse-to-sparse, ignores failure' '
@@ -44,7 +46,9 @@ test_expect_success 'mv refuses to move sparse-to-sparse, ignores failure' '
 	echo b >>expect &&
 	echo e >>expect &&
 	cat sparse_hint >>expect &&
-	test_cmp expect stderr
+	test_cmp expect stderr &&
+	git mv --sparse -k b e 2>stderr &&
+	test_must_be_empty stderr
 '
 
 test_expect_success 'mv refuses to move non-sparse-to-sparse' '
@@ -55,7 +59,9 @@ test_expect_success 'mv refuses to move non-sparse-to-sparse' '
 	cat sparse_error_header >expect &&
 	echo e >>expect &&
 	cat sparse_hint >>expect &&
-	test_cmp expect stderr
+	test_cmp expect stderr &&
+	git mv --sparse a e 2>stderr &&
+	test_must_be_empty stderr
 '
 
 test_expect_success 'mv refuses to move sparse-to-non-sparse' '
@@ -67,7 +73,9 @@ test_expect_success 'mv refuses to move sparse-to-non-sparse' '
 	cat sparse_error_header >expect &&
 	echo b >>expect &&
 	cat sparse_hint >>expect &&
-	test_cmp expect stderr
+	test_cmp expect stderr &&
+	git mv --sparse b e 2>stderr &&
+	test_must_be_empty stderr
 '
 
 test_expect_success 'recursive mv refuses to move (possible) sparse' '
@@ -80,7 +88,14 @@ test_expect_success 'recursive mv refuses to move (possible) sparse' '
 	echo sub >>expect &&
 	echo sub2 >>expect &&
 	cat sparse_hint >>expect &&
-	test_cmp expect stderr
+	test_cmp expect stderr &&
+	git mv --sparse sub sub2 2>stderr &&
+	test_must_be_empty stderr &&
+	git commit -m "moved sub to sub2" &&
+	git rev-parse HEAD~1:sub >expect &&
+	git rev-parse HEAD:sub2 >actual &&
+	test_cmp expect actual &&
+	git reset --hard HEAD~1
 '
 
 test_expect_success 'recursive mv refuses to move sparse' '
@@ -93,7 +108,14 @@ test_expect_success 'recursive mv refuses to move sparse' '
 	echo sub/dir2/e >>expect &&
 	echo sub2/dir2/e >>expect &&
 	cat sparse_hint >>expect &&
-	test_cmp expect stderr
+	test_cmp expect stderr &&
+	git mv --sparse sub sub2 2>stderr &&
+	test_must_be_empty stderr &&
+	git commit -m "moved sub to sub2" &&
+	git rev-parse HEAD~1:sub >expect &&
+	git rev-parse HEAD:sub2 >actual &&
+	test_cmp expect actual &&
+	git reset --hard HEAD~1
 '
 
 test_done

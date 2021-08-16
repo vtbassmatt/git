@@ -118,17 +118,18 @@ static int index_range_of_same_dir(const char *src, int length,
 int cmd_mv(int argc, const char **argv, const char *prefix)
 {
 	int i, flags, gitmodules_modified = 0;
-	int verbose = 0, show_only = 0, force = 0, ignore_errors = 0;
+	int verbose = 0, show_only = 0, force = 0, ignore_errors = 0, ignore_sparse = 0;
 	struct option builtin_mv_options[] = {
 		OPT__VERBOSE(&verbose, N_("be verbose")),
 		OPT__DRY_RUN(&show_only, N_("dry run")),
 		OPT__FORCE(&force, N_("force move/rename even if target exists"),
 			   PARSE_OPT_NOCOMPLETE),
 		OPT_BOOL('k', NULL, &ignore_errors, N_("skip move/rename errors")),
+		OPT_BOOL(0, "sparse", &ignore_sparse, N_("allow updating entries outside of the sparse-checkout cone")),
 		OPT_END(),
 	};
 	const char **source, **destination, **dest_path, **submodule_gitfile;
-	enum update_mode { BOTH = 0, WORKING_DIRECTORY, INDEX } *modes;
+	enum update_mode { BOTH = 0, WORKING_DIRECTORY, INDEX, SPARSE } *modes;
 	struct stat st;
 	struct string_list src_for_dst = STRING_LIST_INIT_NODUP;
 	struct lock_file lock_file = LOCK_INIT;
@@ -182,11 +183,11 @@ int cmd_mv(int argc, const char **argv, const char *prefix)
 		if (show_only)
 			printf(_("Checking rename of '%s' to '%s'\n"), src, dst);
 
-		if (!path_in_sparse_checkout(src, &the_index)) {
+		if (!ignore_sparse && !path_in_sparse_checkout(src, &the_index)) {
 			string_list_append(&only_match_skip_worktree, src);
 			skip_sparse = 1;
 		}
-		if (!path_in_sparse_checkout(dst, &the_index)) {
+		if (!ignore_sparse && !path_in_sparse_checkout(dst, &the_index)) {
 			string_list_append(&only_match_skip_worktree, dst);
 			skip_sparse = 1;
 		}
@@ -194,9 +195,11 @@ int cmd_mv(int argc, const char **argv, const char *prefix)
 			continue;
 
 		length = strlen(src);
-		if (lstat(src, &st) < 0)
-			bad = _("bad source");
-		else if (!strncmp(src, dst, length) &&
+		if (lstat(src, &st) < 0) {
+			/* only error if existence is expected. */
+			if (modes[i] != SPARSE)
+				bad = _("bad source");
+		} else if (!strncmp(src, dst, length) &&
 				(dst[length] == 0 || dst[length] == '/')) {
 			bad = _("can not move directory into itself");
 		} else if ((src_is_dir = S_ISDIR(st.st_mode))
@@ -225,11 +228,12 @@ int cmd_mv(int argc, const char **argv, const char *prefix)
 				dst_len = strlen(dst);
 
 				for (j = 0; j < last - first; j++) {
-					const char *path = active_cache[first + j]->name;
+					const struct cache_entry *ce = active_cache[first + j];
+					const char *path = ce->name;
 					source[argc + j] = path;
 					destination[argc + j] =
 						prefix_path(dst, dst_len, path + length + 1);
-					modes[argc + j] = INDEX;
+					modes[argc + j] = ce_skip_worktree(ce) ? SPARSE : INDEX;
 					submodule_gitfile[argc + j] = NULL;
 				}
 				argc += last - first;
@@ -293,7 +297,7 @@ int cmd_mv(int argc, const char **argv, const char *prefix)
 			printf(_("Renaming %s to %s\n"), src, dst);
 		if (show_only)
 			continue;
-		if (mode != INDEX && rename(src, dst) < 0) {
+		if (mode != INDEX && mode != SPARSE && rename(src, dst) < 0) {
 			if (ignore_errors)
 				continue;
 			die_errno(_("renaming '%s' failed"), src);
