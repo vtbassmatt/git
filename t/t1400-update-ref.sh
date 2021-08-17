@@ -269,7 +269,7 @@ test_expect_success "(not) changed .git/$m" '
 '
 
 rm -f .git/logs/refs/heads/main
-test_expect_success "create $m (logged by touch)" '
+test_expect_success "create $m" '
 	test_config core.logAllRefUpdates false &&
 	GIT_COMMITTER_DATE="2005-05-26 23:30" \
 	git update-ref --create-reflog HEAD $A -m "Initial Creation" &&
@@ -315,12 +315,10 @@ test_expect_success 'symref empty directory removal' '
 	test_path_is_file .git/logs/HEAD
 '
 
-TAB='	'
 cat >expect <<EOF
 $Z $A $GIT_COMMITTER_NAME <$GIT_COMMITTER_EMAIL> 1117150200 +0000	Initial Creation
-$A $B $GIT_COMMITTER_NAME <$GIT_COMMITTER_EMAIL> 1117150260 +0000	Switch
-$B $A $GIT_COMMITTER_NAME <$GIT_COMMITTER_EMAIL> 1117150860 +0000$TAB
 EOF
+
 test_expect_success "verifying $m's log (logged by touch)" '
 	test_when_finished "git update-ref -d $m && rm -rf .git/logs actual expect" &&
 	test-tool ref-store main for-each-reflog-ent $m > actual &&
@@ -346,6 +344,7 @@ test_expect_success "set $m (logged by config)" '
 	test $A = $(git show-ref -s --verify $m)
 '
 
+TAB='	'
 cat >expect <<EOF
 $Z $A $GIT_COMMITTER_NAME <$GIT_COMMITTER_EMAIL> 1117150320 +0000	Initial Creation
 $A $B $GIT_COMMITTER_NAME <$GIT_COMMITTER_EMAIL> 1117150380 +0000	Switch
