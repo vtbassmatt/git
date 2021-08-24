@@ -63,6 +63,19 @@ void add_to_alternates_file(const char *dir);
 void add_to_alternates_memory(const char *dir);
 
 /*
+ * Replace the current main object directory with the specified temporary
+ * object directory. We make a copy of the former main object directory,
+ * add it as an in-memory alternate, and return the copy so that it can
+ * be restored via restore_main_odb.
+ */
+struct object_directory *set_temporary_main_odb(const char *dir);
+
+/*
+ * Restore a previous ODB replaced by set_temporary_main_odb.
+ */
+void restore_main_odb(struct object_directory *odb);
+
+/*
  * Populate and return the loose object cache array corresponding to the
  * given object ID.
  */
@@ -71,6 +84,9 @@ struct oidtree *odb_loose_cache(struct object_directory *odb,
 
 /* Empty the loose object cache for the specified object directory. */
 void odb_clear_loose_cache(struct object_directory *odb);
+
+/* Clear and free the specified object directory */
+void free_object_directory(struct object_directory *odb);
 
 struct packed_git {
 	struct hashmap_entry packmap_ent;
