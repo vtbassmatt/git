@@ -49,6 +49,7 @@ int cmd_ls_remote(int argc, const char **argv, const char *prefix)
 		TRANSPORT_LS_REFS_OPTIONS_INIT;
 	int i;
 	struct string_list server_options = STRING_LIST_INIT_DUP;
+	struct ref_format dummy = REF_FORMAT_INIT;
 
 	struct remote *remote;
 	struct transport *transport;
@@ -136,9 +137,10 @@ int cmd_ls_remote(int argc, const char **argv, const char *prefix)
 		item->symref = xstrdup_or_null(ref->symref);
 	}
 
-	if (!list_empty(&sorting.list))
+	if (!list_empty(&sorting.list)) {
+		parse_ref_sorting_list(&sorting, &dummy);
 		ref_array_sort(&sorting, &ref_array);
-
+	}
 	for (i = 0; i < ref_array.nr; i++) {
 		const struct ref_array_item *ref = ref_array.items[i];
 		if (show_symref_target && ref->symref)

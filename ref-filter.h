@@ -28,6 +28,7 @@ struct atom_value;
 struct ref_sorting {
 	struct list_head list;
 	int atom; /* index into used_atom array (internal) */
+	const char *arg;
 	enum {
 		REF_SORTING_REVERSE = 1<<0,
 		REF_SORTING_ICASE = 1<<1,
@@ -128,6 +129,8 @@ void parse_ref_sorting(struct ref_sorting *sorting_list, const char *arg);
 int parse_opt_ref_sorting(const struct option *opt, const char *arg, int unset);
 /*  Default sort option based on refname */
 void ref_default_sorting(struct ref_sorting *sorting_list);
+/* Parse every sort atom of ref_sorting list */
+void parse_ref_sorting_list(struct ref_sorting *sorting_list, struct ref_format *format);
 /* Free all ref_sorting items in sorting list */
 void free_ref_sorting_list(struct ref_sorting *sorting_list);
 /*  Function to parse --merged and --no-merged options */

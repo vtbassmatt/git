@@ -2656,30 +2656,33 @@ void pretty_print_ref(const char *name, const struct object_id *oid,
 	free_array_item(ref_item);
 }
 
-static int parse_sorting_atom(const char *atom)
+static int parse_sorting_atom(struct ref_format *format, const char *atom)
 {
-	/*
-	 * This parses an atom using a dummy ref_format, since we don't
-	 * actually care about the formatting details.
-	 */
-	struct ref_format dummy = REF_FORMAT_INIT;
 	const char *end = atom + strlen(atom);
 	struct strbuf err = STRBUF_INIT;
-	int res = parse_ref_filter_atom(&dummy, atom, end, &err);
+	int res = parse_ref_filter_atom(format, atom, end, &err);
 	if (res < 0)
 		die("%s", err.buf);
 	strbuf_release(&err);
 	return res;
 }
 
+void parse_ref_sorting_list(struct ref_sorting *sorting_list, struct ref_format *format) {
+	struct list_head *pos;
+	struct ref_sorting *entry;
+
+	list_for_each(pos, &sorting_list->list) {
+		entry = list_entry(pos, struct ref_sorting, list);
+		entry->atom = parse_sorting_atom(format, entry->arg);
+	}
+}
+
 /*  If no sorting option is given, use refname to sort as default */
 void ref_default_sorting(struct ref_sorting *sorting_list)
 {
-	static const char cstr_name[] = "refname";
-
 	struct ref_sorting *sorting = xcalloc(1, sizeof(*sorting));
 	list_add_tail(&sorting->list, &sorting_list->list);
-	sorting->atom = parse_sorting_atom(cstr_name);
+	sorting->arg = "refname";
 }
 
 void free_ref_sorting_list(struct ref_sorting *sorting_list) {
@@ -2707,7 +2710,7 @@ void parse_ref_sorting(struct ref_sorting *sorting_list, const char *arg)
 	if (skip_prefix(arg, "version:", &arg) ||
 	    skip_prefix(arg, "v:", &arg))
 		s->sort_flags |= REF_SORTING_VERSION;
-	s->atom = parse_sorting_atom(arg);
+	s->arg = arg;
 }
 
 int parse_opt_ref_sorting(const struct option *opt, const char *arg, int unset)

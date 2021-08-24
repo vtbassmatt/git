@@ -751,6 +751,7 @@ int cmd_branch(int argc, const char **argv, const char *prefix)
 		 */
 		if (list_empty(&sorting.list))
 			ref_default_sorting(&sorting);
+		parse_ref_sorting_list(&sorting, &format);
 		ref_sorting_set_sort_flags_all(&sorting, REF_SORTING_ICASE, icase);
 		ref_sorting_set_sort_flags_all(
 			&sorting, REF_SORTING_DETACHED_HEAD_FIRST, 1);
