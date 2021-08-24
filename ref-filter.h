@@ -26,7 +26,7 @@
 struct atom_value;
 
 struct ref_sorting {
-	struct ref_sorting *next;
+	struct list_head list;
 	int atom; /* index into used_atom array (internal) */
 	enum {
 		REF_SORTING_REVERSE = 1<<0,
@@ -123,11 +123,13 @@ int format_ref_array_item(struct ref_array_item *info,
 			  struct strbuf *final_buf,
 			  struct strbuf *error_buf);
 /*  Parse a single sort specifier and add it to the list */
-void parse_ref_sorting(struct ref_sorting **sorting_tail, const char *atom);
+void parse_ref_sorting(struct ref_sorting *sorting_list, const char *arg);
 /*  Callback function for parsing the sort option */
 int parse_opt_ref_sorting(const struct option *opt, const char *arg, int unset);
 /*  Default sort option based on refname */
-struct ref_sorting *ref_default_sorting(void);
+void ref_default_sorting(struct ref_sorting *sorting_list);
+/* Free all ref_sorting items in sorting list */
+void free_ref_sorting_list(struct ref_sorting *sorting_list);
 /*  Function to parse --merged and --no-merged options */
 int parse_opt_merge_filter(const struct option *opt, const char *arg, int unset);
 /*  Get the current HEAD's description */

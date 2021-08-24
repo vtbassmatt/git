@@ -2534,14 +2534,16 @@ static int compare_refs(const void *a_, const void *b_, void *ref_sorting)
 {
 	struct ref_array_item *a = *((struct ref_array_item **)a_);
 	struct ref_array_item *b = *((struct ref_array_item **)b_);
-	struct ref_sorting *s;
+	struct ref_sorting *s = ref_sorting;
+	struct list_head *pos;
 
-	for (s = ref_sorting; s; s = s->next) {
-		int cmp = cmp_ref_sorting(s, a, b);
+	list_for_each_prev(pos, &s->list) {
+		int cmp = cmp_ref_sorting(list_entry(pos, struct ref_sorting, list),
+						     a, b);
 		if (cmp)
 			return cmp;
 	}
-	s = ref_sorting;
+
 	return s && s->sort_flags & REF_SORTING_ICASE ?
 		strcasecmp(a->refname, b->refname) :
 		strcmp(a->refname, b->refname);
@@ -2550,11 +2552,15 @@ static int compare_refs(const void *a_, const void *b_, void *ref_sorting)
 void ref_sorting_set_sort_flags_all(struct ref_sorting *sorting,
 				    unsigned int mask, int on)
 {
-	for (; sorting; sorting = sorting->next) {
+	struct list_head *pos;
+	struct ref_sorting *entry;
+
+	list_for_each(pos, &sorting->list) {
+		entry = list_entry(pos, struct ref_sorting, list);
 		if (on)
-			sorting->sort_flags |= mask;
+			entry->sort_flags |= mask;
 		else
-			sorting->sort_flags &= ~mask;
+			entry->sort_flags &= ~mask;
 	}
 }
 
@@ -2667,24 +2673,32 @@ static int parse_sorting_atom(const char *atom)
 }
 
 /*  If no sorting option is given, use refname to sort as default */
-struct ref_sorting *ref_default_sorting(void)
+void ref_default_sorting(struct ref_sorting *sorting_list)
 {
 	static const char cstr_name[] = "refname";
 
 	struct ref_sorting *sorting = xcalloc(1, sizeof(*sorting));
-
-	sorting->next = NULL;
+	list_add_tail(&sorting->list, &sorting_list->list);
 	sorting->atom = parse_sorting_atom(cstr_name);
-	return sorting;
 }
 
-void parse_ref_sorting(struct ref_sorting **sorting_tail, const char *arg)
+void free_ref_sorting_list(struct ref_sorting *sorting_list) {
+	struct list_head *pos, *tmp;
+	struct ref_sorting *item;
+
+	list_for_each_safe(pos, tmp, &sorting_list->list) {
+		item = list_entry(pos, struct ref_sorting, list);
+		list_del(pos);
+		free(item);
+	}
+}
+
+void parse_ref_sorting(struct ref_sorting *sorting_list, const char *arg)
 {
 	struct ref_sorting *s;
 
 	CALLOC_ARRAY(s, 1);
-	s->next = *sorting_tail;
-	*sorting_tail = s;
+	list_add_tail(&s->list, &sorting_list->list);
 
 	if (*arg == '-') {
 		s->sort_flags |= REF_SORTING_REVERSE;
