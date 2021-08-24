@@ -427,7 +427,7 @@ static void print_ref_list(struct ref_filter *filter, struct ref_sorting *sortin
 
 	memset(&array, 0, sizeof(array));
 
-	filter_refs(&array, filter, filter->kind | FILTER_REFS_INCLUDE_BROKEN);
+	filter_refs(&array, filter, format, filter->kind | FILTER_REFS_INCLUDE_BROKEN);
 
 	if (filter->verbose)
 		maxwidth = calc_maxwidth(&array, strlen(remote_prefix));
@@ -444,7 +444,8 @@ static void print_ref_list(struct ref_filter *filter, struct ref_sorting *sortin
 	for (i = 0; i < array.nr; i++) {
 		strbuf_reset(&err);
 		strbuf_reset(&out);
-		if (format_ref_array_item(array.items[i], format, &out, &err))
+		array.items[i]->format = format;
+		if (format_ref_array_item(array.items[i], &out, &err))
 			die("%s", err.buf);
 		if (column_active(colopts)) {
 			assert(!filter->verbose && "--column and --verbose are incompatible");

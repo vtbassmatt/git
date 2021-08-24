@@ -2167,22 +2167,24 @@ static const struct object_id *match_points_at(struct oid_array *points_at,
  * Callers can then fill in other struct members at their leisure.
  */
 static struct ref_array_item *new_ref_array_item(const char *refname,
-						 const struct object_id *oid)
+						 const struct object_id *oid,
+						 struct ref_format *format)
 {
 	struct ref_array_item *ref;
 
 	FLEX_ALLOC_STR(ref, refname, refname);
 	oidcpy(&ref->objectname, oid);
 	ref->rest = NULL;
-
+	ref->format = format;
 	return ref;
 }
 
 struct ref_array_item *ref_array_push(struct ref_array *array,
 				      const char *refname,
-				      const struct object_id *oid)
+				      const struct object_id *oid,
+				      struct ref_format *format)
 {
-	struct ref_array_item *ref = new_ref_array_item(refname, oid);
+	struct ref_array_item *ref = new_ref_array_item(refname, oid, format);
 
 	ALLOC_GROW(array->items, array->nr + 1, array->alloc);
 	array->items[array->nr++] = ref;
@@ -2226,6 +2228,7 @@ static int filter_ref_kind(struct ref_filter *filter, const char *refname)
 struct ref_filter_cbdata {
 	struct ref_array *array;
 	struct ref_filter *filter;
+	struct ref_format *format;
 	struct contains_cache contains_cache;
 	struct contains_cache no_contains_cache;
 };
@@ -2238,6 +2241,7 @@ static int ref_filter_handler(const char *refname, const struct object_id *oid, 
 {
 	struct ref_filter_cbdata *ref_cbdata = cb_data;
 	struct ref_filter *filter = ref_cbdata->filter;
+	struct ref_format *format = ref_cbdata->format;
 	struct ref_array_item *ref;
 	struct commit *commit = NULL;
 	unsigned int kind;
@@ -2288,7 +2292,7 @@ static int ref_filter_handler(const char *refname, const struct object_id *oid, 
 	 * to do its job and the resulting list may yet to be pruned
 	 * by maxcount logic.
 	 */
-	ref = ref_array_push(ref_cbdata->array, refname, oid);
+	ref = ref_array_push(ref_cbdata->array, refname, oid, format);
 	ref->commit = commit;
 	ref->flag = flag;
 	ref->kind = kind;
@@ -2401,7 +2405,7 @@ static void reach_filter(struct ref_array *array,
  * as per the given ref_filter structure and finally store the
  * filtered refs in the ref_array structure.
  */
-int filter_refs(struct ref_array *array, struct ref_filter *filter, unsigned int type)
+int filter_refs(struct ref_array *array, struct ref_filter *filter, struct ref_format *format, unsigned int type)
 {
 	struct ref_filter_cbdata ref_cbdata;
 	int ret = 0;
@@ -2409,7 +2413,7 @@ int filter_refs(struct ref_array *array, struct ref_filter *filter, unsigned int
 
 	ref_cbdata.array = array;
 	ref_cbdata.filter = filter;
-
+	ref_cbdata.format = format;
 	if (type & FILTER_REFS_INCLUDE_BROKEN)
 		broken = 1;
 	filter->kind = type & FILTER_REFS_KIND_MASK;
@@ -2592,12 +2596,12 @@ static void append_literal(const char *cp, const char *ep, struct ref_formatting
 }
 
 int format_ref_array_item(struct ref_array_item *info,
-			  struct ref_format *format,
 			  struct strbuf *final_buf,
 			  struct strbuf *error_buf)
 {
 	const char *cp, *sp, *ep;
 	struct ref_formatting_state state = REF_FORMATTING_STATE_INIT;
+	struct ref_format *format = info->format;
 
 	state.quote_style = format->quote_style;
 	push_stack_element(&state.stack);
@@ -2644,9 +2648,9 @@ void pretty_print_ref(const char *name, const struct object_id *oid,
 	struct strbuf output = STRBUF_INIT;
 	struct strbuf err = STRBUF_INIT;
 
-	ref_item = new_ref_array_item(name, oid);
+	ref_item = new_ref_array_item(name, oid, format);
 	ref_item->kind = ref_kind_from_refname(name);
-	if (format_ref_array_item(ref_item, format, &output, &err))
+	if (format_ref_array_item(ref_item, &output, &err))
 		die("%s", err.buf);
 	fwrite(output.buf, 1, output.len, stdout);
 	putchar('\n');

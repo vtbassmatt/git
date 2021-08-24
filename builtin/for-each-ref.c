@@ -79,7 +79,7 @@ int cmd_for_each_ref(int argc, const char **argv, const char *prefix)
 
 	filter.name_patterns = argv;
 	filter.match_as_path = 1;
-	filter_refs(&array, &filter, FILTER_REFS_ALL | FILTER_REFS_INCLUDE_BROKEN);
+	filter_refs(&array, &filter, &format, FILTER_REFS_ALL | FILTER_REFS_INCLUDE_BROKEN);
 	ref_array_sort(&sorting, &array);
 
 	if (!maxcount || array.nr < maxcount)
@@ -87,7 +87,7 @@ int cmd_for_each_ref(int argc, const char **argv, const char *prefix)
 	for (i = 0; i < maxcount; i++) {
 		strbuf_reset(&err);
 		strbuf_reset(&output);
-		if (format_ref_array_item(array.items[i], &format, &output, &err))
+		if (format_ref_array_item(array.items[i], &output, &err))
 			die("%s", err.buf);
 		fwrite(output.buf, 1, output.len, stdout);
 		putchar('\n');

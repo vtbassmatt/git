@@ -62,13 +62,13 @@ static int list_tags(struct ref_filter *filter, struct ref_sorting *sorting,
 	if (verify_ref_format(format))
 		die(_("unable to parse format string"));
 	filter->with_commit_tag_algo = 1;
-	filter_refs(&array, filter, FILTER_REFS_TAGS);
+	filter_refs(&array, filter, format, FILTER_REFS_TAGS);
 	ref_array_sort(sorting, &array);
 
 	for (i = 0; i < array.nr; i++) {
 		strbuf_reset(&output);
 		strbuf_reset(&err);
-		if (format_ref_array_item(array.items[i], format, &output, &err))
+		if (format_ref_array_item(array.items[i], &output, &err))
 			die("%s", err.buf);
 		fwrite(output.buf, 1, output.len, stdout);
 		putchar('\n');
