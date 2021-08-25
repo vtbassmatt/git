@@ -242,6 +242,7 @@ static int color_atom_parser(struct ref_format *format, struct used_atom *atom,
 	 */
 	if (!want_color(format->use_color))
 		color_parse("", atom->u.color);
+	format->need_color_reset_at_eol = !!strcmp(color_value, "reset");
 	return 0;
 }
 
@@ -432,12 +433,29 @@ static int contents_atom_parser(struct ref_format *format, struct used_atom *ato
 	return 0;
 }
 
+static int raw_atom_reject_quote_style(int quote_style) {
+	switch (quote_style) {
+	case QUOTE_PYTHON:
+	case QUOTE_SHELL:
+	case QUOTE_TCL:
+		return 1;
+	case QUOTE_PERL:
+	case 0:
+		return 0;
+	default:
+		BUG("unknown quote style %d", quote_style);
+	}
+}
+
 static int raw_atom_parser(struct ref_format *format, struct used_atom *atom,
 				const char *arg, struct strbuf *err)
 {
-	if (!arg)
+	if (!arg) {
 		atom->u.raw_data.option = RAW_BARE;
-	else if (!strcmp(arg, "size"))
+		if (raw_atom_reject_quote_style(format->quote_style))
+			return strbuf_addf_ret(err, -1, _("--format=%%(raw) cannot be used with"
+						   "--python, --shell, --tcl"));
+	} else if (!strcmp(arg, "size"))
 		atom->u.raw_data.option = RAW_LENGTH;
 	else
 		return strbuf_addf_ret(err, -1, _("unrecognized %%(raw) argument: %s"), arg);
@@ -567,7 +585,7 @@ static int rest_atom_parser(struct ref_format *format, struct used_atom *atom,
 	if (arg)
 		return strbuf_addf_ret(err, -1, _("%%(rest) does not take arguments"));
 	format->use_rest = 1;
-	return 0;
+	return strbuf_addf_ret(err, -1, _("this command reject atom %%(rest)"));
 }
 
 static int head_atom_parser(struct ref_format *format, struct used_atom *atom,
@@ -1004,11 +1022,6 @@ static const char *find_next(const char *cp)
 	return NULL;
 }
 
-static int reject_atom(enum atom_type atom_type)
-{
-	return atom_type == ATOM_REST;
-}
-
 /*
  * Make sure the format string is well formed, and parse out
  * the used atoms.
@@ -1020,7 +1033,7 @@ int verify_ref_format(struct ref_format *format)
 	format->need_color_reset_at_eol = 0;
 	for (cp = format->format; *cp && (sp = find_next(cp)); ) {
 		struct strbuf err = STRBUF_INIT;
-		const char *color, *ep = strchr(sp, ')');
+		const char *ep = strchr(sp, ')');
 		int at;
 
 		if (!ep)
@@ -1029,20 +1042,8 @@ int verify_ref_format(struct ref_format *format)
 		at = parse_ref_filter_atom(format, sp + 2, ep, &err);
 		if (at < 0)
 			die("%s", err.buf);
-		if (reject_atom(used_atom[at].atom_type))
-			die(_("this command reject atom %%(%.*s)"), (int)(ep - sp - 2), sp + 2);
-
-		if ((format->quote_style == QUOTE_PYTHON ||
-		     format->quote_style == QUOTE_SHELL ||
-		     format->quote_style == QUOTE_TCL) &&
-		     used_atom[at].atom_type == ATOM_RAW &&
-		     used_atom[at].u.raw_data.option == RAW_BARE)
-			die(_("--format=%.*s cannot be used with"
-			      "--python, --shell, --tcl"), (int)(ep - sp - 2), sp + 2);
 		cp = ep + 1;
 
-		if (skip_prefix(used_atom[at].name, "color:", &color))
-			format->need_color_reset_at_eol = !!strcmp(color, "reset");
 		strbuf_release(&err);
 	}
 	if (format->need_color_reset_at_eol && !want_color(format->use_color))
