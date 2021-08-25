@@ -213,7 +213,7 @@ static struct used_atom {
 		char *head;
 	} u;
 } *used_atom;
-static int used_atom_cnt, need_tagged, need_symref;
+static int used_atom_cnt;
 
 /*
  * Expand string, append it to strbuf *sb, then return error code ret.
@@ -499,7 +499,7 @@ static int person_email_atom_parser(struct ref_format *format, struct used_atom 
 static int symref_atom_parser(struct ref_format *format, struct used_atom *atom,
 			       const char *arg, struct strbuf *err)
 {
-	need_symref = 1;
+	format->need_symref = 1;
 	return refname_atom_parser_internal(&atom->u.refname, arg, atom->name, err);
 }
 
@@ -769,7 +769,7 @@ static int parse_ref_filter_atom(struct ref_format *format,
 	if (valid_atom[i].parser && valid_atom[i].parser(format, &used_atom[at], arg, err))
 		return -1;
 	if (deref)
-		need_tagged = 1;
+		format->need_tagged = 1;
 	return at;
 }
 
@@ -1816,10 +1816,10 @@ static int populate_value(struct ref_array_item *ref, struct strbuf *err)
 	struct object *obj;
 	int i;
 	struct object_info empty = OBJECT_INFO_INIT;
-
+	struct ref_format *format = ref->format;
 	CALLOC_ARRAY(ref->value, used_atom_cnt);
 
-	if (need_symref && (ref->flag & REF_ISSYMREF) && !ref->symref) {
+	if (format->need_symref && (ref->flag & REF_ISSYMREF) && !ref->symref) {
 		ref->symref = resolve_refdup(ref->refname, RESOLVE_REF_READING,
 					     NULL, NULL);
 		if (!ref->symref)
@@ -1958,7 +1958,7 @@ static int populate_value(struct ref_array_item *ref, struct strbuf *err)
 					       oid_to_hex(&ref->objectname), ref->refname);
 	}
 
-	if (need_tagged)
+	if (format->need_tagged)
 		oi.info.contentp = &oi.content;
 	if (!memcmp(&oi.info, &empty, sizeof(empty)) &&
 	    !memcmp(&oi_deref.info, &empty, sizeof(empty)))
@@ -1973,7 +1973,7 @@ static int populate_value(struct ref_array_item *ref, struct strbuf *err)
 	 * If there is no atom that wants to know about tagged
 	 * object, we are done.
 	 */
-	if (!need_tagged || (obj->type != OBJ_TAG))
+	if (!format->need_tagged || (obj->type != OBJ_TAG))
 		return 0;
 
 	/*

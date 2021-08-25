@@ -86,6 +86,8 @@ struct ref_format {
 
 	/* Internal state to ref-filter */
 	int need_color_reset_at_eol;
+	int need_tagged;
+	int need_symref;
 };
 
 #define REF_FORMAT_INIT { .use_color = -1 }
