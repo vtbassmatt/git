@@ -619,7 +619,7 @@ static int fsmonitor_parse_client_token(const char *buf_token,
 	return 0;
 }
 
-KHASH_INIT(str, const char *, int, 0, kh_str_hash_func, kh_str_hash_equal);
+KHASH_INIT(str, const char *, int, 0, kh_str_hash_func, kh_str_hash_equal)
 
 static int do_handle_client(struct fsmonitor_daemon_state *state,
 			    const char *command,
