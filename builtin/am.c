@@ -1918,14 +1918,25 @@ static int fast_forward_to(struct tree *head, struct tree *remote, int reset)
 	opts.dst_index = &the_index;
 	opts.update = 1;
 	opts.merge = 1;
-	opts.reset = reset;
+	opts.reset = reset ? UNPACK_RESET_PROTECT_UNTRACKED : 0;
 	opts.fn = twoway_merge;
+	if (opts.reset) {
+		/* Allow ignored files in the way to get overwritten */
+		opts.dir = xcalloc(1, sizeof(*opts.dir));
+		opts.dir->flags |= DIR_SHOW_IGNORED;
+		setup_standard_excludes(opts.dir);
+	}
 	init_tree_desc(&t[0], head->buffer, head->size);
 	init_tree_desc(&t[1], remote->buffer, remote->size);
 
 	if (unpack_trees(2, t, &opts)) {
 		rollback_lock_file(&lock_file);
 		return -1;
+	}
+
+	if (opts.reset) {
+		dir_clear(opts.dir);
+		FREE_AND_NULL(opts.dir);
 	}
 
 	if (write_locked_index(&the_index, &lock_file, COMMIT_LOCK))

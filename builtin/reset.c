@@ -10,6 +10,7 @@
 #define USE_THE_INDEX_COMPATIBILITY_MACROS
 #include "builtin.h"
 #include "config.h"
+#include "dir.h"
 #include "lockfile.h"
 #include "tag.h"
 #include "object.h"
@@ -70,9 +71,20 @@ static int reset_index(const char *ref, const struct object_id *oid, int reset_t
 		break;
 	case HARD:
 		opts.update = 1;
-		/* fallthrough */
+		opts.reset = UNPACK_RESET_OVERWRITE_UNTRACKED;
+		break;
+	case MIXED:
+		opts.reset = UNPACK_RESET_PROTECT_UNTRACKED;
+		/* but opts.update=0, so working tree not updated */
+		break;
 	default:
-		opts.reset = 1;
+		BUG("invalid reset_type passed to reset_index");
+	}
+	if (opts.reset == UNPACK_RESET_PROTECT_UNTRACKED) {
+		/* Setup opts.dir so we can overwrite ignored files */
+		opts.dir = xcalloc(1, sizeof(*opts.dir));
+		opts.dir->flags |= DIR_SHOW_IGNORED;
+		setup_standard_excludes(opts.dir);
 	}
 
 	read_cache_unmerged();
@@ -104,6 +116,10 @@ static int reset_index(const char *ref, const struct object_id *oid, int reset_t
 	ret = 0;
 
 out:
+	if (opts.reset == UNPACK_RESET_PROTECT_UNTRACKED) {
+		dir_clear(opts.dir);
+		FREE_AND_NULL(opts.dir);
+	}
 	for (i = 0; i < nr; i++)
 		free((void *)desc[i].buffer);
 	return ret;

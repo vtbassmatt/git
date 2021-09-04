@@ -237,6 +237,7 @@ static int reset_tree(struct object_id *i_tree, int update, int reset)
 	struct tree_desc t[MAX_UNPACK_TREES];
 	struct tree *tree;
 	struct lock_file lock_file = LOCK_INIT;
+	int unpack_trees_ret;
 
 	read_cache_preload(NULL);
 	if (refresh_cache(REFRESH_QUIET))
@@ -256,11 +257,23 @@ static int reset_tree(struct object_id *i_tree, int update, int reset)
 	opts.src_index = &the_index;
 	opts.dst_index = &the_index;
 	opts.merge = 1;
-	opts.reset = reset;
+	opts.reset = reset ? UNPACK_RESET_PROTECT_UNTRACKED : 0;
+	if (opts.reset) {
+		opts.dir = xcalloc(1, sizeof(*opts.dir));
+		opts.dir->flags |= DIR_SHOW_IGNORED;
+		setup_standard_excludes(opts.dir);
+	}
 	opts.update = update;
 	opts.fn = oneway_merge;
 
-	if (unpack_trees(nr_trees, t, &opts))
+	unpack_trees_ret = unpack_trees(nr_trees, t, &opts);
+
+	if (opts.reset) {
+		dir_clear(opts.dir);
+		FREE_AND_NULL(opts.dir);
+	}
+
+	if (unpack_trees_ret)
 		return -1;
 
 	if (write_locked_index(&the_index, &lock_file, COMMIT_LOCK))
