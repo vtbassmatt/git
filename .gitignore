@@ -190,6 +190,7 @@
 /gitweb/static/gitweb.min.*
 /config-list.h
 /command-list.h
+/list-objects-filter-extensions.c
 *.tar.gz
 *.dsc
 *.deb
