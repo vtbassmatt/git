@@ -866,6 +866,8 @@ int cmd_main(int argc, const char **argv)
 
 	trace_command_performance(argv);
 
+	startup_info->original_cwd = xgetcwd();
+
 	/*
 	 * "git-xxxx" is the same as "git xxxx", but we obviously:
 	 *
