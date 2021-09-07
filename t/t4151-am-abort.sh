@@ -23,7 +23,11 @@ test_expect_success setup '
 		test_tick &&
 		git commit -a -m $i || return 1
 	done &&
+	git branch changes &&
 	git format-patch --no-numbered initial &&
+	git checkout -b conflicting initial &&
+	echo different >>file-1 &&
+	git commit -a -m different &&
 	git checkout -b side initial &&
 	echo local change >file-2-expect
 '
@@ -189,6 +193,33 @@ test_expect_success 'am --abort leaves index stat info alone' '
 	test_must_fail git am 0001-*.patch &&
 	git am --abort &&
 	git diff-files --exit-code --quiet
+'
+
+test_expect_failure 'git am --abort return failed exit status when it fails' '
+	test_when_finished "rm -rf file-2/ && git reset --hard" &&
+	git checkout changes &&
+	git format-patch -1 --stdout conflicting >changes.mbox &&
+	test_must_fail git am --3way changes.mbox &&
+
+	git rm file-2 &&
+	mkdir file-2 &&
+	echo precious >file-2/somefile &&
+	test_must_fail git am --abort &&
+	test_path_is_dir file-2/
+'
+
+test_expect_failure 'git am --abort returns us to a clean state' '
+	git checkout changes &&
+	git format-patch -1 --stdout conflicting >changes.mbox &&
+	test_must_fail git am --3way changes.mbox &&
+
+	# Make a change related to the rest of the am work
+	echo related change >>file-2 &&
+
+	# Abort, and expect the related change to go away too
+	git am --abort &&
+	git status --porcelain -uno >actual &&
+	test_must_be_empty actual
 '
 
 test_done
