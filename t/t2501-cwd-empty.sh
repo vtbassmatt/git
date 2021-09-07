@@ -252,4 +252,46 @@ test_expect_success 'stash does not remove cwd incidentally' '
 	test_path_is_dir untracked
 '
 
+test_expect_success 'rm -r leaves submodule if cwd inside' '
+	test_when_finished "git reset --hard HEAD~1" &&
+	test_when_finished "rm -rf .git/modules/my_submodule" &&
+
+	git checkout foo/bar/baz &&
+
+	git init my_submodule &&
+	touch my_submodule/file &&
+	git -C my_submodule add file &&
+	git -C my_submodule commit -m "initial commit" &&
+	git submodule add ./my_submodule &&
+	git commit -m "Add the submodule" &&
+
+	(
+		cd my_submodule &&
+		test_must_fail git --git-dir=../.git --work-tree=.. rm -r ../my_submodule/
+	) &&
+
+	test_path_is_dir my_submodule
+'
+
+test_expect_success 'rm -rf removes submodule even if cwd inside' '
+	test_when_finished "git reset --hard HEAD~1" &&
+	test_when_finished "rm -rf .git/modules/my_submodule" &&
+
+	git checkout foo/bar/baz &&
+
+	git init my_submodule &&
+	touch my_submodule/file &&
+	git -C my_submodule add file &&
+	git -C my_submodule commit -m "initial commit" &&
+	git submodule add ./my_submodule &&
+	git commit -m "Add the submodule" &&
+
+	(
+		cd my_submodule &&
+		git --git-dir=../.git --work-tree=.. rm -rf ../my_submodule/
+	) &&
+
+	test_path_is_missing my_submodule
+'
+
 test_done
