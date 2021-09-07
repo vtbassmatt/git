@@ -1307,4 +1307,42 @@ test_expect_success 'stash -c stash.useBuiltin=false warning ' '
 	test_must_be_empty err
 '
 
+test_expect_failure 'git stash succeeds despite directory/file change' '
+	test_create_repo directory_file_switch_v1 &&
+	(
+		cd directory_file_switch_v1 &&
+		test_commit init &&
+
+		test_write_lines this file has some words >filler &&
+		git add filler &&
+		git commit -m filler &&
+
+		git rm filler &&
+		mkdir filler &&
+		echo contents >filler/file &&
+		cp filler/file expect &&
+		git stash push
+	)
+'
+
+test_expect_failure 'git stash can pop directory/file saved changes' '
+	test_create_repo directory_file_switch_v2 &&
+	(
+		cd directory_file_switch_v2 &&
+		test_commit init &&
+
+		test_write_lines this file has some words >filler &&
+		git add filler &&
+		git commit -m filler &&
+
+		git rm filler &&
+		mkdir filler &&
+		echo contents >filler/file &&
+		cp filler/file expect &&
+		git stash push --include-untracked &&
+		git stash apply --index &&
+		test_cmp expect filler/file
+	)
+'
+
 test_done
