@@ -9,6 +9,8 @@ test_expect_success 'git hook usage' '
 	test_expect_code 129 git hook run &&
 	test_expect_code 129 git hook run -h &&
 	test_expect_code 129 git hook run --unknown 2>err &&
+	test_expect_code 129 git hook list &&
+	test_expect_code 129 git hook list -h &&
 	grep "unknown option" err
 '
 
@@ -94,6 +96,18 @@ test_expect_success 'git hook run -- pass arguments' '
 	EOF
 
 	git hook run test-hook -- arg "u ments" 2>actual &&
+	test_cmp expect actual
+'
+
+test_expect_success 'git hook list: does-not-exist hook' '
+	test_expect_code 1 git hook list does-not-exist
+'
+
+test_expect_success 'git hook list: existing hook' '
+	cat >expect <<-\EOF &&
+	.git/hooks/test-hook
+	EOF
+	git hook list test-hook >actual &&
 	test_cmp expect actual
 '
 
