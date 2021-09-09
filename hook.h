@@ -3,8 +3,10 @@
 #include "strbuf.h"
 #include "strvec.h"
 #include "run-command.h"
+#include "list.h"
 
 struct hook {
+	struct list_head list;
 	/* The path to the hook */
 	const char *hook_path;
 
@@ -75,6 +77,7 @@ struct hook_cb_data {
 	/* rc reflects the cumulative failure state */
 	int rc;
 	const char *hook_name;
+	struct list_head *head;
 	struct hook *run_me;
 	struct run_hooks_opt *options;
 	int *invoked_hook;
@@ -88,7 +91,13 @@ struct hook_cb_data {
 const char *find_hook(const char *name);
 
 /**
- * A boolean version of find_hook()
+ * Provides a linked list of 'struct hook' detailing commands which should run
+ * in response to the 'hookname' event, in execution order.
+ */
+struct list_head *list_hooks(const char *hookname);
+
+/**
+ * A boolean version of list_hooks()
  */
 int hook_exists(const char *hookname);
 
@@ -99,12 +108,19 @@ void run_hooks_opt_clear(struct run_hooks_opt *o);
 
 /**
  * Takes an already resolved hook found via find_hook() and runs
- * it. Does not call run_hooks_opt_clear() for you.
+ * it. Does not call run_hooks_opt_clear() for you, but does call
+ * clear_hook_list().
  *
  * See run_hooks_oneshot() for the simpler one-shot API.
  */
-int run_hooks(const char *hookname, const char *hook_path,
+int run_hooks(const char *hookname, struct list_head *hooks,
 	      struct run_hooks_opt *options);
+
+/**
+ * Empties the list at 'head', calling 'free_hook()' on each
+ * entry. Called implicitly by run_hooks() (and run_hooks_oneshot()).
+ */
+void clear_hook_list(struct list_head *head);
 
 /**
  * Calls find_hook() on your "hook_name" and runs the hooks (if any)
