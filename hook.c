@@ -181,7 +181,7 @@ struct list_head *list_hooks(const char *hookname)
 
 	/* Add the hook from the hookdir. The placeholder makes it easier to
 	 * allocate work in pick_next_hook. */
-	if (find_hook(hookname))
+	if (have_git_dir() && find_hook(hookname))
 		append_or_move_hook(hook_head, NULL);
 
 	return hook_head;
