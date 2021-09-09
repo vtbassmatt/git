@@ -26,6 +26,13 @@ struct run_hooks_opt
 	struct strvec args;
 
 	/*
+	 * Number of threads to parallelize across. Set to 0 to use the
+	 * 'hook.jobs' config or, if that config is unset, the number of cores
+	 * on the system.
+	 */
+	int jobs;
+
+	/*
 	 * Resolve and run the "absolute_path(hook)" instead of
 	 * "hook". Used for "git worktree" hooks
 	 */
@@ -68,7 +75,14 @@ struct run_hooks_opt
 	int *invoked_hook;
 };
 
-#define RUN_HOOKS_OPT_INIT { \
+#define RUN_HOOKS_OPT_INIT_SERIAL { \
+	.jobs = 1, \
+	.env = STRVEC_INIT, \
+	.args = STRVEC_INIT, \
+}
+
+#define RUN_HOOKS_OPT_INIT_PARALLEL { \
+	.jobs = 0, \
 	.env = STRVEC_INIT, \
 	.args = STRVEC_INIT, \
 }
