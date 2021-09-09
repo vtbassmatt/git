@@ -258,8 +258,10 @@ int run_hooks_oneshot(const char *hook_name, struct run_hooks_opt *options)
 	 * If you need to act on a missing hook, use run_found_hooks()
 	 * instead
 	 */
-	if (list_empty(hooks))
+	if (list_empty(hooks)) {
+		clear_hook_list(hooks);
 		goto cleanup;
+	}
 
 	ret = run_hooks(hook_name, hooks, options);
 
