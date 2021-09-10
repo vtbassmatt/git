@@ -77,6 +77,13 @@ test_expect_success 'generate builtin list' '
 	git --list-cmds=builtins >builtins
 '
 
+test_expect_success 'git help fails for non-existing html pages' '
+	configure_help &&
+	mkdir html-doc &&
+	touch html-doc/git.html &&
+	test_must_fail git -c help.htmlpath=html-doc help status
+'
+
 while read builtin
 do
 	test_expect_success "$builtin can handle -h" '
