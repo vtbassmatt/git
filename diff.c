@@ -482,19 +482,9 @@ int git_diff_basic_config(const char *var, const char *value, void *cb)
 
 static char *quote_two(const char *one, const char *two)
 {
-	int need_one = quote_c_style(one, NULL, NULL, CQUOTE_NODQ);
-	int need_two = quote_c_style(two, NULL, NULL, CQUOTE_NODQ);
 	struct strbuf res = STRBUF_INIT;
 
-	if (need_one + need_two) {
-		strbuf_addch(&res, '"');
-		quote_c_style(one, &res, NULL, CQUOTE_NODQ);
-		quote_c_style(two, &res, NULL, CQUOTE_NODQ);
-		strbuf_addch(&res, '"');
-	} else {
-		strbuf_addstr(&res, one);
-		strbuf_addstr(&res, two);
-	}
+	quote_two_c_style(&res, one, two, 0);
 	return strbuf_detach(&res, NULL);
 }
 
