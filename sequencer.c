@@ -4093,8 +4093,8 @@ static enum todo_command peek_command(struct todo_list *todo_list, int offset)
 	return -1;
 }
 
-void create_autostash(struct repository *r, const char *path,
-		      const char *default_reflog_action)
+void create_autostash(struct repository *r, const char *path)
+
 {
 	struct strbuf buf = STRBUF_INIT;
 	struct lock_file lock_file = LOCK_INIT;
@@ -4131,7 +4131,7 @@ void create_autostash(struct repository *r, const char *path,
 		write_file(path, "%s", oid_to_hex(&oid));
 		printf(_("Created autostash: %s\n"), buf.buf);
 		if (reset_head(r, NULL, NULL, RESET_HEAD_HARD, NULL, NULL,
-			       default_reflog_action) < 0)
+			       NULL) < 0)
 			die(_("could not reset --hard"));
 
 		if (discard_index(r->index) < 0 ||
