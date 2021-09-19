@@ -59,6 +59,8 @@ int cmd_verify_tag(int argc, const char **argv, const char *prefix)
 	while (i < argc) {
 		struct object_id oid;
 		const char *name = argv[i++];
+		char *refname;
+		int ref_flags;
 
 		if (get_oid(name, &oid)) {
 			had_error = !!error("tag '%s' not found.", name);
@@ -70,8 +72,10 @@ int cmd_verify_tag(int argc, const char **argv, const char *prefix)
 			continue;
 		}
 
+		if (repo_dwim_ref(the_repository, name, strlen(name), &oid, &refname, 0, &ref_flags, 1))
+			name = refname;
 		if (format.format)
-			pretty_print_ref(name, &oid, &format, 0);
+			pretty_print_ref(name, &oid, &format, ref_flags);
 	}
 	return had_error;
 }
