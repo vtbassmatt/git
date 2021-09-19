@@ -1640,12 +1640,19 @@ static const char *show_ref(struct refname_atom *atom, const char *refname)
 }
 
 static void fill_remote_ref_details(struct used_atom *atom, const char *refname,
-				    struct branch *branch, const char **s)
+				    struct branch *branch, const char **s, struct ref_array_item *ref)
 {
 	int num_ours, num_theirs;
-	if (atom->u.remote_ref.option == RR_REF)
-		*s = show_ref(&atom->u.remote_ref.refname, refname);
-	else if (atom->u.remote_ref.option == RR_TRACK) {
+	if (atom->u.remote_ref.option == RR_REF) {
+		if (ref->special_tag_verify && atom->u.remote_ref.refname.option == R_NORMAL) {
+			atom->u.remote_ref.refname.option = R_LSTRIP;
+			atom->u.remote_ref.refname.lstrip = 2;
+			*s = show_ref(&atom->u.remote_ref.refname, refname);
+			atom->u.remote_ref.refname.option = R_NORMAL;
+		} else {
+			*s = show_ref(&atom->u.remote_ref.refname, refname);
+		}
+	} else if (atom->u.remote_ref.option == RR_TRACK) {
 		if (stat_tracking_info(branch, &num_ours, &num_theirs,
 				       NULL, atom->u.remote_ref.push,
 				       AHEAD_BEHIND_FULL) < 0) {
@@ -1726,17 +1733,33 @@ char *get_head_description(void)
 
 static const char *get_symref(struct used_atom *atom, struct ref_array_item *ref)
 {
-	if (!ref->symref)
+	if (!ref->symref) {
 		return xstrdup("");
-	else
+	} else if (ref->special_tag_verify && atom->u.refname.option == R_NORMAL) {
+		atom->u.refname.option = R_LSTRIP;
+		atom->u.refname.lstrip = 2;
 		return show_ref(&atom->u.refname, ref->symref);
+		atom->u.refname.option = R_NORMAL;
+	} else {
+		return show_ref(&atom->u.refname, ref->symref);
+	}
 }
 
 static const char *get_refname(struct used_atom *atom, struct ref_array_item *ref)
 {
-	if (ref->kind & FILTER_REFS_DETACHED_HEAD)
+	if (ref->kind & FILTER_REFS_DETACHED_HEAD) {
 		return get_head_description();
-	return show_ref(&atom->u.refname, ref->refname);
+	} else if (ref->special_tag_verify && atom->u.refname.option == R_NORMAL) {
+		const char * refname;
+
+		atom->u.refname.option = R_LSTRIP;
+		atom->u.refname.lstrip = 2;
+		refname = show_ref(&atom->u.refname, ref->refname);
+		atom->u.refname.option = R_NORMAL;
+		return refname;
+	} else {
+		return show_ref(&atom->u.refname, ref->refname);
+	}
 }
 
 static int get_object(struct ref_array_item *ref, int deref, struct object **obj,
@@ -1878,7 +1901,7 @@ static int populate_value(struct ref_array_item *ref, struct strbuf *err)
 
 			refname = branch_get_upstream(branch, NULL);
 			if (refname)
-				fill_remote_ref_details(atom, refname, branch, &v->s);
+				fill_remote_ref_details(atom, refname, branch, &v->s, ref);
 			else
 				v->s = xstrdup("");
 			continue;
@@ -1899,7 +1922,7 @@ static int populate_value(struct ref_array_item *ref, struct strbuf *err)
 			}
 			/* We will definitely re-init v->s on the next line. */
 			free((char *)v->s);
-			fill_remote_ref_details(atom, refname, branch, &v->s);
+			fill_remote_ref_details(atom, refname, branch, &v->s, ref);
 			continue;
 		} else if (atom_type == ATOM_COLOR) {
 			v->s = xstrdup(atom->u.color);
@@ -2641,6 +2664,7 @@ void pretty_print_ref(const char *name, const struct object_id *oid,
 	ref_item = new_ref_array_item(name, oid);
 	ref_item->kind = ref_kind_from_refname(name);
 	ref_item->flag = ref_flags;
+	ref_item->special_tag_verify = format->special_tag_verify;
 	if (format_ref_array_item(ref_item, format, &output, &err))
 		die("%s", err.buf);
 	fwrite(output.buf, 1, output.len, stdout);
