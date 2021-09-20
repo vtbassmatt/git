@@ -108,14 +108,17 @@ test_expect_success 'switching to cone mode with non-cone mode patterns' '
 	git -C bad-patterns sparse-checkout init &&
 	git -C bad-patterns sparse-checkout add dir &&
 	git -C bad-patterns config core.sparseCheckoutCone true &&
-	git -C bad-patterns sparse-checkout add dir &&
+
+	test_must_fail git -C bad-patterns sparse-checkout add dir 2>err &&
+	grep "existing sparse-checkout patterns do not use cone mode" err &&
 
 	git -C bad-patterns sparse-checkout init --cone &&
 	cat >expect <<-\EOF &&
 	/*
 	!/*/
 	EOF
-	test_cmp expect bad-patterns/.git/info/sparse-checkout
+	test_cmp expect bad-patterns/.git/info/sparse-checkout &&
+	git -C bad-patterns sparse-checkout add dir
 '
 
 test_expect_success 'interaction with clone --no-checkout (unborn index)' '
@@ -182,9 +185,9 @@ test_expect_success 'set sparse-checkout using --stdin' '
 test_expect_success 'add to sparse-checkout' '
 	cat repo/.git/info/sparse-checkout >expect &&
 	cat >add <<-\EOF &&
-	pattern1
+	/pattern1
 	/folder1/
-	pattern2
+	/pattern2
 	EOF
 	cat add >>expect &&
 	git -C repo sparse-checkout add --stdin <add &&
