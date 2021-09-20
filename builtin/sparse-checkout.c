@@ -348,8 +348,17 @@ static int sparse_checkout_init(int argc, const char **argv)
 
 	/* If we already have a sparse-checkout file, use it. */
 	if (res >= 0) {
-		free(sparse_filename);
-		return update_working_directory(NULL);
+		if (pl.use_cone_patterns || !init_opts.cone_mode) {
+			free(sparse_filename);
+			return update_working_directory(NULL);
+		}
+
+		/*
+		 * At this point, note that if res >= 0 but pl.use_cone_patterns
+		 * is false, then we want to override the patterns with the
+		 * initial set of cone mode patterns.
+		 */
+		clear_pattern_list(&pl);
 	}
 
 	if (get_oid("HEAD", &oid)) {

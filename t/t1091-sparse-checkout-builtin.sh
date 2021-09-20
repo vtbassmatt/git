@@ -108,7 +108,14 @@ test_expect_success 'switching to cone mode with non-cone mode patterns' '
 	git -C bad-patterns sparse-checkout init &&
 	git -C bad-patterns sparse-checkout add dir &&
 	git -C bad-patterns config core.sparseCheckoutCone true &&
-	git -C bad-patterns sparse-checkout add dir
+	git -C bad-patterns sparse-checkout add dir &&
+
+	git -C bad-patterns sparse-checkout init --cone &&
+	cat >expect <<-\EOF &&
+	/*
+	!/*/
+	EOF
+	test_cmp expect bad-patterns/.git/info/sparse-checkout
 '
 
 test_expect_success 'interaction with clone --no-checkout (unborn index)' '
