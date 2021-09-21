@@ -15,6 +15,8 @@
 struct reset_head_opts {
 	/* The oid of the commit to checkout/reset to. Defaults to HEAD */
 	const struct object_id *oid;
+	/* Optional commit when setting ORIG_HEAD. Defaults to HEAD */
+	const struct object_id *orig_head;
 	 /* Optional branch to switch to */
 	const char *branch;
 	/* Flags defined above */
