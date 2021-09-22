@@ -57,7 +57,7 @@ int reset_head(struct repository *r, struct object_id *oid, const char *action,
 	unpack_tree_opts.update = 1;
 	unpack_tree_opts.merge = 1;
 	init_checkout_metadata(&unpack_tree_opts.meta, switch_to_branch, oid, NULL);
-	if (!detach_head)
+	if (reset_hard)
 		unpack_tree_opts.reset = 1;
 
 	if (repo_read_index_unmerged(r) < 0) {
