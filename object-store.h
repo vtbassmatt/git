@@ -27,6 +27,12 @@ struct object_directory {
 	struct oidtree *loose_objects_cache;
 
 	/*
+	 * This is a temporary object store, so there is no need to
+	 * create new objects via rename.
+	 */
+	int is_temp;
+
+	/*
 	 * Path to the alternative object store. If this is a relative path,
 	 * it is relative to the current working directory.
 	 */
