@@ -162,6 +162,7 @@ struct set_gitdir_args {
 	const char *graft_file;
 	const char *index_file;
 	const char *alternate_db;
+	int object_dir_is_temp;
 };
 
 void repo_set_gitdir(struct repository *repo, const char *root,

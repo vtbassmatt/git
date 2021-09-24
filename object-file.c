@@ -1826,11 +1826,16 @@ static void write_object_file_prepare(const struct git_hash_algo *algo,
 }
 
 /*
- * Move the just written object into its final resting place.
+ * Move the just written object into its final resting place,
+ * unless it is already there, as indicated by an empty string for
+ * tmpfile.
  */
 int finalize_object_file(const char *tmpfile, const char *filename)
 {
 	int ret = 0;
+
+	if (!*tmpfile)
+		goto out;
 
 	if (object_creation_mode == OBJECT_CREATION_USES_RENAMES)
 		goto try_rename;
@@ -1904,21 +1909,37 @@ static inline int directory_size(const char *filename)
 }
 
 /*
- * This creates a temporary file in the same directory as the final
- * 'filename'
+ * This creates a loose object file for the specified object id.
+ * If we're working in a temporary object directory, the file is
+ * created with its final filename, otherwise it is created with
+ * a temporary name and renamed by finalize_object_file.
+ * If no rename is required, an empty string is returned in tmp.
  *
  * We want to avoid cross-directory filename renames, because those
  * can have problems on various filesystems (FAT, NFS, Coda).
  */
-static int create_tmpfile(struct strbuf *tmp, const char *filename)
+static int create_objfile(const struct object_id *oid, struct strbuf *tmp,
+			  struct strbuf *filename)
 {
-	int fd, dirlen = directory_size(filename);
+	int fd, dirlen, is_retrying = 0;
+	const char *object_name;
+	static const int object_mode = 0444;
 
+	loose_object_path(the_repository, filename, oid);
+	dirlen = directory_size(filename->buf);
+
+retry_create:
 	strbuf_reset(tmp);
-	strbuf_add(tmp, filename, dirlen);
-	strbuf_addstr(tmp, "tmp_obj_XXXXXX");
-	fd = git_mkstemp_mode(tmp->buf, 0444);
-	if (fd < 0 && dirlen && errno == ENOENT) {
+	if (!the_repository->objects->odb->is_temp) {
+		strbuf_add(tmp, filename->buf, dirlen);
+		object_name = "tmp_obj_XXXXXX";
+		strbuf_addstr(tmp, object_name);
+		fd = git_mkstemp_mode(tmp->buf, object_mode);
+	} else {
+		fd = open(filename->buf, O_CREAT | O_EXCL | O_RDWR, object_mode);
+	}
+
+	if (fd < 0 && dirlen && errno == ENOENT && !is_retrying) {
 		/*
 		 * Make sure the directory exists; note that the contents
 		 * of the buffer are undefined after mkstemp returns an
@@ -1926,15 +1947,15 @@ static int create_tmpfile(struct strbuf *tmp, const char *filename)
 		 * scratch.
 		 */
 		strbuf_reset(tmp);
-		strbuf_add(tmp, filename, dirlen - 1);
+		strbuf_add(tmp, filename->buf, dirlen - 1);
 		if (mkdir(tmp->buf, 0777) && errno != EEXIST)
 			return -1;
 		if (adjust_shared_perm(tmp->buf))
 			return -1;
 
 		/* Try again */
-		strbuf_addstr(tmp, "/tmp_obj_XXXXXX");
-		fd = git_mkstemp_mode(tmp->buf, 0444);
+		is_retrying = 1;
+		goto retry_create;
 	}
 	return fd;
 }
@@ -1951,14 +1972,12 @@ static int write_loose_object(const struct object_id *oid, char *hdr,
 	static struct strbuf tmp_file = STRBUF_INIT;
 	static struct strbuf filename = STRBUF_INIT;
 
-	loose_object_path(the_repository, &filename, oid);
-
-	fd = create_tmpfile(&tmp_file, filename.buf);
+	fd = create_objfile(oid, &tmp_file, &filename);
 	if (fd < 0) {
 		if (errno == EACCES)
 			return error(_("insufficient permission for adding an object to repository database %s"), get_object_directory());
 		else
-			return error_errno(_("unable to create temporary file"));
+			return error_errno(_("unable to create object file"));
 	}
 
 	/* Set it up */
