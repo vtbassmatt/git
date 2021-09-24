@@ -279,8 +279,6 @@ int tmp_objdir_migrate(struct tmp_objdir *t)
 	if (!t)
 		return 0;
 
-
-
 	if (t->prev_odb) {
 		if (the_repository->objects->odb->will_destroy)
 			BUG("migrating and ODB that was marked for destruction");
