@@ -19,6 +19,8 @@ struct reset_head_opts {
 	const char *branch;
 	/* Flags defined above */
 	unsigned flags;
+	 /* Optional reflog message for branch, defaults to head_msg. */
+	const char *branch_msg;
 	 /*
 	  * Optional reflog message for HEAD, if this is not set then
 	  * default_reflog_action must be.
