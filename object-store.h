@@ -31,7 +31,12 @@ struct object_directory {
 	 * This is a temporary object store, so there is no need to
 	 * create new objects via rename.
 	 */
-	int is_temp;
+	int is_temp : 8;
+
+	/*
+	 * This object store is ephemeral, so there is no need to fsync.
+	 */
+	int will_destroy : 8;
 
 	/*
 	 * Path to the alternative object store. If this is a relative path,
@@ -65,6 +70,17 @@ void add_to_alternates_file(const char *dir);
 void add_to_alternates_memory(const char *dir);
 
 /*
+ * Replace the current writable object directory with the specified temporary
+ * object directory; returns the former primary object directory.
+ */
+struct object_directory *set_temporary_primary_odb(const char *dir, int will_destroy);
+
+/*
+ * Restore a previous ODB replaced by set_temporary_main_odb.
+ */
+void restore_primary_odb(struct object_directory *restore_odb, const char *old_path);
+
+/*
  * Populate and return the loose object cache array corresponding to the
  * given object ID.
  */
@@ -73,6 +89,9 @@ struct oidtree *odb_loose_cache(struct object_directory *odb,
 
 /* Empty the loose object cache for the specified object directory. */
 void odb_clear_loose_cache(struct object_directory *odb);
+
+/* Clear and free the specified object directory */
+void free_object_directory(struct object_directory *odb);
 
 struct packed_git {
 	struct hashmap_entry packmap_ent;
