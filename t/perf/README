@@ -190,7 +190,7 @@ shown in the aggregated output. For example:
 	'
 
 	test_size 'output size'
-		wc -c <foo.out
+		test_file_size foo.out
 	'
 
 might produce output like:

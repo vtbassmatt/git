@@ -33,7 +33,7 @@ for days in 1 2 4 8 16 32 64 128; do
 	'
 
 	test_size "size   $title" '
-		wc -c <tmp.pack
+		test_file_size tmp.pack
 	'
 
 	test_perf "client $title" '
