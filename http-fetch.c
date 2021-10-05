@@ -63,7 +63,9 @@ static void fetch_single_packfile(struct object_id *packfile_hash,
 	if (start_active_slot(preq->slot)) {
 		run_active_slot(preq->slot);
 		if (results.curl_result != CURLE_OK) {
-			die("Unable to get pack file %s\n%s", preq->url,
+			int showUrl = git_env_bool("GIT_TRACE_REDACT", 1);
+			die("Unable to get offloaded pack file %s\n%s",
+			    showUrl ? preq->url : "<redacted>",
 			    curl_errorstr);
 		}
 	} else {
