@@ -1581,6 +1581,9 @@ static struct ref *do_fetch_pack_v2(struct fetch_pack_args *args,
 		reader.me = "fetch-pack";
 	}
 
+	if (git_env_bool("GIT_TRACE_REDACT", 1))
+		reader.options |= PACKET_READ_REDACT_URL_PATH;
+
 	while (state != FETCH_DONE) {
 		switch (state) {
 		case FETCH_CHECK_LOCAL:

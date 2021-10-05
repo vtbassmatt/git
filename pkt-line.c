@@ -370,6 +370,31 @@ int packet_length(const char lenbuf_hex[4])
 	return (val < 0) ? val : (val << 8) | hex2chr(lenbuf_hex + 2);
 }
 
+static char *find_url_path(const char* buffer, int *path_len)
+{
+	const char *URL_MARK = "://";
+	char *path = strstr(buffer, URL_MARK);
+	if (!path)
+		return NULL;
+
+	path += strlen(URL_MARK);
+	while (*path && *path != '/')
+		path++;
+
+	if (!*path || !*(path + 1))
+		return NULL;
+
+	// position after '/'
+	path++;
+
+	if (path_len) {
+		char *url_end = strchrnul(path, ' ');
+		*path_len = url_end - path;
+	}
+
+	return path;
+}
+
 enum packet_read_status packet_read_with_status(int fd, char **src_buffer,
 						size_t *src_len, char *buffer,
 						unsigned size, int *pktlen,
@@ -377,6 +402,8 @@ enum packet_read_status packet_read_with_status(int fd, char **src_buffer,
 {
 	int len;
 	char linelen[4];
+	char *url_path_start;
+	int url_path_len;
 
 	if (get_packet_data(fd, src_buffer, src_len, linelen, 4, options) < 0) {
 		*pktlen = -1;
@@ -427,7 +454,18 @@ enum packet_read_status packet_read_with_status(int fd, char **src_buffer,
 		len--;
 
 	buffer[len] = 0;
-	packet_trace(buffer, len, 0);
+	if (options & PACKET_READ_REDACT_URL_PATH &&
+	    (url_path_start = find_url_path(buffer, &url_path_len))) {
+		const char *redacted = "<redacted>";
+		struct strbuf tracebuf = STRBUF_INIT;
+		strbuf_insert(&tracebuf, 0, buffer, len);
+		strbuf_splice(&tracebuf, url_path_start - buffer,
+			      url_path_len, redacted, strlen(redacted));
+		packet_trace(tracebuf.buf, tracebuf.len, 0);
+		strbuf_release(&tracebuf);
+	} else {
+		packet_trace(buffer, len, 0);
+	}
 
 	if ((options & PACKET_READ_DIE_ON_ERR_PACKET) &&
 	    starts_with(buffer, "ERR "))
