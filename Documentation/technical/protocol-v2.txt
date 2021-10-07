@@ -393,7 +393,7 @@ header. Most sections are sent only when the packfile is sent.
     wanted-ref = obj-id SP refname
 
     packfile-uris = PKT-LINE("packfile-uris" LF) *packfile-uri
-    packfile-uri = PKT-LINE(40*(HEXDIGIT) SP *%x20-ff LF)
+    packfile-uri = PKT-LINE((40|64)*(HEXDIGIT) SP *%x20-ff LF)
 
     packfile = PKT-LINE("packfile" LF)
 	       *PKT-LINE(%x01-03 *%x00-ff)
@@ -476,9 +476,9 @@ header. Most sections are sent only when the packfile is sent.
 	* For each URI the server sends, it sends a hash of the pack's
 	  contents (as output by git index-pack) followed by the URI.
 
-	* The hashes are 40 hex characters long. When Git upgrades to a new
-	  hash algorithm, this might need to be updated. (It should match
-	  whatever index-pack outputs after "pack\t" or "keep\t".
+	* The hashes length is defined by the hash algorithm (40 hex
+	  characters in SHA-1, 64 in SHA-256). It should match whatever
+	  index-pack outputs after "pack\t" or "keep\t".
 
     packfile section
 	* This section is only included if the client has sent 'want'
