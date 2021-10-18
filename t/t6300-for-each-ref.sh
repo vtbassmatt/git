@@ -419,6 +419,11 @@ test_expect_success 'Verify descending sort' '
 	test_cmp expected actual
 '
 
+test_expect_success 'Give help even with invalid sort atoms' '
+	test_expect_code 129 git for-each-ref --sort=bogus -h >actual 2>&1 &&
+	grep "^usage: git for-each-ref" actual
+'
+
 cat >expected <<\EOF
 refs/tags/testtag
 refs/tags/testtag-2
