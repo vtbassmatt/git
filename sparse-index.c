@@ -122,11 +122,10 @@ static int index_has_unmerged_entries(struct index_state *istate)
 	return 0;
 }
 
-int convert_to_sparse(struct index_state *istate, int flags)
+static int can_convert_to_sparse(struct index_state *istate, int flags)
 {
 	int test_env;
-	if (istate->sparse_index || !istate->cache_nr ||
-	    !core_apply_sparse_checkout || !core_sparse_checkout_cone)
+	if (!core_apply_sparse_checkout || !core_sparse_checkout_cone)
 		return 0;
 
 	if (!istate->repo)
@@ -185,6 +184,30 @@ int convert_to_sparse(struct index_state *istate, int flags)
 	 * WRITE_TREE_MISSING_OK.
 	 */
 	if (cache_tree_update(istate, WRITE_TREE_MISSING_OK))
+		return 0;
+
+	return 1;
+}
+
+int convert_to_sparse(struct index_state *istate, int flags)
+{
+	int verify = flags & SPARSE_INDEX_VERIFY_ALLOWED;
+
+	/*
+	 * If validating with strict checks against whether the sparse index is
+	 * allowed, we want to check `can_convert_to_sparse` *before* exiting
+	 * early due to an already sparse or empty index.
+	 *
+	 * If not performing strict validation, the order is reversed to avoid
+	 * the more expensive checks in `can_convert_to_sparse` whenver possible.
+	 */
+	if (verify) {
+		if (!can_convert_to_sparse(istate, flags))
+			return -1;
+		else if (istate->sparse_index || !istate->cache_nr)
+			return 0;
+	} else if (istate->sparse_index || !istate->cache_nr ||
+		   !can_convert_to_sparse(istate, flags))
 		return 0;
 
 	remove_fsmonitor(istate);
@@ -311,6 +334,19 @@ void ensure_full_index(struct index_state *istate)
 	cache_tree_update(istate, 0);
 
 	trace2_region_leave("index", "ensure_full_index", istate->repo);
+}
+
+void ensure_correct_sparsity(struct index_state *istate)
+{
+	/*
+	 * First check whether the index can be converted to sparse by attempting
+	 * to convert it with the SPARSE_INDEX_VERIFY_ALLOWED flag. If the
+	 * SPARSE_INDEX_VERIFY_ALLOWED checks indicate that the index cannot
+	 * be converted because repository settings and/or index properties
+	 * do not allow it, expand the index to full.
+	 */
+	if (convert_to_sparse(istate, SPARSE_INDEX_VERIFY_ALLOWED))
+		ensure_full_index(istate);
 }
 
 /*
