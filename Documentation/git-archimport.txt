@@ -9,8 +9,8 @@ git-archimport - Import a GNU Arch repository into Git
 SYNOPSIS
 --------
 [verse]
-'git archimport' [-h] [-v] [-o] [-a] [-f] [-T] [-D depth] [-t tempdir]
-               <archive/branch>[:<git-branch>] ...
+'git archimport' [-h] [-v] [-o] [-a] [-f] [-T] [-D <depth>] [-t <tempdir>]
+	       <archive>/<branch>[:<git-branch>]...
 
 DESCRIPTION
 -----------

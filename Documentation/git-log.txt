@@ -9,7 +9,7 @@ git-log - Show commit logs
 SYNOPSIS
 --------
 [verse]
-'git log' [<options>] [<revision range>] [[--] <path>...]
+'git log' [<options>] [<revision-range>] [[--] <path>...]
 
 DESCRIPTION
 -----------
@@ -81,7 +81,7 @@ produced by `--stat`, etc.
 
 include::line-range-options.txt[]
 
-<revision range>::
+<revision-range>::
 	Show only commits in the specified revision range.  When no
 	<revision range> is specified, it defaults to `HEAD` (i.e. the
 	whole history leading to the current commit).  `origin..HEAD`

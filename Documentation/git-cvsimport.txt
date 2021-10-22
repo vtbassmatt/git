@@ -9,11 +9,11 @@ git-cvsimport - Salvage your data out of another SCM people love to hate
 SYNOPSIS
 --------
 [verse]
-'git cvsimport' [-o <branch-for-HEAD>] [-h] [-v] [-d <CVSROOT>]
+'git cvsimport' [-o <branch-for-HEAD>] [-h] [-v] [-d <cvsroot>]
 	      [-A <author-conv-file>] [-p <options-for-cvsps>] [-P <file>]
-	      [-C <git_repository>] [-z <fuzz>] [-i] [-k] [-u] [-s <subst>]
+	      [-C <git-repository>] [-z <fuzz>] [-i] [-k] [-u] [-s <subst>]
 	      [-a] [-m] [-M <regex>] [-S <regex>] [-L <commitlimit>]
-	      [-r <remote>] [-R] [<CVS_module>]
+	      [-r <remote>] [-R] [<CVS-module>]
 
 
 DESCRIPTION
@@ -52,14 +52,14 @@ OPTIONS
 -v::
 	Verbosity: let 'cvsimport' report what it is doing.
 
--d <CVSROOT>::
+-d <cvsroot>::
 	The root of the CVS archive. May be local (a simple path) or remote;
 	currently, only the :local:, :ext: and :pserver: access methods
 	are supported. If not given, 'git cvsimport' will try to read it
 	from `CVS/Root`. If no such file exists, it checks for the
 	`CVSROOT` environment variable.
 
-<CVS_module>::
+<CVS-module>::
 	The CVS module you want to import. Relative to <CVSROOT>.
 	If not given, 'git cvsimport' tries to read it from
 	`CVS/Repository`.

@@ -10,8 +10,8 @@ SYNOPSIS
 --------
 [verse]
 'git ls-files' [-z] [-t] [-v] [-f]
-		(--[cached|deleted|others|ignored|stage|unmerged|killed|modified])*
-		(-[c|d|o|i|s|u|k|m])*
+		[--(cached|deleted|others|ignored|stage|unmerged|killed|modified)...]
+		[-(c|d|o|i|s|u|k|m)...]
 		[--eol]
 		[--deduplicate]
 		[-x <pattern>|--exclude=<pattern>]
