@@ -133,7 +133,7 @@ int check_apply_state(struct apply_state *state, int force_apply)
 	int is_not_gitdir = !startup_info->have_repository;
 
 	if (state->apply_with_reject && state->threeway)
-		return error(_("--reject and --3way cannot be used together."));
+		return error(_("--reject and --3way cannot be used together"));
 	if (state->threeway) {
 		if (is_not_gitdir)
 			return error(_("--3way outside a repository"));
@@ -3555,7 +3555,7 @@ static int load_current(struct apply_state *state,
 			return -1;
 	}
 	if (verify_index_match(state, ce, &st))
-		return error(_("%s: does not match index"), name);
+		return error(_("does not match index: %s"), name);
 
 	status = load_patch_target(state, &buf, ce, &st, patch, name, mode);
 	if (status < 0)
@@ -3590,7 +3590,7 @@ static int try_threeway(struct apply_state *state,
 		write_object_file("", 0, blob_type, &pre_oid);
 	else if (get_oid(patch->old_oid_prefix, &pre_oid) ||
 		 read_blob_object(&buf, &pre_oid, patch->old_mode))
-		return error(_("repository lacks the necessary blob to perform 3-way merge."));
+		return error(_("repository lacks the necessary blob to perform 3-way merge"));
 
 	if (state->apply_verbosity > verbosity_silent && patch->direct_to_threeway)
 		fprintf(stderr, _("Performing three-way merge...\n"));
@@ -3721,7 +3721,7 @@ static int check_preimage(struct apply_state *state,
 		if (pos < 0) {
 			if (patch->is_new < 0)
 				goto is_new;
-			return error(_("%s: does not exist in index"), old_name);
+			return error(_("index doesn't contain %s"), old_name);
 		}
 		*ce = state->repo->index->cache[pos];
 		if (stat_ret < 0) {
@@ -3729,7 +3729,7 @@ static int check_preimage(struct apply_state *state,
 				return -1;
 		}
 		if (!state->cached && verify_index_match(state, *ce, st))
-			return error(_("%s: does not match index"), old_name);
+			return error(_("index does not match with %s"), old_name);
 		if (state->cached)
 			st_mode = (*ce)->ce_mode;
 	} else if (stat_ret < 0) {
@@ -3746,7 +3746,7 @@ static int check_preimage(struct apply_state *state,
 	if (!patch->old_mode)
 		patch->old_mode = st_mode;
 	if ((st_mode ^ patch->old_mode) & S_IFMT)
-		return error(_("%s: wrong type"), old_name);
+		return error(_("wrong type: %s"), old_name);
 	if (st_mode != patch->old_mode)
 		warning(_("%s has type %o, expected %o"),
 			old_name, st_mode, patch->old_mode);
@@ -3971,11 +3971,11 @@ static int check_patch(struct apply_state *state, struct patch *patch)
 		case 0:
 			break; /* happy */
 		case EXISTS_IN_INDEX:
-			return error(_("%s: already exists in index"), new_name);
+			return error(_("already exists in index: %s"), new_name);
 		case EXISTS_IN_INDEX_AS_ITA:
-			return error(_("%s: does not match index"), new_name);
+			return error(_("does not match index: %s"), new_name);
 		case EXISTS_IN_WORKTREE:
-			return error(_("%s: already exists in working directory"),
+			return error(_("already exists in working directory: %s"),
 				     new_name);
 		default:
 			return err;
@@ -4024,7 +4024,7 @@ static int check_patch(struct apply_state *state, struct patch *patch)
 			     patch->new_name);
 
 	if (apply_data(state, patch, &st, ce) < 0)
-		return error(_("%s: patch does not apply"), name);
+		return error(_("patch does not apply: %s"), name);
 	patch->rejected = 0;
 	return 0;
 }
@@ -4962,8 +4962,8 @@ int apply_all_patches(struct apply_state *state,
 				squelched);
 		}
 		if (state->ws_error_action == die_on_ws_error) {
-			error(Q_("%d line adds whitespace errors.",
-				 "%d lines add whitespace errors.",
+			error(Q_("%d line adds whitespace errors",
+				 "%d lines add whitespace errors",
 				 state->whitespace_error),
 			      state->whitespace_error);
 			res = -128;
@@ -4986,7 +4986,7 @@ int apply_all_patches(struct apply_state *state,
 	if (state->update_index) {
 		res = write_locked_index(state->repo->index, &state->lock_file, COMMIT_LOCK);
 		if (res) {
-			error(_("Unable to write new index file"));
+			error(_("unable to write new index file"));
 			res = -128;
 			goto end;
 		}

@@ -231,13 +231,13 @@ test_expect_success 'fail if the index has unresolved entries' '
 	test_file_not_empty unmerged &&
 	cp file expected &&
 	test_must_fail git pull . second 2>err &&
-	test_i18ngrep "Pulling is not possible because you have unmerged files." err &&
+	test_i18ngrep "pulling is not possible because you have unmerged files" err &&
 	test_cmp expected file &&
 	git add file &&
 	git ls-files -u >unmerged &&
 	test_must_be_empty unmerged &&
 	test_must_fail git pull . second 2>err &&
-	test_i18ngrep "You have not concluded your merge" err &&
+	test_i18ngrep "you have not concluded your merge" err &&
 	test_cmp expected file
 '
 

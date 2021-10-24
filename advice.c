@@ -175,17 +175,17 @@ void list_config_advices(struct string_list *list, const char *prefix)
 int error_resolve_conflict(const char *me)
 {
 	if (!strcmp(me, "cherry-pick"))
-		error(_("Cherry-picking is not possible because you have unmerged files."));
+		error(_("cherry-picking is not possible because you have unmerged files"));
 	else if (!strcmp(me, "commit"))
-		error(_("Committing is not possible because you have unmerged files."));
+		error(_("committing is not possible because you have unmerged files"));
 	else if (!strcmp(me, "merge"))
-		error(_("Merging is not possible because you have unmerged files."));
+		error(_("merging is not possible because you have unmerged files"));
 	else if (!strcmp(me, "pull"))
-		error(_("Pulling is not possible because you have unmerged files."));
+		error(_("pulling is not possible because you have unmerged files"));
 	else if (!strcmp(me, "revert"))
-		error(_("Reverting is not possible because you have unmerged files."));
+		error(_("reverting is not possible because you have unmerged files"));
 	else
-		error(_("It is not possible to %s because you have unmerged files."),
+		error(_("it is not possible to %s because you have unmerged files"),
 			me);
 
 	if (advice_enabled(ADVICE_RESOLVE_CONFLICT))
@@ -201,15 +201,15 @@ int error_resolve_conflict(const char *me)
 void NORETURN die_resolve_conflict(const char *me)
 {
 	error_resolve_conflict(me);
-	die(_("Exiting because of an unresolved conflict."));
+	die(_("exiting because of an unresolved conflict"));
 }
 
 void NORETURN die_conclude_merge(void)
 {
-	error(_("You have not concluded your merge (MERGE_HEAD exists)."));
+	error(_("you have not concluded your merge (MERGE_HEAD exists)"));
 	if (advice_enabled(ADVICE_RESOLVE_CONFLICT))
 		advise(_("Please, commit your changes before merging."));
-	die(_("Exiting because of unfinished merge."));
+	die(_("exiting because of unfinished merge"));
 }
 
 void NORETURN die_ff_impossible(void)

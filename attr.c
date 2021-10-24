@@ -586,7 +586,7 @@ struct attr_check *attr_check_initl(const char *one, ...)
 			    check->nr, cnt);
 		attr = git_attr(param);
 		if (!attr)
-			BUG("%s: not a valid attribute name", param);
+			BUG("not a valid attribute name: %s", param);
 		check->items[cnt].attr = attr;
 	}
 	va_end(params);

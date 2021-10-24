@@ -1287,7 +1287,7 @@ static int apply_for_checkout(struct add_p_state *s, struct strbuf *diff,
 	}
 
 	if (!applies_index) {
-		err(s, _("The selected hunks do not apply to the index!"));
+		err(s, _("the selected hunks do not apply to the index!"));
 		if (prompt_yesno(s, _("Apply them to the worktree "
 					  "anyway? ")) > 0) {
 			setup_child_process(s, &apply_worktree,
@@ -1295,7 +1295,7 @@ static int apply_for_checkout(struct add_p_state *s, struct strbuf *diff,
 			return pipe_command(&apply_worktree, diff->buf,
 					    diff->len, NULL, 0, NULL, 0);
 		}
-		err(s, _("Nothing was applied.\n"));
+		err(s, _("nothing was applied\n"));
 	} else
 		/* As a last resort, show the diff to the user */
 		fwrite(diff->buf, diff->len, 1, stderr);
@@ -1514,28 +1514,28 @@ soft_increment:
 			if (permitted & ALLOW_GOTO_PREVIOUS_HUNK)
 				hunk_index--;
 			else
-				err(s, _("No previous hunk"));
+				err(s, _("no previous hunk"));
 		} else if (s->answer.buf[0] == 'J') {
 			if (permitted & ALLOW_GOTO_NEXT_HUNK)
 				hunk_index++;
 			else
-				err(s, _("No next hunk"));
+				err(s, _("no next hunk"));
 		} else if (s->answer.buf[0] == 'k') {
 			if (permitted & ALLOW_GOTO_PREVIOUS_UNDECIDED_HUNK)
 				hunk_index = undecided_previous;
 			else
-				err(s, _("No previous hunk"));
+				err(s, _("no previous hunk"));
 		} else if (s->answer.buf[0] == 'j') {
 			if (permitted & ALLOW_GOTO_NEXT_UNDECIDED_HUNK)
 				hunk_index = undecided_next;
 			else
-				err(s, _("No next hunk"));
+				err(s, _("no next hunk"));
 		} else if (s->answer.buf[0] == 'g') {
 			char *pend;
 			unsigned long response;
 
 			if (!(permitted & ALLOW_SEARCH_AND_GOTO)) {
-				err(s, _("No other hunks to goto"));
+				err(s, _("no other hunks to goto"));
 				continue;
 			}
 			strbuf_remove(&s->answer, 0, 1);
@@ -1558,13 +1558,13 @@ soft_increment:
 			strbuf_trim(&s->answer);
 			response = strtoul(s->answer.buf, &pend, 10);
 			if (*pend || pend == s->answer.buf)
-				err(s, _("Invalid number: '%s'"),
+				err(s, _("invalid number: '%s'"),
 				    s->answer.buf);
 			else if (0 < response && response <= file_diff->hunk_nr)
 				hunk_index = response - 1;
 			else
-				err(s, Q_("Sorry, only %d hunk available.",
-					  "Sorry, only %d hunks available.",
+				err(s, Q_("sorry, only %d hunk available",
+					  "sorry, only %d hunks available",
 					  file_diff->hunk_nr),
 				    (int)file_diff->hunk_nr);
 		} else if (s->answer.buf[0] == '/') {
@@ -1572,7 +1572,7 @@ soft_increment:
 			int ret;
 
 			if (!(permitted & ALLOW_SEARCH_AND_GOTO)) {
-				err(s, _("No other hunks to search"));
+				err(s, _("no other hunks to search"));
 				continue;
 			}
 			strbuf_remove(&s->answer, 0, 1);
@@ -1593,7 +1593,7 @@ soft_increment:
 				char errbuf[1024];
 
 				regerror(ret, &regex, errbuf, sizeof(errbuf));
-				err(s, _("Malformed search regexp %s: %s"),
+				err(s, _("malformed search regexp %s: %s"),
 				    s->answer.buf, errbuf);
 				continue;
 			}
@@ -1610,14 +1610,14 @@ soft_increment:
 					i = 0;
 				if (i != hunk_index)
 					continue;
-				err(s, _("No hunk matches the given pattern"));
+				err(s, _("no hunk matches the given pattern"));
 				break;
 			}
 			hunk_index = i;
 		} else if (s->answer.buf[0] == 's') {
 			size_t splittable_into = hunk->splittable_into;
 			if (!(permitted & ALLOW_SPLIT))
-				err(s, _("Sorry, cannot split this hunk"));
+				err(s, _("sorry, cannot split this hunk"));
 			else if (!split_hunk(s, file_diff,
 					     hunk - file_diff->hunk))
 				color_fprintf_ln(stdout, s->s.header_color,
@@ -1625,7 +1625,7 @@ soft_increment:
 						 (int)splittable_into);
 		} else if (s->answer.buf[0] == 'e') {
 			if (!(permitted & ALLOW_EDIT))
-				err(s, _("Sorry, cannot edit this hunk"));
+				err(s, _("sorry, cannot edit this hunk"));
 			else if (edit_hunk_loop(s, file_diff, hunk) >= 0) {
 				hunk->use = USE_HUNK;
 				goto soft_increment;

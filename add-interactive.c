@@ -776,7 +776,7 @@ static int run_revert(struct add_i_state *s, const struct pathspec *ps,
 	else {
 		tree = parse_tree_indirect(&oid);
 		if (!tree) {
-			res = error(_("Could not parse HEAD^{tree}"));
+			res = error(_("could not parse HEAD^{tree}"));
 			goto finish_revert;
 		}
 		oidcpy(&oid, &tree->object.oid);
