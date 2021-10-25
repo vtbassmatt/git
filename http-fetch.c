@@ -4,6 +4,7 @@
 #include "http.h"
 #include "walker.h"
 #include "strvec.h"
+#include "urlmatch.h"
 
 static const char http_fetch_usage[] = "git http-fetch "
 "[-c] [-t] [-a] [-v] [--recover] [-w ref] [--stdin | --packfile=hash | commit-id] url";
@@ -63,8 +64,18 @@ static void fetch_single_packfile(struct object_id *packfile_hash,
 	if (start_active_slot(preq->slot)) {
 		run_active_slot(preq->slot);
 		if (results.curl_result != CURLE_OK) {
-			die("Unable to get pack file %s\n%s", preq->url,
-			    curl_errorstr);
+			struct url_info url;
+			char *nurl = url_normalize(preq->url, &url);
+			if (!git_env_bool("GIT_TRACE_REDACT", 1) || !nurl) {
+				die("Unable to get pack file %s\n%s", preq->url,
+				    curl_errorstr);
+			} else {
+				char *schema = xstrndup(url.url, url.scheme_len);
+				char *host = xstrndup(&url.url[url.host_off], url.host_len);
+				die("failed to get '%s' url from '%s' "
+				    "(full URL redacted due to GIT_TRACE_REDACT setting)\n%s",
+				    schema, host, curl_errorstr);
+			}
 		}
 	} else {
 		die("Unable to start request");
