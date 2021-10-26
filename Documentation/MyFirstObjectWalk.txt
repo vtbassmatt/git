@@ -61,6 +61,10 @@ Add usage text and `-h` handling, like all subcommands should consistently do
 We'll need to include the `parse-options.h` header.
 
 ----
+#include "parse-options.h"
+
+...
+
 int cmd_walken(int argc, const char **argv, const char *prefix)
 {
 	const char * const walken_usage[] = {
@@ -200,6 +204,10 @@ Add a new function to `builtin/walken.c`.
 We'll also need to include the `config.h` header:
 
 ----
+#include "config.h"
+
+...
+
 static int git_walken_config(const char *var, const char *value, void *cb)
 {
 	/*
@@ -235,6 +243,10 @@ Add the `struct rev_info` and the `repo_init_revisions()` call.
 We'll also need to include the `revision.h` header:
 
 ----
+#include "revision.h"
+
+...
+
 int cmd_walken(int argc, const char **argv, const char *prefix)
 {
 	/* This can go wherever you like in your declarations.*/
@@ -632,6 +644,10 @@ Complete your implementation of `walken_object_walk()`.
 We'll also need to include the `list-objects.h` header.
 
 ----
+#include "list-objects.h"
+
+...
+
 	traverse_commit_list(rev, walken_show_commit, walken_show_object, NULL);
 
 	printf("commits %d\nblobs %d\ntags %d\ntrees %d\n", commit_count,
