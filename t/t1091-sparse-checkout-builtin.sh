@@ -708,4 +708,19 @@ test_expect_success 'cone mode clears ignored subdirectories' '
 	test_cmp expect out
 '
 
+test_expect_success 'malformed cone-mode patterns' '
+	git -C repo sparse-checkout init --cone &&
+	mkdir -p repo/foo/bar &&
+	touch repo/foo/bar/x repo/foo/y &&
+	cat >repo/.git/info/sparse-checkout <<-\EOF &&
+	/*
+	!/*/
+	/foo/
+	!/foo/*/
+	/foo/\*/
+	EOF
+	cat repo/.git/info/sparse-checkout &&
+	git -C repo sparse-checkout list
+'
+
 test_done
