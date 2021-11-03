@@ -728,8 +728,17 @@ static int prepare_to_commit(const char *index_file, const char *prefix,
 	/* This checks and barfs if author is badly specified */
 	determine_author_info(author_ident);
 
-	if (!no_verify && run_commit_hook(use_editor, index_file, "pre-commit", NULL))
-		return 0;
+	if (!no_verify && find_hook("pre-commit")) {
+		if(run_commit_hook(use_editor, index_file, "pre-commit", NULL))
+			return 0;
+
+		/*
+		 * Re-read the index as pre-commit hook could have updated it,
+		 * and write it out as a tree.
+		 */
+		discard_cache();
+		read_cache_from(index_file);
+	}
 
 	if (squash_message) {
 		/*
@@ -1051,14 +1060,6 @@ static int prepare_to_commit(const char *index_file, const char *prefix,
 		return 0;
 	}
 
-	if (!no_verify && find_hook("pre-commit")) {
-		/*
-		 * Re-read the index as pre-commit hook could have updated it,
-		 * and write it out as a tree.  We must do this before we invoke
-		 * the editor and after we invoke run_status above.
-		 */
-		discard_cache();
-	}
 	read_cache_from(index_file);
 
 	if (update_main_cache_tree(0)) {
