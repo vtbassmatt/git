@@ -1645,7 +1645,8 @@ const char *find_commit_header(const char *msg, const char *key, size_t *out_len
 		if (eol - line > key_len &&
 		    !strncmp(line, key, key_len) &&
 		    line[key_len] == ' ') {
-			*out_len = eol - line - key_len - 1;
+			if (out_len != NULL)
+				*out_len = eol - line - key_len - 1;
 			return line + key_len + 1;
 		}
 		line = *eol ? eol + 1 : NULL;

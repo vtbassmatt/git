@@ -581,32 +581,26 @@ static char *prepare_push_cert_nonce(const char *path, timestamp_t stamp)
 	return strbuf_detach(&buf, NULL);
 }
 
-/*
- * NEEDSWORK: reuse find_commit_header() from jk/commit-author-parsing
- * after dropping "_commit" from its name and possibly moving it out
- * of commit.c
- */
-static char *find_header(const char *msg, size_t len, const char *key,
-			 const char **next_line)
+static char *find_header_value(const char *msg, const char *key, const char **next_line)
 {
-	int key_len = strlen(key);
-	const char *line = msg;
+	size_t out_len;
+	const char *eol;
+	char *ret;
 
-	while (line && line < msg + len) {
-		const char *eol = strchrnul(line, '\n');
+	const char *val = find_commit_header(msg, key, &out_len);
+	if (val == NULL)
+		return NULL;
 
-		if ((msg + len <= eol) || line == eol)
-			return NULL;
-		if (line + key_len < eol &&
-		    !memcmp(line, key, key_len) && line[key_len] == ' ') {
-			int offset = key_len + 1;
-			if (next_line)
-				*next_line = *eol ? eol + 1 : eol;
-			return xmemdupz(line + offset, (eol - line) - offset);
-		}
-		line = *eol ? eol + 1 : NULL;
+	eol = strchrnul(val, '\n');
+	if (next_line) {
+		*next_line = *eol ? eol + 1: eol;
 	}
-	return NULL;
+
+	ret = xmalloc(out_len+1);
+	memcpy(ret, val, out_len);
+	ret[out_len] = '\0';
+
+	return ret;
 }
 
 /*
@@ -625,7 +619,8 @@ static int constant_memequal(const char *a, const char *b, size_t n)
 
 static const char *check_nonce(const char *buf, size_t len)
 {
-	char *nonce = find_header(buf, len, "nonce", NULL);
+	char *nonce = find_header_value(buf, "nonce", NULL);
+
 	timestamp_t stamp, ostamp;
 	char *bohmac, *expect = NULL;
 	const char *retval = NONCE_BAD;
@@ -730,8 +725,7 @@ static int check_cert_push_options(const struct string_list *push_options)
 	if (!len)
 		return 1;
 
-	while ((option = find_header(buf, len, "push-option", &next_line))) {
-		len -= (next_line - buf);
+	while ((option = find_header_value(buf, "push-option", &next_line))) {
 		buf = next_line;
 		options_seen++;
 		if (options_seen > push_options->nr
