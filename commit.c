@@ -734,7 +734,7 @@ void record_author_date(struct author_date_slab *author_date,
 	char *date_end;
 	timestamp_t date;
 
-	ident_line = find_commit_header(buffer, "author", &ident_len);
+	ident_line = find_header(buffer, "author", &ident_len);
 	if (!ident_line)
 		goto fail_exit; /* no author line */
 	if (split_ident_line(&ident, ident_line, ident_len) ||
@@ -1631,7 +1631,7 @@ struct commit_list **commit_list_append(struct commit *commit,
 	return &new_commit->next;
 }
 
-const char *find_commit_header(const char *msg, const char *key, size_t *out_len)
+const char *find_header(const char *msg, const char *key, size_t *out_len)
 {
 	int key_len = strlen(key);
 	const char *line = msg;

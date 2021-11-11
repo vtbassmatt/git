@@ -296,7 +296,7 @@ void free_commit_extra_headers(struct commit_extra_header *extra);
  * Note that some headers (like mergetag) may be multi-line. It is the caller's
  * responsibility to parse further in this case!
  */
-const char *find_commit_header(const char *msg, const char *key,
+const char *find_header(const char *msg, const char *key,
 			       size_t *out_len);
 
 /* Find the end of the log message, the right place for a new trailer. */

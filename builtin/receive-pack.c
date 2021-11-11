@@ -581,13 +581,13 @@ static char *prepare_push_cert_nonce(const char *path, timestamp_t stamp)
 	return strbuf_detach(&buf, NULL);
 }
 
-static char *find_header_value(const char *msg, const char *key, const char **next_line)
+static char *find_header_nextline(const char *msg, const char *key, const char **next_line)
 {
 	size_t out_len;
 	const char *eol;
 	char *ret;
 
-	const char *val = find_commit_header(msg, key, &out_len);
+	const char *val = find_header(msg, key, &out_len);
 	if (val == NULL)
 		return NULL;
 
@@ -619,7 +619,7 @@ static int constant_memequal(const char *a, const char *b, size_t n)
 
 static const char *check_nonce(const char *buf, size_t len)
 {
-	char *nonce = find_header_value(buf, "nonce", NULL);
+	char *nonce = find_header_nextline(buf, "nonce", NULL);
 
 	timestamp_t stamp, ostamp;
 	char *bohmac, *expect = NULL;
@@ -725,7 +725,7 @@ static int check_cert_push_options(const struct string_list *push_options)
 	if (!len)
 		return 1;
 
-	while ((option = find_header_value(buf, "push-option", &next_line))) {
+	while ((option = find_header_nextline(buf, "push-option", &next_line))) {
 		buf = next_line;
 		options_seen++;
 		if (options_seen > push_options->nr

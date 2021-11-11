@@ -597,7 +597,7 @@ static int parse_payload_metadata(struct signature_check *sigc)
 		BUG("invalid value for sigc->payload_type");
 	}
 
-	ident_line = find_commit_header(sigc->payload, signer_header, &ident_len);
+	ident_line = find_header(sigc->payload, signer_header, &ident_len);
 	if (!ident_line || !ident_len)
 		return 1;
 

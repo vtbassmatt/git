@@ -633,7 +633,7 @@ static void add_merge_info(const struct pretty_print_context *pp,
 static char *get_header(const char *msg, const char *key)
 {
 	size_t len;
-	const char *v = find_commit_header(msg, key, &len);
+	const char *v = find_header(msg, key, &len);
 	return v ? xmemdupz(v, len) : NULL;
 }
 

@@ -1312,7 +1312,7 @@ static void get_commit_info(struct am_state *state, struct commit *commit)
 
 	buffer = logmsg_reencode(commit, NULL, get_commit_output_encoding());
 
-	ident_line = find_commit_header(buffer, "author", &ident_len);
+	ident_line = find_header(buffer, "author", &ident_len);
 	if (!ident_line)
 		die(_("missing author line in commit %s"),
 		      oid_to_hex(&commit->object.oid));

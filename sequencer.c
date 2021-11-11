@@ -912,7 +912,7 @@ static char *get_author(const char *message)
 	size_t len;
 	const char *a;
 
-	a = find_commit_header(message, "author", &len);
+	a = find_header(message, "author", &len);
 	if (a)
 		return xmemdupz(a, len);
 

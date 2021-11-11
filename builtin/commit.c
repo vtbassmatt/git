@@ -614,7 +614,7 @@ static void determine_author_info(struct strbuf *author_ident)
 		size_t len;
 		const char *a;
 
-		a = find_commit_header(author_message_buffer, "author", &len);
+		a = find_header(author_message_buffer, "author", &len);
 		if (!a)
 			die(_("commit '%s' lacks author header"), author_message);
 		if (split_ident_line(&ident, a, len) < 0)
