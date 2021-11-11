@@ -30,6 +30,7 @@ SYNOPSIS
 		   [--range-diff=<previous> [--creation-factor=<percent>]]
 		   [--filename-max-length=<n>]
 		   [--progress]
+		   [--always]
 		   [<common diff options>]
 		   [ <since> | <revision range> ]
 
@@ -387,6 +388,10 @@ you can use `--suffix=-patch` to get `0001-description-of-my-change-patch`.
 
 --progress::
 	Show progress reports on stderr as patches are generated.
+
+--always::
+	Patch commits with detailed commit messages,
+	even if they emit no changes. (see linkgit:git-diff-tree[1])
 
 CONFIGURATION
 -------------
