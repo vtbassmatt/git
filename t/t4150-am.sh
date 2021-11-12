@@ -1166,7 +1166,17 @@ test_expect_success 'am a real empty patch with the --always option' '
 	test_cmp expected actual
 '
 
-test_expect_success 'am a patch with empty commits' '
+test_expect_success 'am a patch of empty commits without the --always option' '
+	grep "empty commit" empty-commit.patch &&
+	rm -fr .git/rebase-apply &&
+	git reset --hard &&
+	git checkout empty-commit^ &&
+	test_must_fail git am empty-commit.patch >err &&
+	test_path_is_dir .git/rebase-apply &&
+	test_i18ngrep "Patch is empty." err
+'
+
+test_expect_success 'am a patch of empty commits with the --always option' '
 	grep "empty commit" empty-commit.patch &&
 	rm -fr .git/rebase-apply &&
 	git reset --hard &&
