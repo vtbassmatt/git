@@ -124,6 +124,8 @@ struct am_state {
 	int ignore_date;
 	int allow_rerere_autoupdate;
 	const char *sign_commit;
+	int always;
+	int empty_commit;
 	int rebasing;
 };
 
@@ -1249,8 +1251,12 @@ static int parse_mail(struct am_state *state, const char *mail)
 	}
 
 	if (is_empty_or_missing_file(am_path(state, "patch"))) {
-		printf_ln(_("Patch is empty."));
-		die_user_resolve(state);
+		if (state->always) {
+			state->empty_commit = 1;
+		} else {
+			printf_ln(_("Patch is empty."));
+			die_user_resolve(state);
+		}
 	}
 
 	strbuf_addstr(&msg, "\n\n");
@@ -1792,6 +1798,9 @@ static void am_run(struct am_state *state, int resume)
 		if (state->interactive && do_interactive(state))
 			goto next;
 
+		if (state->empty_commit)
+			goto commit;
+
 		if (run_applypatch_msg_hook(state))
 			exit(1);
 
@@ -1827,6 +1836,7 @@ static void am_run(struct am_state *state, int resume)
 			die_user_resolve(state);
 		}
 
+commit:
 		do_commit(state);
 
 next:
@@ -2357,6 +2367,10 @@ int cmd_am(int argc, const char **argv, const char *prefix)
 		{ OPTION_STRING, 'S', "gpg-sign", &state.sign_commit, N_("key-id"),
 		  N_("GPG-sign commits"),
 		  PARSE_OPT_OPTARG, NULL, (intptr_t) "" },
+		OPT_BOOL(0, "always", &state.always,
+			N_("always apply patch event if the patch is empty")),
+		OPT_HIDDEN_BOOL(0, "empty-commit", &state.empty_commit,
+			N_("(internal use for skipping git-apply to empty commits)")),
 		OPT_HIDDEN_BOOL(0, "rebasing", &state.rebasing,
 			N_("(internal use for git-rebase)")),
 		OPT_END()

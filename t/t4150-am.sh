@@ -196,6 +196,12 @@ test_expect_success setup '
 
 	git format-patch -M --stdout lorem^ >rename-add.patch &&
 
+	git checkout -b empty-commit &&
+	git commit -m "empty commit" --allow-empty &&
+
+	git format-patch --stdout empty-commit^ >empty.patch &&
+	git format-patch --always --stdout empty-commit^ >empty-commit.patch &&
+
 	# reset time
 	sane_unset test_tick &&
 	test_tick
@@ -1150,6 +1156,25 @@ test_expect_success 'apply binary blob in partial clone' '
 
 	# Exercise to make sure that it works
 	git -C client am ../patch
+'
+
+test_expect_success 'am a real empty patch with the --always option' '
+	rm -fr .git/rebase-apply &&
+	git reset --hard &&
+	test_must_fail git am --always empty.patch 2>actual &&
+	echo Patch format detection failed. >expected &&
+	test_cmp expected actual
+'
+
+test_expect_success 'am a patch with empty commits' '
+	grep "empty commit" empty-commit.patch &&
+	rm -fr .git/rebase-apply &&
+	git reset --hard &&
+	git checkout empty-commit^ &&
+	git am --always empty-commit.patch &&
+	test_path_is_missing .git/rebase-apply &&
+	git cat-file commit HEAD >actual &&
+	test_i18ngrep "empty commit" actual
 '
 
 test_done
