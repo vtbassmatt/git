@@ -1158,15 +1158,15 @@ test_expect_success 'apply binary blob in partial clone' '
 	git -C client am ../patch
 '
 
-test_expect_success 'am a real empty patch with the --always option' '
+test_expect_success 'am a real empty patch with the --allow-empty option' '
 	rm -fr .git/rebase-apply &&
 	git reset --hard &&
-	test_must_fail git am --always empty.patch 2>actual &&
+	test_must_fail git am --allow-empty empty.patch 2>actual &&
 	echo Patch format detection failed. >expected &&
 	test_cmp expected actual
 '
 
-test_expect_success 'am a patch of empty commits without the --always option' '
+test_expect_success 'am a patch of empty commits without the --allow-empty option' '
 	grep "empty commit" empty-commit.patch &&
 	rm -fr .git/rebase-apply &&
 	git reset --hard &&
@@ -1176,12 +1176,12 @@ test_expect_success 'am a patch of empty commits without the --always option' '
 	test_i18ngrep "Patch is empty." err
 '
 
-test_expect_success 'am a patch of empty commits with the --always option' '
+test_expect_success 'am a patch of empty commits with the --allow-empty option' '
 	grep "empty commit" empty-commit.patch &&
 	rm -fr .git/rebase-apply &&
 	git reset --hard &&
 	git checkout empty-commit^ &&
-	git am --always empty-commit.patch &&
+	git am --allow-empty empty-commit.patch &&
 	test_path_is_missing .git/rebase-apply &&
 	git cat-file commit HEAD >actual &&
 	test_i18ngrep "empty commit" actual

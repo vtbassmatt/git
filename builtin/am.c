@@ -124,7 +124,7 @@ struct am_state {
 	int ignore_date;
 	int allow_rerere_autoupdate;
 	const char *sign_commit;
-	int always;
+	int allow_empty;
 	int empty_commit;
 	int rebasing;
 };
@@ -1251,7 +1251,7 @@ static int parse_mail(struct am_state *state, const char *mail)
 	}
 
 	if (is_empty_or_missing_file(am_path(state, "patch"))) {
-		if (state->always) {
+		if (state->allow_empty) {
 			state->empty_commit = 1;
 		} else {
 			printf_ln(_("Patch is empty."));
@@ -2367,8 +2367,8 @@ int cmd_am(int argc, const char **argv, const char *prefix)
 		{ OPTION_STRING, 'S', "gpg-sign", &state.sign_commit, N_("key-id"),
 		  N_("GPG-sign commits"),
 		  PARSE_OPT_OPTARG, NULL, (intptr_t) "" },
-		OPT_BOOL(0, "always", &state.always,
-			N_("always apply patch event if the patch is empty")),
+		OPT_BOOL(0, "allow-empty", &state.allow_empty,
+			N_("allow to apply patches of empty commits")),
 		OPT_HIDDEN_BOOL(0, "empty-commit", &state.empty_commit,
 			N_("(internal use for skipping git-apply to empty commits)")),
 		OPT_HIDDEN_BOOL(0, "rebasing", &state.rebasing,

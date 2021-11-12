@@ -16,7 +16,7 @@ SYNOPSIS
 	 [--exclude=<path>] [--include=<path>] [--reject] [-q | --quiet]
 	 [--[no-]scissors] [-S[<keyid>]] [--patch-format=<format>]
 	 [--quoted-cr=<action>]
-	 [--always]
+	 [--allow-empty]
 	 [(<mbox> | <Maildir>)...]
 'git am' (--continue | --skip | --abort | --quit | --show-current-patch[=(diff|raw)])
 
@@ -160,7 +160,7 @@ default.   You can use `--no-utf8` to override this.
 	countermand both `commit.gpgSign` configuration variable, and
 	earlier `--gpg-sign`.
 
---always::
+--allow-empty::
 	Apply patches of commits with detailed commit messages,
 	even if they emit no changes. (see linkgit:git-format-patch[1])
 
