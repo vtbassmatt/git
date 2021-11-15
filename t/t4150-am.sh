@@ -196,6 +196,12 @@ test_expect_success setup '
 
 	git format-patch -M --stdout lorem^ >rename-add.patch &&
 
+	git checkout -b empty-commit &&
+	git commit -m "empty commit" --allow-empty &&
+
+	git format-patch --stdout empty-commit^ >empty.patch &&
+	git format-patch --always --stdout empty-commit^ >empty-commit.patch &&
+
 	# reset time
 	sane_unset test_tick &&
 	test_tick
@@ -1150,6 +1156,58 @@ test_expect_success 'apply binary blob in partial clone' '
 
 	# Exercise to make sure that it works
 	git -C client am ../patch
+'
+
+test_expect_success 'still output error with --empty-commit when meeting empty files' '
+	test_must_fail git am --empty-commit=skip empty.patch 2>actual &&
+	echo Patch format detection failed. >expected &&
+	test_cmp expected actual
+'
+
+test_expect_success 'error when meeting e-mail message that lacks a patch by default' '
+	git checkout empty-commit^ &&
+	test_must_fail git am empty-commit.patch >err &&
+	test_path_is_dir .git/rebase-apply &&
+	test_i18ngrep "Patch is empty." err &&
+	rm -fr .git/rebase-apply &&
+
+	test_must_fail git am --empty-commit=die empty-commit.patch >err &&
+	test_path_is_dir .git/rebase-apply &&
+	test_i18ngrep "Patch is empty." err &&
+	rm -fr .git/rebase-apply &&
+
+	test_must_fail git am --empty-commit=die cover-letter.patch >err &&
+	test_path_is_dir .git/rebase-apply &&
+	test_i18ngrep "Patch is empty." err &&
+	rm -fr .git/rebase-apply
+'
+
+test_expect_success 'skip without error when meeting e-mail message that lacks a patch' '
+	git am --empty-commit=skip empty-commit.patch >err &&
+	test_path_is_missing .git/rebase-apply &&
+	git rev-parse empty-commit^ >expected &&
+	git rev-parse HEAD >actual &&
+	test_cmp expected actual &&
+
+	git am --empty-commit=skip cover-letter.patch >err &&
+	test_path_is_missing .git/rebase-apply &&
+	git rev-parse empty-commit^ >expected &&
+	git rev-parse HEAD >actual &&
+	test_cmp expected actual
+'
+
+test_expect_success 'record as an empty commit when meeting e-mail message that lacks a patch' '
+	git am --empty-commit=asis empty-commit.patch &&
+	test_path_is_missing .git/rebase-apply &&
+	git show empty-commit --format="%B" >expected &&
+	git show HEAD --format="%B" >actual &&
+	grep -f actual expected &&
+
+	git am --empty-commit=asis cover-letter.patch &&
+	test_path_is_missing .git/rebase-apply &&
+	git show empty-commit --format="%B" >expected &&
+	git show HEAD --format="%B" >actual &&
+	grep -f actual expected
 '
 
 test_done

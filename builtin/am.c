@@ -87,6 +87,12 @@ enum show_patch_type {
 	SHOW_PATCH_DIFF = 1,
 };
 
+enum empty_commit_action {
+	DIE_EMPTY_COMMIT = 0,  /* output errors */
+	SKIP_EMPTY_COMMIT,     /* skip without outputting errors */
+	ASIS_EMPTY_COMMIT      /* keep recording as empty commits */
+};
+
 struct am_state {
 	/* state directory path */
 	char *dir;
@@ -118,6 +124,7 @@ struct am_state {
 	int message_id;
 	int scissors; /* enum scissors_type */
 	int quoted_cr; /* enum quoted_cr_action */
+	int empty_commit; /* enum empty_commit_action */
 	struct strvec git_apply_opts;
 	const char *resolvemsg;
 	int committer_date_is_author_date;
@@ -175,6 +182,23 @@ static int am_option_parse_quoted_cr(const struct option *opt,
 
 	if (mailinfo_parse_quoted_cr_action(arg, opt->value) != 0)
 		return error(_("bad action '%s' for '%s'"), arg, "--quoted-cr");
+	return 0;
+}
+
+static int am_option_parse_empty_commit(const struct option *opt,
+				     const char *arg, int unset)
+{
+	int *opt_value = opt->value;
+
+	if (unset || !strcmp(arg, "die"))
+		*opt_value = DIE_EMPTY_COMMIT;
+	else if (!strcmp(arg, "skip"))
+		*opt_value = SKIP_EMPTY_COMMIT;
+	else if (!strcmp(arg, "asis"))
+		*opt_value = ASIS_EMPTY_COMMIT;
+	else
+		return error(_("Invalid value for --empty-commit: %s"), arg);
+
 	return 0;
 }
 
@@ -1248,11 +1272,6 @@ static int parse_mail(struct am_state *state, const char *mail)
 		goto finish;
 	}
 
-	if (is_empty_or_missing_file(am_path(state, "patch"))) {
-		printf_ln(_("Patch is empty."));
-		die_user_resolve(state);
-	}
-
 	strbuf_addstr(&msg, "\n\n");
 	strbuf_addbuf(&msg, &mi.log_message);
 	strbuf_stripspace(&msg, 0);
@@ -1792,6 +1811,20 @@ static void am_run(struct am_state *state, int resume)
 		if (state->interactive && do_interactive(state))
 			goto next;
 
+		if (is_empty_or_missing_file(am_path(state, "patch"))) {
+			if (state->empty_commit == SKIP_EMPTY_COMMIT)
+				goto next;
+			else if (state->empty_commit == ASIS_EMPTY_COMMIT) {
+				if (run_applypatch_msg_hook(state))
+					exit(1);
+				else
+					goto commit;
+			} else if (state->empty_commit == DIE_EMPTY_COMMIT) {
+				printf_ln(_("Patch is empty."));
+				die_user_resolve(state);
+			}
+		}
+
 		if (run_applypatch_msg_hook(state))
 			exit(1);
 
@@ -1827,6 +1860,7 @@ static void am_run(struct am_state *state, int resume)
 			die_user_resolve(state);
 		}
 
+commit:
 		do_commit(state);
 
 next:
@@ -2357,6 +2391,10 @@ int cmd_am(int argc, const char **argv, const char *prefix)
 		{ OPTION_STRING, 'S', "gpg-sign", &state.sign_commit, N_("key-id"),
 		  N_("GPG-sign commits"),
 		  PARSE_OPT_OPTARG, NULL, (intptr_t) "" },
+		{ OPTION_CALLBACK, 0, "empty-commit", &state.empty_commit,
+		  "(die|skip|asis)",
+		  N_("specify how to handle empty patches"),
+		  PARSE_OPT_OPTARG, am_option_parse_empty_commit },
 		OPT_HIDDEN_BOOL(0, "rebasing", &state.rebasing,
 			N_("(internal use for git-rebase)")),
 		OPT_END()
