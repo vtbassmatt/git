@@ -196,6 +196,13 @@ test_expect_success setup '
 
 	git format-patch -M --stdout lorem^ >rename-add.patch &&
 
+	git checkout -b empty-commit &&
+	git commit -m "empty commit" --allow-empty &&
+
+	git format-patch --stdout empty-commit^ >empty.patch &&
+	git format-patch --stdout --cover-letter empty-commit^ >cover-letter.patch &&
+	git format-patch --always --stdout empty-commit^ >empty-commit.patch &&
+
 	# reset time
 	sane_unset test_tick &&
 	test_tick
@@ -1150,6 +1157,72 @@ test_expect_success 'apply binary blob in partial clone' '
 
 	# Exercise to make sure that it works
 	git -C client am ../patch
+'
+
+test_expect_success 'still output error with --empty when meeting empty files' '
+	test_must_fail git am --empty=drop empty.patch 2>actual &&
+	echo Patch format detection failed. >expected &&
+	test_cmp expected actual
+'
+
+test_expect_success 'error when meeting e-mail message that lacks a patch by default' '
+	git checkout empty-commit^ &&
+	test_must_fail git am empty-commit.patch >err &&
+	test_path_is_dir .git/rebase-apply &&
+	test_i18ngrep "Patch is empty." err &&
+	rm -fr .git/rebase-apply &&
+
+	test_must_fail git am --empty=die empty-commit.patch >err &&
+	test_path_is_dir .git/rebase-apply &&
+	test_i18ngrep "Patch is empty." err &&
+	rm -fr .git/rebase-apply &&
+
+	test_must_fail git am --empty=die cover-letter.patch >err &&
+	test_path_is_dir .git/rebase-apply &&
+	test_i18ngrep "Patch is empty." err &&
+	rm -fr .git/rebase-apply
+'
+
+test_expect_success 'skip without error when meeting e-mail message that lacks a patch' '
+	git am --empty=drop empty-commit.patch >err &&
+	test_path_is_missing .git/rebase-apply &&
+	git rev-parse empty-commit^ >expected &&
+	git rev-parse HEAD >actual &&
+	test_cmp expected actual &&
+
+	git am --empty=drop cover-letter.patch >err &&
+	test_path_is_missing .git/rebase-apply &&
+	test_cmp_rev empty-commit^ HEAD
+'
+
+test_expect_success 'record as an empty commit when meeting e-mail message that lacks a patch' '
+	git am --empty=keep empty-commit.patch &&
+	test_path_is_missing .git/rebase-apply &&
+	{
+		git show empty-commit --format="%B" &&
+		echo "--" &&
+		git version | sed -e "s/^git version //" &&
+		echo
+	} >expected &&
+	git show HEAD --format="%B" >actual &&
+	test_cmp actual expected &&
+
+	git am --empty=keep cover-letter.patch &&
+	test_path_is_missing .git/rebase-apply &&
+	{
+		echo "*** SUBJECT HERE ***" &&
+		echo &&
+		echo "*** BLURB HERE ***" &&
+		echo &&
+		echo "A U Thor (1):" &&
+		printf "  " &&
+		git show empty-commit --format="%B" &&
+		echo "--" &&
+		git version | sed -e "s/^git version //" &&
+		echo
+	} >expected &&
+	git show HEAD --format="%B" >actual &&
+	test_cmp actual expected
 '
 
 test_done
