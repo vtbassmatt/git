@@ -10810,7 +10810,7 @@ msgstr "indeks dosyası yazılamıyor"
 msgid "Dirty index: cannot apply patches (dirty: %s)"
 msgstr "Kirli indeks: Yamalar uygulanamıyor (kirli: %s)"
 
-#: builtin/am.c:1798 builtin/am.c:1865
+#: builtin/am.c:1834 builtin/am.c:1902
 #, c-format
 msgid "Applying: %.*s"
 msgstr "Uygulanıyor: %.*s"

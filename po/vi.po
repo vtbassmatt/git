@@ -10807,7 +10807,7 @@ msgstr "không thể ghi tập tin lưu mục lục"
 msgid "Dirty index: cannot apply patches (dirty: %s)"
 msgstr "Bảng mục lục bẩn: không thể áp dụng các miếng vá (bẩn: %s)"
 
-#: builtin/am.c:1798 builtin/am.c:1865
+#: builtin/am.c:1834 builtin/am.c:1902
 #, c-format
 msgid "Applying: %.*s"
 msgstr "Áp dụng: %.*s"

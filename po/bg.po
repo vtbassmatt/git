@@ -11194,7 +11194,7 @@ msgid "Dirty index: cannot apply patches (dirty: %s)"
 msgstr ""
 "Индексът не е чист: кръпките не може да бъдат приложени (замърсени са: %s)"
 
-#: builtin/am.c:1798 builtin/am.c:1865
+#: builtin/am.c:1834 builtin/am.c:1902
 #, c-format
 msgid "Applying: %.*s"
 msgstr "Прилагане: %.*s"

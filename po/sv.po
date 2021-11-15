@@ -10746,7 +10746,7 @@ msgstr "kan inte skriva indexfil"
 msgid "Dirty index: cannot apply patches (dirty: %s)"
 msgstr "Smutsigt index: kan inte tillämpa patchar (smutsiga: %s)"
 
-#: builtin/am.c:1798 builtin/am.c:1865
+#: builtin/am.c:1834 builtin/am.c:1902
 #, c-format
 msgid "Applying: %.*s"
 msgstr "Tillämpar: %.*s"

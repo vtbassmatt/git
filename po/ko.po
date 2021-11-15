@@ -5681,7 +5681,7 @@ msgstr "적용? 예[y]/아니오[n]/편집[e]/패치 보기[v]/모두 적용[a]:
 msgid "Dirty index: cannot apply patches (dirty: %s)"
 msgstr "변경된 인덱스: 패치를 적용할 수 없습니다 (dirty: %s)"
 
-#: builtin/am.c:1808 builtin/am.c:1879
+#: builtin/am.c:1834 builtin/am.c:1902
 #, c-format
 msgid "Applying: %.*s"
 msgstr "적용하는 중: %.*s"

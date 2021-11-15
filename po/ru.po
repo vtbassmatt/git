@@ -1,7 +1,7 @@
 # SOME DESCRIPTIVE TITLE.
 # Copyright (C) YEAR THE PACKAGE'S COPYRIGHT HOLDER
 # This file is distributed under the same license as the PACKAGE package.
-# 
+#
 # Translators:
 # Alexander Golubev <fatzer2@gmail.com>, 2020
 # Dimitriy Ryazantcev <DJm00n@mail.ru>, 2014-2021
@@ -9398,7 +9398,7 @@ msgstr "не удалось записать индекс"
 msgid "Dirty index: cannot apply patches (dirty: %s)"
 msgstr "Индекс изменён: нельзя применять патчи (изменено: %s)"
 
-#: builtin/am.c:1748 builtin/am.c:1816
+#: builtin/am.c:1834 builtin/am.c:1902
 #, c-format
 msgid "Applying: %.*s"
 msgstr "Применение: %.*s"

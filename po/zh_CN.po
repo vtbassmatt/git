@@ -6463,7 +6463,7 @@ msgstr "坏的索引文件 sha1 签名"
 msgid "index uses %.4s extension, which we do not understand"
 msgstr "索引使用不被支持的 %.4s 扩展"
 
-# 	
+#
 #: read-cache.c:1834
 #, c-format
 msgid "ignoring %.4s extension"
@@ -10673,10 +10673,15 @@ msgstr "无法写入索引文件"
 msgid "Dirty index: cannot apply patches (dirty: %s)"
 msgstr "脏索引：不能应用补丁（脏文件：%s）"
 
-#: builtin/am.c:1798 builtin/am.c:1865
+#: builtin/am.c:1834 builtin/am.c:1902
 #, c-format
 msgid "Applying: %.*s"
 msgstr "应用：%.*s"
+
+#: builtin/am.c:1818
+#, c-format
+msgid "Skipping: %.*s"
+msgstr "跳过：%.*s"
 
 #: builtin/am.c:1815
 msgid "No changes -- Patch already applied."

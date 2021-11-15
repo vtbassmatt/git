@@ -10538,10 +10538,15 @@ msgstr "無法寫入索引檔案"
 msgid "Dirty index: cannot apply patches (dirty: %s)"
 msgstr "髒索引：不能套用修補檔（髒檔案：%s）"
 
-#: builtin/am.c:1798 builtin/am.c:1865
+#: builtin/am.c:1834 builtin/am.c:1902
 #, c-format
 msgid "Applying: %.*s"
 msgstr "套用：%.*s"
+
+#: builtin/am.c:1818
+#, c-format
+msgid "Skipping: %.*s"
+msgstr "忽略：%.*s"
 
 #: builtin/am.c:1815
 msgid "No changes -- Patch already applied."

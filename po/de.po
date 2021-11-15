@@ -10999,7 +10999,7 @@ msgstr "Konnte Index-Datei nicht schreiben."
 msgid "Dirty index: cannot apply patches (dirty: %s)"
 msgstr "Geänderter Index: kann Patches nicht anwenden (geändert: %s)"
 
-#: builtin/am.c:1798 builtin/am.c:1865
+#: builtin/am.c:1834 builtin/am.c:1902
 #, c-format
 msgid "Applying: %.*s"
 msgstr "Wende an: %.*s"

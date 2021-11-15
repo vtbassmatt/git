@@ -10229,7 +10229,7 @@ msgstr "impossibile scrivere il file indice"
 msgid "Dirty index: cannot apply patches (dirty: %s)"
 msgstr "Indice sporco: impossibile applicare le patch (elemento sporco: %s)"
 
-#: builtin/am.c:1761 builtin/am.c:1829
+#: builtin/am.c:1834 builtin/am.c:1902
 #, c-format
 msgid "Applying: %.*s"
 msgstr "Applicazione in corso: %.*s"

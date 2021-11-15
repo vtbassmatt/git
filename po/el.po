@@ -7801,7 +7801,7 @@ msgstr "Να γίνει εφαρμογή; [y]es/[n]o/[e]dit/[v]iew patch/[a]ccep
 msgid "Dirty index: cannot apply patches (dirty: %s)"
 msgstr ""
 
-#: builtin/am.c:1749 builtin/am.c:1817
+#: builtin/am.c:1834 builtin/am.c:1902
 #, c-format
 msgid "Applying: %.*s"
 msgstr ""

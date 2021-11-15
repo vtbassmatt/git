@@ -24,7 +24,7 @@
 #   bisect                           |  bisetar
 #   blame                            |  blame
 #   blob object                      |  objeto-blob
-#   branch                           |  ramo 
+#   branch                           |  ramo
 #   bug                              |  bug
 #   bundle                           |  conjunto
 #   bypass                           |  desviar
@@ -74,7 +74,7 @@
 #   loose refs                       |  refs soltas
 #   mark                             |  marca
 #   master                           |  master
-#   merge                            |  junção 
+#   merge                            |  junção
 #   mergetag                         |  etiqueta-junção
 #   object                           |  objeto
 #   object database                  |  base dados de objeto
@@ -211,7 +211,7 @@
 #   token                            |  token
 #   unset                            |  desdefinir
 #   untrack                          |  desmonitorizar
-#   
+#
 #
 msgid ""
 msgstr ""
@@ -10485,7 +10485,7 @@ msgstr "incapaz escrever ficheiro de index"
 msgid "Dirty index: cannot apply patches (dirty: %s)"
 msgstr "Index sujo: incapaz aplicar patches (sujo: %s)"
 
-#: builtin/am.c:1797 builtin/am.c:1865
+#: builtin/am.c:1834 builtin/am.c:1902
 #, c-format
 msgid "Applying: %.*s"
 msgstr "A aplicar: %.*s"

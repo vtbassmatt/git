@@ -10306,7 +10306,7 @@ msgstr "tidak dapat menulis berkas indeks"
 msgid "Dirty index: cannot apply patches (dirty: %s)"
 msgstr "Indeks kotor: tidak dapat menerapkan tambalan (kotor: %s)"
 
-#: builtin/am.c:1798 builtin/am.c:1865
+#: builtin/am.c:1834 builtin/am.c:1902
 #, c-format
 msgid "Applying: %.*s"
 msgstr "Menerapkan: %.*s"
