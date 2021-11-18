@@ -185,12 +185,14 @@ static int am_option_parse_quoted_cr(const struct option *opt,
 	return 0;
 }
 
-static int am_option_parse_empty_commit(const struct option *opt,
+static int am_option_parse_empty(const struct option *opt,
 				     const char *arg, int unset)
 {
 	int *opt_value = opt->value;
 
-	if (unset || !strcmp(arg, "die"))
+	BUG_ON_OPT_NEG(unset);
+
+	if (!strcmp(arg, "die"))
 		*opt_value = DIE_EMPTY_COMMIT;
 	else if (!strcmp(arg, "drop"))
 		*opt_value = DROP_EMPTY_COMMIT;
@@ -2391,10 +2393,9 @@ int cmd_am(int argc, const char **argv, const char *prefix)
 		{ OPTION_STRING, 'S', "gpg-sign", &state.sign_commit, N_("key-id"),
 		  N_("GPG-sign commits"),
 		  PARSE_OPT_OPTARG, NULL, (intptr_t) "" },
-		{ OPTION_CALLBACK, 0, "empty", &state.empty_type,
-		  "(die|drop|keep)",
-		  N_("specify how to handle empty patches"),
-		  PARSE_OPT_OPTARG, am_option_parse_empty_commit },
+		OPT_CALLBACK_F(0, "empty", &state.empty_type, "{drop,keep,die}",
+		  N_("how to handle empty patches"),
+		  PARSE_OPT_NONEG, am_option_parse_empty),
 		OPT_HIDDEN_BOOL(0, "rebasing", &state.rebasing,
 			N_("(internal use for git-rebase)")),
 		OPT_END()

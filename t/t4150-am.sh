@@ -1165,8 +1165,14 @@ test_expect_success 'still output error with --empty when meeting empty files' '
 	test_cmp expected actual
 '
 
-test_expect_success 'error when meeting e-mail message that lacks a patch by default' '
+test_expect_success 'invalid when passing no value for the --empty option' '
 	git checkout empty-commit^ &&
+	test_must_fail git am --empty empty-commit.patch 2>err &&
+	echo "error: Invalid value for --empty: empty-commit.patch" >expected &&
+	test_cmp expected err
+'
+
+test_expect_success 'error when meeting e-mail message that lacks a patch by default' '
 	test_must_fail git am empty-commit.patch >err &&
 	test_path_is_dir .git/rebase-apply &&
 	test_i18ngrep "Patch is empty." err &&
