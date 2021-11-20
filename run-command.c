@@ -19,6 +19,7 @@ void child_process_clear(struct child_process *child)
 {
 	strvec_clear(&child->args);
 	strvec_clear(&child->env_array);
+	child_process_init(child);
 }
 
 struct child_to_clean {
