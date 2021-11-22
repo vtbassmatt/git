@@ -750,4 +750,34 @@ test_expect_success 'merge commit gets exported with --import-marks' '
 	)
 '
 
+
+test_expect_success 'fast-export --first-parent outputs all revisions output by revision walk' '
+	git init first-parent &&
+	cd first-parent &&
+	test_commit init &&
+	git checkout -b topic1 &&
+	test_commit file2 file2.txt &&
+	git checkout main &&
+	git merge topic1 --no-ff &&
+
+	git checkout -b topic2 &&
+	test_commit file3 file3.txt &&
+	git checkout main &&
+	git merge topic2 --no-ff &&
+
+	test_commit branch-head &&
+
+	git rev-list --format="%ad%B" --first-parent --topo-order --no-commit-header main > expected &&
+
+	git fast-export main -- --first-parent > first-parent-export &&
+	git fast-export main -- --first-parent --reverse > first-parent-reverse-export &&
+	git init import && cd import &&
+	cat ../first-parent-export | git fast-import &&
+
+	git rev-list --format="%ad%B" --topo-order --all --no-commit-header > actual &&
+	test $(git rev-list --all | wc -l) -eq 4 &&
+	test_cmp ../expected actual &&
+	test_cmp ../first-parent-export ../first-parent-reverse-export
+'
+
 test_done
