@@ -45,9 +45,8 @@ linux-gcc-4.8)
 	export MAKE_TARGETS=all
 	;;
 esac
-make -C contrib/scalar test
-
 make $MAKE_TARGETS
+make -C contrib/scalar test
 
 check_unignored_build_artifacts
 
