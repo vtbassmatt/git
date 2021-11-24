@@ -11,7 +11,7 @@ PREREQ="PERL"
 
 replace_variable_fields () {
 	sed	-e "s/^\(Date:\).*/\1 DATE-STRING/" \
-		-e "s/^\(Message-Id:\).*/\1 MESSAGE-ID-STRING/" \
+		-e "s/^\(Message-ID:\).*/\1 MESSAGE-ID-STRING/" \
 		-e "s/^\(X-Mailer:\).*/\1 X-MAILER-STRING/"
 }
 
@@ -224,7 +224,7 @@ Cc: cc@example.com,
 	two@example.com
 Subject: [PATCH 1/1] Second.
 Date: DATE-STRING
-Message-Id: MESSAGE-ID-STRING
+Message-ID: MESSAGE-ID-STRING
 X-Mailer: X-MAILER-STRING
 In-Reply-To: <unique-message-id@example.com>
 References: <unique-message-id@example.com>
@@ -616,7 +616,7 @@ test_expect_success $PREREQ 'In-Reply-To without --chain-reply-to' '
 	sed -n -e "s/^In-Reply-To: *\(.*\)/\1/p" msgtxt1 >actual &&
 	test_cmp expect actual &&
 	# Second and subsequent messages are replies to the first one
-	sed -n -e "s/^Message-Id: *\(.*\)/\1/p" msgtxt1 >expect &&
+	sed -n -e "s/^Message-ID: *\(.*\)/\1/p" msgtxt1 >expect &&
 	sed -n -e "s/^In-Reply-To: *\(.*\)/\1/p" msgtxt2 >actual &&
 	test_cmp expect actual &&
 	sed -n -e "s/^In-Reply-To: *\(.*\)/\1/p" msgtxt3 >actual &&
@@ -636,10 +636,10 @@ test_expect_success $PREREQ 'In-Reply-To with --chain-reply-to' '
 		2>errors &&
 	sed -n -e "s/^In-Reply-To: *\(.*\)/\1/p" msgtxt1 >actual &&
 	test_cmp expect actual &&
-	sed -n -e "s/^Message-Id: *\(.*\)/\1/p" msgtxt1 >expect &&
+	sed -n -e "s/^Message-ID: *\(.*\)/\1/p" msgtxt1 >expect &&
 	sed -n -e "s/^In-Reply-To: *\(.*\)/\1/p" msgtxt2 >actual &&
 	test_cmp expect actual &&
-	sed -n -e "s/^Message-Id: *\(.*\)/\1/p" msgtxt2 >expect &&
+	sed -n -e "s/^Message-ID: *\(.*\)/\1/p" msgtxt2 >expect &&
 	sed -n -e "s/^In-Reply-To: *\(.*\)/\1/p" msgtxt3 >actual &&
 	test_cmp expect actual
 '
@@ -712,7 +712,7 @@ Cc: cc@example.com,
 	two@example.com
 Subject: [PATCH 1/1] Second.
 Date: DATE-STRING
-Message-Id: MESSAGE-ID-STRING
+Message-ID: MESSAGE-ID-STRING
 X-Mailer: X-MAILER-STRING
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
@@ -758,7 +758,7 @@ Cc: A <author@example.com>,
 	two@example.com
 Subject: [PATCH 1/1] Second.
 Date: DATE-STRING
-Message-Id: MESSAGE-ID-STRING
+Message-ID: MESSAGE-ID-STRING
 X-Mailer: X-MAILER-STRING
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
@@ -795,7 +795,7 @@ Cc: A <author@example.com>,
 	C O Mitter <committer@example.com>
 Subject: [PATCH 1/1] Second.
 Date: DATE-STRING
-Message-Id: MESSAGE-ID-STRING
+Message-ID: MESSAGE-ID-STRING
 X-Mailer: X-MAILER-STRING
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
@@ -823,7 +823,7 @@ From: Example <from@example.com>
 To: to@example.com
 Subject: [PATCH 1/1] Second.
 Date: DATE-STRING
-Message-Id: MESSAGE-ID-STRING
+Message-ID: MESSAGE-ID-STRING
 X-Mailer: X-MAILER-STRING
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
@@ -859,7 +859,7 @@ Cc: A <author@example.com>,
 	cc-cmd@example.com
 Subject: [PATCH 1/1] Second.
 Date: DATE-STRING
-Message-Id: MESSAGE-ID-STRING
+Message-ID: MESSAGE-ID-STRING
 X-Mailer: X-MAILER-STRING
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
@@ -892,7 +892,7 @@ Cc: A <author@example.com>,
 	two@example.com
 Subject: [PATCH 1/1] Second.
 Date: DATE-STRING
-Message-Id: MESSAGE-ID-STRING
+Message-ID: MESSAGE-ID-STRING
 X-Mailer: X-MAILER-STRING
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
@@ -925,7 +925,7 @@ Cc: A <author@example.com>,
 	two@example.com
 Subject: [PATCH 1/1] Second.
 Date: DATE-STRING
-Message-Id: MESSAGE-ID-STRING
+Message-ID: MESSAGE-ID-STRING
 X-Mailer: X-MAILER-STRING
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
@@ -962,7 +962,7 @@ Cc: A <author@example.com>,
 	C O Mitter <committer@example.com>
 Subject: [PATCH 1/1] Second.
 Date: DATE-STRING
-Message-Id: MESSAGE-ID-STRING
+Message-ID: MESSAGE-ID-STRING
 X-Mailer: X-MAILER-STRING
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
@@ -992,7 +992,7 @@ Cc: A <author@example.com>,
 	C O Mitter <committer@example.com>
 Subject: [PATCH 1/1] Second.
 Date: DATE-STRING
-Message-Id: MESSAGE-ID-STRING
+Message-ID: MESSAGE-ID-STRING
 X-Mailer: X-MAILER-STRING
 MIME-Version: 1.0
 Content-Transfer-Encoding: 8bit
@@ -1477,7 +1477,7 @@ test_expect_success $PREREQ 'To headers from files reset each patch' '
 test_expect_success $PREREQ 'setup expect' '
 cat >email-using-8bit <<\EOF
 From fe6ecc66ece37198fe5db91fa2fc41d9f4fe5cc4 Mon Sep 17 00:00:00 2001
-Message-Id: <bogus-message-id@example.com>
+Message-ID: <bogus-message-id@example.com>
 From: author@example.com
 Date: Sat, 12 Jun 2010 15:53:58 +0200
 Subject: subject goes here
@@ -1563,7 +1563,7 @@ test_expect_success $PREREQ '--8bit-encoding overrides sendemail.8bitEncoding' '
 test_expect_success $PREREQ 'setup expect' '
 	cat >email-using-8bit <<-\EOF
 	From fe6ecc66ece37198fe5db91fa2fc41d9f4fe5cc4 Mon Sep 17 00:00:00 2001
-	Message-Id: <bogus-message-id@example.com>
+	Message-ID: <bogus-message-id@example.com>
 	From: author@example.com
 	Date: Sat, 12 Jun 2010 15:53:58 +0200
 	Subject: Dieser Betreff enthält auch einen Umlaut!
@@ -1592,7 +1592,7 @@ test_expect_success $PREREQ '--8bit-encoding also treats subject' '
 test_expect_success $PREREQ 'setup expect' '
 	cat >email-using-8bit <<-\EOF
 	From fe6ecc66ece37198fe5db91fa2fc41d9f4fe5cc4 Mon Sep 17 00:00:00 2001
-	Message-Id: <bogus-message-id@example.com>
+	Message-ID: <bogus-message-id@example.com>
 	From: A U Thor <author@example.com>
 	Date: Sat, 12 Jun 2010 15:53:58 +0200
 	Content-Type: text/plain; charset=UTF-8
@@ -1673,7 +1673,7 @@ test_expect_success $PREREQ '8-bit and sendemail.transferencoding=base64' '
 test_expect_success $PREREQ 'setup expect' '
 	cat >email-using-qp <<-\EOF
 	From fe6ecc66ece37198fe5db91fa2fc41d9f4fe5cc4 Mon Sep 17 00:00:00 2001
-	Message-Id: <bogus-message-id@example.com>
+	Message-ID: <bogus-message-id@example.com>
 	From: A U Thor <author@example.com>
 	Date: Sat, 12 Jun 2010 15:53:58 +0200
 	MIME-Version: 1.0
@@ -1699,7 +1699,7 @@ test_expect_success $PREREQ 'convert from quoted-printable to base64' '
 test_expect_success $PREREQ 'setup expect' "
 tr -d '\\015' | tr '%' '\\015' >email-using-crlf <<EOF
 From fe6ecc66ece37198fe5db91fa2fc41d9f4fe5cc4 Mon Sep 17 00:00:00 2001
-Message-Id: <bogus-message-id@example.com>
+Message-ID: <bogus-message-id@example.com>
 From: A U Thor <author@example.com>
 Date: Sat, 12 Jun 2010 15:53:58 +0200
 Content-Type: text/plain; charset=UTF-8
