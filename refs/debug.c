@@ -284,15 +284,21 @@ static int debug_print_reflog_ent(struct object_id *old_oid,
 	int ret;
 	char o[GIT_MAX_HEXSZ + 1] = "null";
 	char n[GIT_MAX_HEXSZ + 1] = "null";
+	struct strbuf trimmed = STRBUF_INIT;
 	if (old_oid)
 		oid_to_hex_r(o, old_oid);
 	if (new_oid)
 		oid_to_hex_r(n, new_oid);
 
+	strbuf_addstr(&trimmed, msg);
 	ret = dbg->fn(old_oid, new_oid, committer, timestamp, tz, msg,
 		      dbg->cb_data);
-	trace_printf_key(&trace_refs, "reflog_ent %s (ret %d): %s -> %s, %s %ld \"%s\"\n",
-		dbg->refname, ret, o, n, committer, (long int)timestamp, msg);
+	strbuf_trim_trailing_newline(&trimmed);
+	trace_printf_key(&trace_refs,
+			 "reflog_ent %s (ret %d): %s -> %s, %s %ld \"%s\"\n",
+			 dbg->refname, ret, o, n, committer,
+			 (long int)timestamp, trimmed.buf);
+	strbuf_release(&trimmed);
 	return ret;
 }
 
