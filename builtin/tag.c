@@ -543,13 +543,13 @@ int cmd_tag(int argc, const char **argv, const char *prefix)
 		goto cleanup;
 	}
 	if (filter.lines != -1)
-		die(_("-n option is only allowed in list mode"));
+		die(_("%s option is only allowed in list mode"), "-n");
 	if (filter.with_commit)
-		die(_("--contains option is only allowed in list mode"));
+		die(_("%s option is only allowed in list mode"), "--contains");
 	if (filter.no_commit)
-		die(_("--no-contains option is only allowed in list mode"));
+		die(_("%s option is only allowed in list mode"), "--no-contains");
 	if (filter.points_at.nr)
-		die(_("--points-at option is only allowed in list mode"));
+		die(_("%s option is only allowed in list mode"), "--points-at");
 	if (filter.reachable_from || filter.unreachable_from)
 		die(_("--merged and --no-merged options are only allowed in list mode"));
 	if (cmdmode == 'd') {
