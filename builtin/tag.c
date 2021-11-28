@@ -483,6 +483,7 @@ int cmd_tag(int argc, const char **argv, const char *prefix)
 		OPT_END()
 	};
 	int ret = 0;
+	const char *only_in_list = NULL;
 
 	setup_ref_filter_porcelain_msg();
 
@@ -542,13 +543,15 @@ int cmd_tag(int argc, const char **argv, const char *prefix)
 		goto cleanup;
 	}
 	if (filter.lines != -1)
-		die(_("-n option is only allowed in list mode"));
+		only_in_list = "-n";
 	if (filter.with_commit)
-		die(_("--contains option is only allowed in list mode"));
+		only_in_list = "--contains";
 	if (filter.no_commit)
-		die(_("--no-contains option is only allowed in list mode"));
+		only_in_list = "--no-contains";
 	if (filter.points_at.nr)
-		die(_("--points-at option is only allowed in list mode"));
+		only_in_list = "--points-at";
+	if (only_in_list)
+		die("the '%s' option is only allowed in list mode", only_in_list);
 	if (filter.reachable_from || filter.unreachable_from)
 		die(_("--merged and --no-merged options are only allowed in list mode"));
 	if (cmdmode == 'd') {
