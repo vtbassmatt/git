@@ -86,11 +86,13 @@ static int cmd_delete_refs(struct ref_store *refs, const char **argv)
 	unsigned int flags = arg_flags(*argv++, "flags");
 	const char *msg = *argv++;
 	struct string_list refnames = STRING_LIST_INIT_NODUP;
-
+	int result;
 	while (*argv)
 		string_list_append(&refnames, *argv++);
 
-	return refs_delete_refs(refs, msg, &refnames, flags);
+	result = refs_delete_refs(refs, msg, &refnames, flags);
+	string_list_clear(&refnames, 0);
+	return result;
 }
 
 static int cmd_rename_ref(struct ref_store *refs, const char **argv)
