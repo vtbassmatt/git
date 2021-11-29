@@ -1201,4 +1201,16 @@ test_expect_success 'record as an empty commit when meeting e-mail message that 
 	test_cmp actual expected
 '
 
+
+test_expect_success 'record as an empty commit in the middle of an am session' '
+	git checkout empty-commit^ &&
+	test_must_fail git am empty-commit.patch >err &&
+	grep "Patch is empty." err &&
+	grep "If you want to keep recording it, run \"git am --allow-empty\"." err &&
+	git am --allow-empty &&
+	git show empty-commit --format="%s" >expected &&
+	git show HEAD --format="%s" >actual &&
+	test_cmp actual expected
+'
+
 test_done
