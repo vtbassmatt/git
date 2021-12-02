@@ -139,6 +139,25 @@ static NORETURN void not_found(struct strbuf *hdr, const char *err, ...)
 	exit(0);
 }
 
+static NORETURN void not_found_2(struct strbuf *hdr, const char *dir,
+				 const char *pathinfo, const char *err,
+				 const char *hint)
+{
+	http_status(hdr, 404, "Not Found");
+	hdr_nocache(hdr);
+	strbuf_add(hdr, "\r\n", 2);
+	if (pathinfo != NULL)
+		strbuf_addf(hdr, "%s: ", pathinfo);
+	strbuf_addf(hdr, "%s.\r\n", err);
+	if (hint != NULL)
+		strbuf_addf(hdr, "%s\r\n", hint);
+	end_headers(hdr);
+
+	if (err && *err)
+		fprintf(stderr, "%s: %s\n", dir, err);
+	exit(0);
+}
+
 __attribute__((format (printf, 2, 3)))
 static NORETURN void forbidden(struct strbuf *hdr, const char *err, ...)
 {
@@ -736,7 +755,8 @@ static int bad_request(struct strbuf *hdr, const struct service_cmd *c)
 
 int cmd_main(int argc, const char **argv)
 {
-	char *method = getenv("REQUEST_METHOD");
+	const char *method = getenv("REQUEST_METHOD");
+	const char *pathinfo = getenv("PATH_INFO");
 	const char *proto_header;
 	char *dir;
 	struct service_cmd *cmd = NULL;
@@ -775,15 +795,21 @@ int cmd_main(int argc, const char **argv)
 		regfree(&re);
 	}
 
-	if (!cmd)
-		not_found(&hdr, "Request not supported: '%s'", dir);
+	if (!cmd) {
+		const char *hint = "";
+		if (strcmp(method, "GET") == 0)
+			hint = "You cannot use a web browser to access "
+			       "this URL. Only git operations like "
+			       "clone/ls-remote/etc. will work.\n";
+		not_found_2(&hdr, dir, pathinfo, "Request not supported", hint);
+	}
 
 	setup_path();
 	if (!enter_repo(dir, 0))
-		not_found(&hdr, "Not a git repository: '%s'", dir);
+		not_found_2(&hdr, dir, pathinfo, "Not a git repository", NULL);
 	if (!getenv("GIT_HTTP_EXPORT_ALL") &&
 	    access("git-daemon-export-ok", F_OK) )
-		not_found(&hdr, "Repository not exported: '%s'", dir);
+		not_found_2(&hdr, dir, pathinfo, "Repository not exported", NULL);
 
 	http_config();
 	max_request_buffer = git_env_ulong("GIT_HTTP_MAX_REQUEST_BUFFER",

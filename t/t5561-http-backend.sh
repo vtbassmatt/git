@@ -44,7 +44,7 @@ grep '^[^#]' >exp <<EOF
 
 ###  refs/heads/main
 ###
-GET  /smart/repo.git/refs/heads/main HTTP/1.1 404 -
+GET  /smart/repo.git/refs/heads/main HTTP/1.1 404
 
 ###  getanyfile default
 ###
@@ -59,14 +59,14 @@ GET  /smart/repo.git/$IDX_URL HTTP/1.1 200
 
 ###  no git-daemon-export-ok
 ###
-GET  /smart_noexport/repo.git/HEAD HTTP/1.1 404 -
-GET  /smart_noexport/repo.git/info/refs HTTP/1.1 404 -
-GET  /smart_noexport/repo.git/objects/info/packs HTTP/1.1 404 -
-GET  /smart_noexport/repo.git/objects/info/alternates HTTP/1.1 404 -
-GET  /smart_noexport/repo.git/objects/info/http-alternates HTTP/1.1 404 -
-GET  /smart_noexport/repo.git/$LOOSE_URL HTTP/1.1 404 -
-GET  /smart_noexport/repo.git/$PACK_URL HTTP/1.1 404 -
-GET  /smart_noexport/repo.git/$IDX_URL HTTP/1.1 404 -
+GET  /smart_noexport/repo.git/HEAD HTTP/1.1 404
+GET  /smart_noexport/repo.git/info/refs HTTP/1.1 404
+GET  /smart_noexport/repo.git/objects/info/packs HTTP/1.1 404
+GET  /smart_noexport/repo.git/objects/info/alternates HTTP/1.1 404
+GET  /smart_noexport/repo.git/objects/info/http-alternates HTTP/1.1 404
+GET  /smart_noexport/repo.git/$LOOSE_URL HTTP/1.1 404
+GET  /smart_noexport/repo.git/$PACK_URL HTTP/1.1 404
+GET  /smart_noexport/repo.git/$IDX_URL HTTP/1.1 404
 
 ###  git-daemon-export-ok
 ###
@@ -92,14 +92,14 @@ GET  /smart/repo.git/$IDX_URL HTTP/1.1 200
 
 ###  getanyfile false
 ###
-GET  /smart/repo.git/HEAD HTTP/1.1 403 -
-GET  /smart/repo.git/info/refs HTTP/1.1 403 -
-GET  /smart/repo.git/objects/info/packs HTTP/1.1 403 -
-GET  /smart/repo.git/objects/info/alternates HTTP/1.1 403 -
-GET  /smart/repo.git/objects/info/http-alternates HTTP/1.1 403 -
-GET  /smart/repo.git/$LOOSE_URL HTTP/1.1 403 -
-GET  /smart/repo.git/$PACK_URL HTTP/1.1 403 -
-GET  /smart/repo.git/$IDX_URL HTTP/1.1 403 -
+GET  /smart/repo.git/HEAD HTTP/1.1 403
+GET  /smart/repo.git/info/refs HTTP/1.1 403
+GET  /smart/repo.git/objects/info/packs HTTP/1.1 403
+GET  /smart/repo.git/objects/info/alternates HTTP/1.1 403
+GET  /smart/repo.git/objects/info/http-alternates HTTP/1.1 403
+GET  /smart/repo.git/$LOOSE_URL HTTP/1.1 403
+GET  /smart/repo.git/$PACK_URL HTTP/1.1 403
+GET  /smart/repo.git/$IDX_URL HTTP/1.1 403
 
 ###  uploadpack default
 ###
@@ -113,13 +113,13 @@ POST /smart/repo.git/git-upload-pack HTTP/1.1 200 -
 
 ###  uploadpack false
 ###
-GET  /smart/repo.git/info/refs?service=git-upload-pack HTTP/1.1 403 -
-POST /smart/repo.git/git-upload-pack HTTP/1.1 403 -
+GET  /smart/repo.git/info/refs?service=git-upload-pack HTTP/1.1 403
+POST /smart/repo.git/git-upload-pack HTTP/1.1 403
 
 ###  receivepack default
 ###
-GET  /smart/repo.git/info/refs?service=git-receive-pack HTTP/1.1 403 -
-POST /smart/repo.git/git-receive-pack HTTP/1.1 403 -
+GET  /smart/repo.git/info/refs?service=git-receive-pack HTTP/1.1 403
+POST /smart/repo.git/git-receive-pack HTTP/1.1 403
 
 ###  receivepack true
 ###
@@ -128,8 +128,8 @@ POST /smart/repo.git/git-receive-pack HTTP/1.1 200 -
 
 ###  receivepack false
 ###
-GET  /smart/repo.git/info/refs?service=git-receive-pack HTTP/1.1 403 -
-POST /smart/repo.git/git-receive-pack HTTP/1.1 403 -
+GET  /smart/repo.git/info/refs?service=git-receive-pack HTTP/1.1 403
+POST /smart/repo.git/git-receive-pack HTTP/1.1 403
 EOF
 test_expect_success 'server request log matches test results' '
 	check_access_log exp
