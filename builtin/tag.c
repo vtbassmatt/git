@@ -522,7 +522,7 @@ int cmd_tag(int argc, const char **argv, const char *prefix)
 	finalize_colopts(&colopts, -1);
 	if (cmdmode == 'l' && filter.lines != -1) {
 		if (explicitly_enable_column(colopts))
-			die(_("--column and -n are incompatible"));
+			die(_("%s and %s are mutually exclusive"), "--column", "-n");
 		colopts = 0;
 	}
 	if (!sorting)

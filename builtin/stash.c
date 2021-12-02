@@ -1644,7 +1644,7 @@ static int push_stash(int argc, const char **argv, const char *prefix,
 
 	if (pathspec_from_file) {
 		if (patch_mode)
-			die(_("--pathspec-from-file is incompatible with --patch"));
+			die(_("%s and %s are mutually exclusive"), "--pathspec-from-file", "--patch");
 
 		if (ps.nr)
 			die(_("--pathspec-from-file is incompatible with pathspec arguments"));

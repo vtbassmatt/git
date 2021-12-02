@@ -581,7 +581,7 @@ static int parse_archive_args(int argc, const char **argv,
 	if (output)
 		die(_("Unexpected option --output"));
 	if (is_remote && args->extra_files.nr)
-		die(_("Options --add-file and --remote cannot be used together"));
+		die(_("%s and %s are mutually exclusive"), "--add-file", "--remote");
 
 	if (!base)
 		base = "";

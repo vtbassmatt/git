@@ -355,7 +355,7 @@ static const char *prepare_index(const char **argv, const char *prefix,
 
 	if (pathspec_from_file) {
 		if (interactive)
-			die(_("--pathspec-from-file is incompatible with --interactive/--patch"));
+			die(_("%s and %s are mutually exclusive"), "--pathspec-from-file", "--interactive/--patch");
 
 		if (all)
 			die(_("--pathspec-from-file with -a does not make sense"));
@@ -1193,7 +1193,7 @@ static void finalize_deferred_config(struct wt_status *s)
 		    status_format == STATUS_FORMAT_UNSPECIFIED)
 			status_format = STATUS_FORMAT_PORCELAIN;
 		else if (status_format == STATUS_FORMAT_LONG)
-			die(_("--long and -z are incompatible"));
+			die(_("%s and %s are mutually exclusive"), "--long", "-z");
 	}
 
 	if (use_deferred_config && status_format == STATUS_FORMAT_UNSPECIFIED)

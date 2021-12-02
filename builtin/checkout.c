@@ -1731,10 +1731,10 @@ static int checkout_main(int argc, const char **argv, const char *prefix,
 			die(_("--pathspec-from-file is incompatible with pathspec arguments"));
 
 		if (opts->force_detach)
-			die(_("--pathspec-from-file is incompatible with --detach"));
+			die(_("%s and %s are mutually exclusive"), "--pathspec-from-file",  "--detach");
 
 		if (opts->patch_mode)
-			die(_("--pathspec-from-file is incompatible with --patch"));
+			die(_("%s and %s are mutually exclusive"), "--pathspec-from-file", "--patch");
 
 		parse_pathspec_file(&opts->pathspec, 0,
 				    0,
