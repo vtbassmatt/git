@@ -682,17 +682,26 @@ static int sparse_checkout_add(int argc, const char **argv, const char *prefix)
 }
 
 static char const * const builtin_sparse_checkout_set_usage[] = {
-	N_("git sparse-checkout set (--stdin | <patterns>)"),
+	N_("git sparse-checkout set [--cone] [--[no-]sparse-index] (--stdin | <patterns>)"),
 	NULL
 };
 
 static struct sparse_checkout_set_opts {
+	int cone_mode;
+	int sparse_index;
 	int use_stdin;
 } set_opts;
 
 static int sparse_checkout_set(int argc, const char **argv, const char *prefix)
 {
+	int mode, record_mode;
+	const char *default_patterns[] = {"/*", "!/*/"};
+
 	static struct option builtin_sparse_checkout_set_options[] = {
+		OPT_BOOL(0, "cone", &set_opts.cone_mode,
+			 N_("initialize the sparse-checkout in cone mode")),
+		OPT_BOOL(0, "sparse-index", &set_opts.sparse_index,
+			 N_("toggle the use of a sparse index")),
 		OPT_BOOL(0, "stdin", &set_opts.use_stdin,
 			 N_("read patterns from standard in")),
 		OPT_END(),
@@ -700,10 +709,51 @@ static int sparse_checkout_set(int argc, const char **argv, const char *prefix)
 
 	repo_read_index(the_repository);
 
+	set_opts.cone_mode = -1;
+	set_opts.sparse_index = -1;
+
 	argc = parse_options(argc, argv, prefix,
 			     builtin_sparse_checkout_set_options,
 			     builtin_sparse_checkout_set_usage,
 			     PARSE_OPT_KEEP_UNKNOWN);
+
+	/* Determine if we need to record the mode; ensure sparse checkout on */
+	record_mode = (set_opts.cone_mode != -1) || !core_apply_sparse_checkout;
+	core_apply_sparse_checkout = 1;
+
+	/* If not specified, use previous definition of cone mode */
+	if (set_opts.cone_mode == -1 && core_apply_sparse_checkout)
+		set_opts.cone_mode = core_sparse_checkout_cone;
+
+	/* Set cone/non-cone mode appropriately */
+	if (set_opts.cone_mode == 1) {
+		mode = MODE_CONE_PATTERNS;
+		core_sparse_checkout_cone = 1;
+	} else {
+		mode = MODE_ALL_PATTERNS;
+	}
+	if (record_mode && set_config(mode))
+		return 1;
+
+	/* Set sparse-index/non-sparse-index mode if specified */
+	if (set_opts.sparse_index >= 0) {
+		if (set_sparse_index_config(the_repository, set_opts.sparse_index) < 0)
+			die(_("failed to modify sparse-index config"));
+
+		/* force an index rewrite */
+		repo_read_index(the_repository);
+		the_repository->index->updated_workdir = 1;
+	}
+
+	/*
+	 * Cone mode automatically specifies the toplevel directory.  For
+	 * non-cone mode, if nothing is specified, manually select just the
+	 * top-level directory (much as 'init' would do).
+	 */
+	if (!core_sparse_checkout_cone && argc == 0) {
+		argv = default_patterns;
+		argc = 2;
+	}
 
 	return modify_pattern_list(argc, argv, set_opts.use_stdin, REPLACE);
 }
