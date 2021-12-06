@@ -561,6 +561,7 @@ core.fsync::
 * `pack` hardens objects added to the repo in packfile form.
 * `pack-metadata` hardens packfile bitmaps and indexes.
 * `commit-graph` hardens the commit graph file.
+* `index` hardens the index when it is modified.
 * `objects` is an aggregate option that includes `loose-objects`, `pack`,
   `pack-metadata`, and `commit-graph`.
 * `default` is an aggregate option that is equivalent to `objects,-loose-object`
