@@ -56,6 +56,9 @@ static int sparse_checkout_list(int argc, const char **argv)
 	char *sparse_filename;
 	int res;
 
+	if (!core_apply_sparse_checkout)
+		die(_("this worktree is not sparse"));
+
 	argc = parse_options(argc, argv, NULL,
 			     builtin_sparse_checkout_list_options,
 			     builtin_sparse_checkout_list_usage, 0);
@@ -671,6 +674,9 @@ static int sparse_checkout_add(int argc, const char **argv, const char *prefix)
 		OPT_END(),
 	};
 
+	if (!core_apply_sparse_checkout)
+		die(_("no sparse-checkout to add to"));
+
 	repo_read_index(the_repository);
 
 	argc = parse_options(argc, argv, prefix,
@@ -719,6 +725,9 @@ static int sparse_checkout_reapply(int argc, const char **argv)
 		OPT_END(),
 	};
 
+	if (!core_apply_sparse_checkout)
+		die(_("must be in a sparse-checkout to reapply sparsity patterns"));
+
 	argc = parse_options(argc, argv, NULL,
 			     builtin_sparse_checkout_reapply_options,
 			     builtin_sparse_checkout_reapply_usage, 0);
@@ -739,6 +748,9 @@ static int sparse_checkout_disable(int argc, const char **argv)
 	};
 	struct pattern_list pl;
 	struct strbuf match_all = STRBUF_INIT;
+
+	if (!core_apply_sparse_checkout)
+		die(_("no active sparse-checkout to disable"));
 
 	argc = parse_options(argc, argv, NULL,
 			     builtin_sparse_checkout_disable_options,
