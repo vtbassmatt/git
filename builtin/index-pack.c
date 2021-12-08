@@ -1415,7 +1415,7 @@ static void fix_unresolved_deltas(struct hashfile *f)
 
 		if (check_object_signature(the_repository, &d->oid,
 					   data, size,
-					   type_name(type)))
+					   type_name(type), NULL))
 			die(_("local object %s is corrupt"), oid_to_hex(&d->oid));
 
 		/*
@@ -1486,7 +1486,7 @@ static void rename_tmp_packfile(const char **final_name,
 		if (!*final_name)
 			*final_name = odb_pack_name(name, hash, ext);
 		if (finalize_object_file(curr_name, *final_name))
-			die(_("unable to rename temporary '*.%s' file to '%s"),
+			die(_("unable to rename temporary '*.%s' file to '%s'"),
 			    ext, *final_name);
 	} else if (make_read_only_if_same) {
 		chmod(*final_name, 0444);

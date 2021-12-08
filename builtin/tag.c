@@ -178,7 +178,6 @@ static const char tag_template_nocleanup[] =
 static int git_tag_config(const char *var, const char *value, void *cb)
 {
 	int status;
-	struct ref_sorting **sorting_tail = (struct ref_sorting **)cb;
 
 	if (!strcmp(var, "tag.gpgsign")) {
 		config_sign_tag = git_config_bool(var, value);
@@ -188,7 +187,7 @@ static int git_tag_config(const char *var, const char *value, void *cb)
 	if (!strcmp(var, "tag.sort")) {
 		if (!value)
 			return config_error_nonbool(var);
-		parse_ref_sorting(sorting_tail, value);
+		string_list_append(cb, value);
 		return 0;
 	}
 
@@ -432,11 +431,12 @@ int cmd_tag(int argc, const char **argv, const char *prefix)
 	int annotate = 0, force = 0;
 	int cmdmode = 0, create_tag_object = 0;
 	const char *msgfile = NULL, *keyid = NULL;
-	struct msg_arg msg = { 0, STRBUF_INIT };
+	struct msg_arg msg = { .buf = STRBUF_INIT };
 	struct ref_transaction *transaction;
 	struct strbuf err = STRBUF_INIT;
 	struct ref_filter filter;
-	static struct ref_sorting *sorting = NULL, **sorting_tail = &sorting;
+	struct ref_sorting *sorting;
+	struct string_list sorting_options = STRING_LIST_INIT_DUP;
 	struct ref_format format = REF_FORMAT_INIT;
 	int icase = 0;
 	int edit_flag = 0;
@@ -470,7 +470,7 @@ int cmd_tag(int argc, const char **argv, const char *prefix)
 		OPT_WITHOUT(&filter.no_commit, N_("print only tags that don't contain the commit")),
 		OPT_MERGED(&filter, N_("print only tags that are merged")),
 		OPT_NO_MERGED(&filter, N_("print only tags that are not merged")),
-		OPT_REF_SORT(sorting_tail),
+		OPT_REF_SORT(&sorting_options),
 		{
 			OPTION_CALLBACK, 0, "points-at", &filter.points_at, N_("object"),
 			N_("print only tags of the object"), PARSE_OPT_LASTARG_DEFAULT,
@@ -482,10 +482,11 @@ int cmd_tag(int argc, const char **argv, const char *prefix)
 		OPT_BOOL('i', "ignore-case", &icase, N_("sorting and filtering are case insensitive")),
 		OPT_END()
 	};
+	int ret = 0;
 
 	setup_ref_filter_porcelain_msg();
 
-	git_config(git_tag_config, sorting_tail);
+	git_config(git_tag_config, &sorting_options);
 
 	memset(&opt, 0, sizeof(opt));
 	memset(&filter, 0, sizeof(filter));
@@ -524,12 +525,10 @@ int cmd_tag(int argc, const char **argv, const char *prefix)
 			die(_("--column and -n are incompatible"));
 		colopts = 0;
 	}
-	if (!sorting)
-		sorting = ref_default_sorting();
+	sorting = ref_sorting_options(&sorting_options);
 	ref_sorting_set_sort_flags_all(sorting, REF_SORTING_ICASE, icase);
 	filter.ignore_case = icase;
 	if (cmdmode == 'l') {
-		int ret;
 		if (column_active(colopts)) {
 			struct column_options copts;
 			memset(&copts, 0, sizeof(copts));
@@ -540,7 +539,7 @@ int cmd_tag(int argc, const char **argv, const char *prefix)
 		ret = list_tags(&filter, sorting, &format);
 		if (column_active(colopts))
 			stop_column_filter();
-		return ret;
+		goto cleanup;
 	}
 	if (filter.lines != -1)
 		die(_("-n option is only allowed in list mode"));
@@ -552,12 +551,15 @@ int cmd_tag(int argc, const char **argv, const char *prefix)
 		die(_("--points-at option is only allowed in list mode"));
 	if (filter.reachable_from || filter.unreachable_from)
 		die(_("--merged and --no-merged options are only allowed in list mode"));
-	if (cmdmode == 'd')
-		return delete_tags(argv);
+	if (cmdmode == 'd') {
+		ret = delete_tags(argv);
+		goto cleanup;
+	}
 	if (cmdmode == 'v') {
 		if (format.format && verify_ref_format(&format))
 			usage_with_options(git_tag_usage, options);
-		return for_each_tag_name(argv, verify_tag, &format);
+		ret = for_each_tag_name(argv, verify_tag, &format);
+		goto cleanup;
 	}
 
 	if (msg.given || msgfile) {
@@ -626,10 +628,12 @@ int cmd_tag(int argc, const char **argv, const char *prefix)
 		printf(_("Updated tag '%s' (was %s)\n"), tag,
 		       find_unique_abbrev(&prev, DEFAULT_ABBREV));
 
-	UNLEAK(buf);
-	UNLEAK(ref);
-	UNLEAK(reflog_msg);
-	UNLEAK(msg);
-	UNLEAK(err);
-	return 0;
+cleanup:
+	ref_sorting_release(sorting);
+	strbuf_release(&buf);
+	strbuf_release(&ref);
+	strbuf_release(&reflog_msg);
+	strbuf_release(&msg.buf);
+	strbuf_release(&err);
+	return ret;
 }

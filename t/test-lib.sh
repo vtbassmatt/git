@@ -589,15 +589,31 @@ USER_TERM="$TERM"
 TERM=dumb
 export TERM USER_TERM
 
-error () {
-	say_color error "error: $*"
+_error_exit () {
 	finalize_junit_xml
 	GIT_EXIT_OK=t
 	exit 1
 }
 
+error () {
+	say_color error "error: $*"
+	_error_exit
+}
+
 BUG () {
 	error >&7 "bug in the test script: $*"
+}
+
+BAIL_OUT () {
+	test $# -ne 1 && BUG "1 param"
+
+	# Do not change "Bail out! " string. It's part of TAP syntax:
+	# https://testanything.org/tap-specification.html
+	local bail_out="Bail out! "
+	local message="$1"
+
+	say_color error $bail_out "$message"
+	_error_exit
 }
 
 say () {
@@ -608,9 +624,7 @@ if test -n "$HARNESS_ACTIVE"
 then
 	if test "$verbose" = t || test -n "$verbose_only"
 	then
-		printf 'Bail out! %s\n' \
-		 'verbose mode forbidden under TAP harness; try --verbose-log'
-		exit 1
+		BAIL_OUT 'verbose mode forbidden under TAP harness; try --verbose-log'
 	fi
 fi
 
@@ -720,7 +734,7 @@ test_failure_ () {
 	say_color error "not ok $test_count - $1"
 	shift
 	printf '%s\n' "$*" | sed -e 's/^/#	/'
-	test "$immediate" = "" || { finalize_junit_xml; GIT_EXIT_OK=t; exit 1; }
+	test "$immediate" = "" || _error_exit
 }
 
 test_known_broken_ok_ () {
@@ -1398,7 +1412,7 @@ then
 	fi
 elif test_bool_env GIT_TEST_PASSING_SANITIZE_LEAK false
 then
-	error "GIT_TEST_PASSING_SANITIZE_LEAK=true has no effect except when compiled with SANITIZE=leak"
+	BAIL_OUT "GIT_TEST_PASSING_SANITIZE_LEAK=true has no effect except when compiled with SANITIZE=leak"
 fi
 
 # Last-minute variable setup
@@ -1407,8 +1421,20 @@ HOME="$TRASH_DIRECTORY"
 GNUPGHOME="$HOME/gnupg-home-not-used"
 export HOME GNUPGHOME USER_HOME
 
+# "rm -rf" existing trash directory, even if a previous run left it
+# with bad permissions.
+remove_trash_directory () {
+	dir="$1"
+	if ! rm -rf "$dir" 2>/dev/null
+	then
+		chmod -R u+rwx "$dir"
+		rm -rf "$dir"
+	fi
+	! test -d "$dir"
+}
+
 # Test repository
-rm -fr "$TRASH_DIRECTORY" || {
+remove_trash_directory "$TRASH_DIRECTORY" || {
 	GIT_EXIT_OK=t
 	echo >&5 "FATAL: Cannot prepare test area"
 	exit 1
@@ -1708,6 +1734,10 @@ build_option () {
 	sed -ne "s/^$1: //p"
 }
 
+test_lazy_prereq SIZE_T_IS_64BIT '
+	test 8 -eq "$(build_option sizeof-size_t)"
+'
+
 test_lazy_prereq LONG_IS_64BIT '
 	test 8 -le "$(build_option sizeof-long)"
 '
@@ -1728,10 +1758,6 @@ test_lazy_prereq SHA1 '
 	"") test $(git hash-object /dev/null) = e69de29bb2d1d6434b8b29ae775ad8c2e48c5391 ;;
 	*) false ;;
 	esac
-'
-
-test_lazy_prereq REBASE_P '
-	test -z "$GIT_TEST_SKIP_REBASE_P"
 '
 
 # Ensure that no test accidentally triggers a Git command
