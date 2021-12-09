@@ -562,9 +562,9 @@ core.fsync::
 * `pack-metadata` hardens packfile bitmaps and indexes.
 * `commit-graph` hardens the commit graph file.
 * `index` hardens the index when it is modified.
-* `objects` is an aggregate option that includes `loose-objects`, `pack`,
-  `pack-metadata`, and `commit-graph`.
-* `default` is an aggregate option that is equivalent to `objects,-loose-object`
+* `objects` is an aggregate option that includes `loose-objects` and `pack`.
+* `derived-metadata` is an aggregate option that includes `pack-metadata` and `commit-graph`.
+* `default` is an aggregate option that is equivalent to `objects,derived-metadata,-loose-object`
 * `all` is an aggregate option that syncs all individual components above.
 
 core.fsyncMethod::
