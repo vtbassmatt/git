@@ -163,11 +163,6 @@ def prompt(prompt_text):
         if response in choices:
             return response
 
-def decode_text_stream(s):
-    return s.decode() if isinstance(s, bytes) else s
-def encode_text_stream(s):
-    return s.encode() if isinstance(s, str) else s
-
 def decode_path(path):
     """Decode a given string (bytes or otherwise) using configured path encoding options
     """
@@ -271,7 +266,7 @@ def read_pipe_full(c, *k, **kw):
     p = subprocess.Popen(
         c, stdout=subprocess.PIPE, stderr=subprocess.PIPE, *k, **kw)
     (out, err) = p.communicate()
-    return (p.returncode, out, decode_text_stream(err))
+    return (p.returncode, out, err.decode())
 
 def read_pipe(c, ignore_error=False, raw=False):
     """ Read output from  command. Returns the output text on
@@ -283,22 +278,17 @@ def read_pipe(c, ignore_error=False, raw=False):
     (retcode, out, err) = read_pipe_full(c)
     if retcode != 0:
         if ignore_error:
-            out = ""
+            out = b""
         else:
             die('Command failed: {}\nError: {}'.format(' '.join(c), err))
-    if not raw:
-        out = decode_text_stream(out)
-    return out
+    return out if raw else out.decode()
 
 def read_pipe_text(c):
     """ Read output from a command with trailing whitespace stripped.
         On error, returns None.
     """
     (retcode, out, err) = read_pipe_full(c)
-    if retcode != 0:
-        return None
-    else:
-        return decode_text_stream(out).rstrip()
+    return out.decode().rstrip() if retcode == 0 else None
 
 def p4_read_pipe(c, ignore_error=False, raw=False):
     real_cmd = p4_build_cmd(c)
@@ -310,7 +300,7 @@ def read_pipe_lines(c, *k, **kw):
 
     p = subprocess.Popen(c, stdout=subprocess.PIPE, *k, **kw)
     pipe = p.stdout
-    val = [decode_text_stream(line) for line in pipe.readlines()]
+    val = [line.decode() for line in pipe.readlines()]
     if pipe.close() or p.wait():
         die('Command failed: {}'.format(' '.join(c)))
     return val
@@ -340,7 +330,7 @@ def p4_has_move_command():
     cmd = p4_build_cmd(["move", "-k", "@from", "@to"])
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
     (out, err) = p.communicate()
-    err = decode_text_stream(err)
+    err = err.decode()
     # return code will be 1 in either case
     if err.find("Invalid option") >= 0:
         return False
@@ -704,7 +694,7 @@ def p4CmdList(cmd, stdin=None, stdin_mode='w+b', cb=None, skip_info=False,
     if stdin is not None:
         stdin_file = tempfile.TemporaryFile(prefix='p4-stdin', mode=stdin_mode)
         for i in stdin:
-            stdin_file.write(encode_text_stream(i))
+            stdin_file.write(i.encode())
             stdin_file.write(b'\n')
         stdin_file.flush()
         stdin_file.seek(0)
@@ -945,8 +935,7 @@ def branch_exists(branch):
 
     cmd = [ "git", "rev-parse", "--symbolic", "--verify", branch ]
     p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    out, _ = p.communicate()
-    out = decode_text_stream(out)
+    out = p.communicate()[0].decode()
     if p.returncode:
         return False
     # expect exactly one line of output: the branch name
@@ -1331,7 +1320,7 @@ class GitLFS(LargeFileSystem):
             ['git', 'lfs', 'pointer', '--file=' + contentFile],
             stdout=subprocess.PIPE
         )
-        pointerFile = decode_text_stream(pointerProcess.stdout.read())
+        pointerFile = pointerProcess.stdout.read().decode()
         if pointerProcess.wait():
             os.remove(contentFile)
             die('git-lfs pointer command failed. Did you install the extension?')
@@ -2130,7 +2119,7 @@ class P4Submit(Command, P4UserMap):
         tmpFile = os.fdopen(handle, "w+b")
         if self.isWindows:
             submitTemplate = submitTemplate.replace("\n", "\r\n")
-        tmpFile.write(encode_text_stream(submitTemplate))
+        tmpFile.write(submitTemplate.encode())
         tmpFile.close()
 
         submitted = False
@@ -2186,8 +2175,8 @@ class P4Submit(Command, P4UserMap):
                         return False
 
                 # read the edited message and submit
-                tmpFile = open(fileName, "rb")
-                message = decode_text_stream(tmpFile.read())
+                with open(fileName, "r") as tmpFile:
+                    message = tmpFile.read()
                 tmpFile.close()
                 if self.isWindows:
                     message = message.replace("\r\n", "\n")
@@ -2887,7 +2876,7 @@ class P4Sync(Command, P4UserMap):
         return branches
 
     def writeToGitStream(self, gitMode, relPath, contents):
-        self.gitStream.write(encode_text_stream(u'M {} inline {}\n'.format(gitMode, relPath)))
+        self.gitStream.write('M {} inline {}\n'.format(gitMode, relPath))
         self.gitStream.write('data %d\n' % sum(len(d) for d in contents))
         for d in contents:
             self.gitStream.write(d)
@@ -2930,7 +2919,7 @@ class P4Sync(Command, P4UserMap):
             git_mode = "120000"
             # p4 print on a symlink sometimes contains "target\n";
             # if it does, remove the newline
-            data = ''.join(decode_text_stream(c) for c in contents)
+            data = ''.join(c.decode() for c in contents)
             if not data:
                 # Some version of p4 allowed creating a symlink that pointed
                 # to nothing.  This causes p4 errors when checking out such
@@ -2984,9 +2973,9 @@ class P4Sync(Command, P4UserMap):
         pattern = p4_keywords_regexp_for_type(type_base, type_mods)
         if pattern:
             regexp = re.compile(pattern, re.VERBOSE)
-            text = ''.join(decode_text_stream(c) for c in contents)
+            text = ''.join(c.decode() for c in contents)
             text = regexp.sub(r'$\1$', text)
-            contents = [ encode_text_stream(text) ]
+            contents = [text.encode()]
 
         if self.largeFileSystem:
             (git_mode, contents) = self.largeFileSystem.processContent(git_mode, relPath, contents)
@@ -2998,7 +2987,7 @@ class P4Sync(Command, P4UserMap):
         if verbose:
             sys.stdout.write("delete %s\n" % relPath)
             sys.stdout.flush()
-        self.gitStream.write(encode_text_stream(u'D {}\n'.format(relPath)))
+        self.gitStream.write('D {}\n'.format(relPath))
 
         if self.largeFileSystem and self.largeFileSystem.isLargeFile(relPath):
             self.largeFileSystem.removeLargeFile(relPath)
@@ -3096,12 +3085,13 @@ class P4Sync(Command, P4UserMap):
 
             fileArgs = []
             for f in filesToRead:
+                fileArg = f['path'].decode()
                 if 'shelved_cl' in f:
                     # Handle shelved CLs using the "p4 print file@=N" syntax to print
                     # the contents
-                    fileArg = f['path'] + encode_text_stream('@={}'.format(f['shelved_cl']))
+                    fileArg += '@={}'.format(f['shelved_cl'])
                 else:
-                    fileArg = f['path'] + encode_text_stream('#{}'.format(f['rev']))
+                    fileArg += '#{}'.format(f['rev'])
 
                 fileArgs.append(fileArg)
 
