@@ -93,10 +93,7 @@ def p4_build_cmd(cmd):
         # Provide a way to not pass this option by setting git-p4.retries to 0
         real_cmd += ["-r", str(retries)]
 
-    if not isinstance(cmd, list):
-        real_cmd = ' '.join(real_cmd) + ' ' + cmd
-    else:
-        real_cmd += cmd
+    real_cmd += cmd
 
     # now check that we can actually talk to the server
     global p4_access_checked
@@ -273,12 +270,11 @@ def run_hook_command(cmd, param):
     return subprocess.call(cli, shell=use_shell)
 
 
-def write_pipe(c, stdin):
+def write_pipe(c, stdin, *k, **kw):
     if verbose:
         sys.stderr.write('Writing pipe: %s\n' % str(c))
 
-    expand = not isinstance(c, list)
-    p = subprocess.Popen(c, stdin=subprocess.PIPE, shell=expand)
+    p = subprocess.Popen(c, stdin=subprocess.PIPE, *k, **kw)
     pipe = p.stdin
     val = pipe.write(stdin)
     pipe.close()
@@ -293,7 +289,7 @@ def p4_write_pipe(c, stdin):
         stdin = encode_text_stream(stdin)
     return write_pipe(real_cmd, stdin)
 
-def read_pipe_full(c):
+def read_pipe_full(c, *k, **kw):
     """ Read output from  command. Returns a tuple
         of the return status, stdout text and stderr
         text.
@@ -301,8 +297,8 @@ def read_pipe_full(c):
     if verbose:
         sys.stderr.write('Reading pipe: %s\n' % str(c))
 
-    expand = not isinstance(c, list)
-    p = subprocess.Popen(c, stdout=subprocess.PIPE, stderr=subprocess.PIPE, shell=expand)
+    p = subprocess.Popen(
+        c, stdout=subprocess.PIPE, stderr=subprocess.PIPE, *k, **kw)
     (out, err) = p.communicate()
     return (p.returncode, out, decode_text_stream(err))
 
@@ -337,12 +333,11 @@ def p4_read_pipe(c, ignore_error=False, raw=False):
     real_cmd = p4_build_cmd(c)
     return read_pipe(real_cmd, ignore_error, raw=raw)
 
-def read_pipe_lines(c):
+def read_pipe_lines(c, *k, **kw):
     if verbose:
         sys.stderr.write('Reading pipe: %s\n' % str(c))
 
-    expand = not isinstance(c, list)
-    p = subprocess.Popen(c, stdout=subprocess.PIPE, shell=expand)
+    p = subprocess.Popen(c, stdout=subprocess.PIPE, *k, **kw)
     pipe = p.stdout
     val = [decode_text_stream(line) for line in pipe.readlines()]
     if pipe.close() or p.wait():
@@ -383,11 +378,10 @@ def p4_has_move_command():
     # assume it failed because @... was invalid changelist
     return True
 
-def system(cmd, ignore_error=False):
-    expand = not isinstance(cmd, list)
+def system(cmd, ignore_error=False, *k, **kw):
     if verbose:
         sys.stderr.write("executing %s\n" % str(cmd))
-    retcode = subprocess.call(cmd, shell=expand)
+    retcode = subprocess.call(cmd, *k, **kw)
     if retcode and not ignore_error:
         raise CalledProcessError(retcode, cmd)
 
@@ -396,8 +390,7 @@ def system(cmd, ignore_error=False):
 def p4_system(cmd):
     """Specifically invoke p4 as the system command. """
     real_cmd = p4_build_cmd(cmd)
-    expand = not isinstance(real_cmd, list)
-    retcode = subprocess.call(real_cmd, shell=expand)
+    retcode = subprocess.call(real_cmd)
     if retcode:
         raise CalledProcessError(retcode, real_cmd)
 
@@ -728,14 +721,7 @@ def isModeExecChanged(src_mode, dst_mode):
 def p4CmdList(cmd, stdin=None, stdin_mode='w+b', cb=None, skip_info=False,
         errors_as_exceptions=False):
 
-    if not isinstance(cmd, list):
-        cmd = "-G " + cmd
-        expand = True
-    else:
-        cmd = ["-G"] + cmd
-        expand = False
-
-    cmd = p4_build_cmd(cmd)
+    cmd = p4_build_cmd(["-G"] + cmd)
     if verbose:
         sys.stderr.write("Opening pipe: %s\n" % str(cmd))
 
@@ -745,17 +731,13 @@ def p4CmdList(cmd, stdin=None, stdin_mode='w+b', cb=None, skip_info=False,
     stdin_file = None
     if stdin is not None:
         stdin_file = tempfile.TemporaryFile(prefix='p4-stdin', mode=stdin_mode)
-        if not isinstance(stdin, list):
-            stdin_file.write(stdin)
-        else:
-            for i in stdin:
-                stdin_file.write(encode_text_stream(i))
-                stdin_file.write(b'\n')
+        for i in stdin:
+            stdin_file.write(encode_text_stream(i))
+            stdin_file.write(b'\n')
         stdin_file.flush()
         stdin_file.seek(0)
 
     p4 = subprocess.Popen(cmd,
-                          shell=expand,
                           stdin=stdin_file,
                           stdout=subprocess.PIPE)
 
@@ -860,7 +842,7 @@ def isValidGitDir(path):
     return git_dir(path) != None
 
 def parseRevision(ref):
-    return read_pipe("git rev-parse %s" % ref).strip()
+    return read_pipe(["git", "rev-parse", ref]).strip()
 
 def branchExists(ref):
     rev = read_pipe(["git", "rev-parse", "-q", "--verify", ref],
@@ -966,11 +948,11 @@ def p4BranchesInGit(branchesAreInRemotes=True):
 
     branches = {}
 
-    cmdline = "git rev-parse --symbolic "
+    cmdline = ["git", "rev-parse", "--symbolic"]
     if branchesAreInRemotes:
-        cmdline += "--remotes"
+        cmdline.append("--remotes")
     else:
-        cmdline += "--branches"
+        cmdline.append("--branches")
 
     for line in read_pipe_lines(cmdline):
         line = line.strip()
@@ -1035,7 +1017,7 @@ def createOrUpdateBranchesFromOrigin(localRefPrefix = "refs/remotes/p4/", silent
 
     originPrefix = "origin/p4/"
 
-    for line in read_pipe_lines("git rev-parse --symbolic --remotes"):
+    for line in read_pipe_lines(["git", "rev-parse", "--symbolic", "--remotes"]):
         line = line.strip()
         if (not line.startswith(originPrefix)) or line.endswith("HEAD"):
             continue
@@ -1073,7 +1055,7 @@ def createOrUpdateBranchesFromOrigin(localRefPrefix = "refs/remotes/p4/", silent
                               remoteHead, ','.join(settings['depot-paths'])))
 
         if update:
-            system("git update-ref %s %s" % (remoteHead, originHead))
+            system(["git", "update-ref", remoteHead, originHead])
 
 def originP4BranchesExist():
         return gitBranchExists("origin") or gitBranchExists("origin/p4") or gitBranchExists("origin/p4/master")
@@ -1187,7 +1169,7 @@ def getClientSpec():
     """Look at the p4 client spec, create a View() object that contains
        all the mappings, and return it."""
 
-    specList = p4CmdList("client -o")
+    specList = p4CmdList(["client", "-o"])
     if len(specList) != 1:
         die('Output from "client -o" is %d lines, expecting 1' %
             len(specList))
@@ -1216,7 +1198,7 @@ def getClientSpec():
 def getClientRoot():
     """Grab the client directory."""
 
-    output = p4CmdList("client -o")
+    output = p4CmdList(["client", "-o"])
     if len(output) != 1:
         die('Output from "client -o" is %d lines, expecting 1' % len(output))
 
@@ -1471,7 +1453,7 @@ class P4UserMap:
         if self.myP4UserId:
             return self.myP4UserId
 
-        results = p4CmdList("user -o")
+        results = p4CmdList(["user", "-o"])
         for r in results:
             if 'User' in r:
                 self.myP4UserId = r['User']
@@ -1496,7 +1478,7 @@ class P4UserMap:
         self.users = {}
         self.emails = {}
 
-        for output in p4CmdList("users"):
+        for output in p4CmdList(["users"]):
             if "User" not in output:
                 continue
             self.users[output["User"]] = output["FullName"] + " <" + output["Email"] + ">"
@@ -1566,10 +1548,10 @@ class P4RollBack(Command):
 
         if self.rollbackLocalBranches:
             refPrefix = "refs/heads/"
-            lines = read_pipe_lines("git rev-parse --symbolic --branches")
+            lines = read_pipe_lines(["git", "rev-parse", "--symbolic", "--branches"])
         else:
             refPrefix = "refs/remotes/"
-            lines = read_pipe_lines("git rev-parse --symbolic --remotes")
+            lines = read_pipe_lines(["git", "rev-parse", "--symbolic", "--remotes"])
 
         for line in lines:
             if self.rollbackLocalBranches or (line.startswith("p4/") and line != "p4/HEAD\n"):
@@ -1586,14 +1568,14 @@ class P4RollBack(Command):
                 if len(p4Cmd("changes -m 1 "  + ' '.join (['%s...@%s' % (p, maxChange)
                                                            for p in depotPaths]))) == 0:
                     print("Branch %s did not exist at change %s, deleting." % (ref, maxChange))
-                    system("git update-ref -d %s `git rev-parse %s`" % (ref, ref))
+                    system("git update-ref -d {ref} `git rev-parse {ref}`".format(ref=ref), shell=True)
                     continue
 
                 while change and int(change) > maxChange:
                     changed = True
                     if self.verbose:
                         print("%s is at %s ; rewinding towards %s" % (ref, change, maxChange))
-                    system("git update-ref %s \"%s^\"" % (ref, ref))
+                    system(["git", "update-ref", ref, "{}^".format(ref)])
                     log = extractLogMessageFromGitCommit(ref)
                     settings =  extractSettingsGitLog(log)
 
@@ -1694,7 +1676,7 @@ class P4Submit(Command, P4UserMap):
             die("Large file system not supported for git-p4 submit command. Please remove it from config.")
 
     def check(self):
-        if len(p4CmdList("opened ...")) > 0:
+        if len(p4CmdList(["opened", "..."])) > 0:
             die("You have files opened with perforce! Close them before starting the sync.")
 
     def separate_jobs_from_description(self, message):
@@ -1803,7 +1785,7 @@ class P4Submit(Command, P4UserMap):
         # then gets used to patch up the username in the change. If the same
         # client spec is being used by multiple processes then this might go
         # wrong.
-        results = p4CmdList("client -o")        # find the current client
+        results = p4CmdList(["client", "-o"])        # find the current client
         client = None
         for r in results:
             if 'Client' in r:
@@ -1819,7 +1801,7 @@ class P4Submit(Command, P4UserMap):
 
     def modifyChangelistUser(self, changelist, newUser):
         # fixup the user field of a changelist after it has been submitted.
-        changes = p4CmdList("change -o %s" % changelist)
+        changes = p4CmdList(["change", "-o", changelist])
         if len(changes) != 1:
             die("Bad output from p4 change modifying %s to user %s" %
                 (changelist, newUser))
@@ -1830,7 +1812,7 @@ class P4Submit(Command, P4UserMap):
         # p4 does not understand format version 3 and above
         input = marshal.dumps(c, 2)
 
-        result = p4CmdList("change -f -i", stdin=input)
+        result = p4CmdList(["change", "-f", "-i"], stdin=input)
         for r in result:
             if 'code' in r:
                 if r['code'] == 'error':
@@ -1936,7 +1918,7 @@ class P4Submit(Command, P4UserMap):
         if "P4EDITOR" in os.environ and (os.environ.get("P4EDITOR") != ""):
             editor = os.environ.get("P4EDITOR")
         else:
-            editor = read_pipe("git var GIT_EDITOR").strip()
+            editor = read_pipe(["git", "var", "GIT_EDITOR"]).strip()
         system(["sh", "-c", ('%s "$@"' % editor), editor, template_file])
 
         # If the file was not saved, prompt to see if this patch should
@@ -1994,7 +1976,7 @@ class P4Submit(Command, P4UserMap):
 
         (p4User, gitEmail) = self.p4UserForCommit(id)
 
-        diff = read_pipe_lines("git diff-tree -r %s \"%s^\" \"%s\"" % (self.diffOpts, id, id))
+        diff = read_pipe_lines(["git", "diff-tree", "-r"] + self.diffOpts + ["{}^".format(id), id])
         filesToAdd = set()
         filesToChangeType = set()
         filesToDelete = set()
@@ -2131,7 +2113,7 @@ class P4Submit(Command, P4UserMap):
         #
         # Apply the patch for real, and do add/delete/+x handling.
         #
-        system(applyPatchCmd)
+        system(applyPatchCmd, shell=True)
 
         for f in filesToChangeType:
             p4_edit(f, "-t", "auto")
@@ -2481,17 +2463,17 @@ class P4Submit(Command, P4UserMap):
         #
         if self.detectRenames:
             # command-line -M arg
-            self.diffOpts = "-M"
+            self.diffOpts = ["-M"]
         else:
             # If not explicitly set check the config variable
             detectRenames = gitConfig("git-p4.detectRenames")
 
             if detectRenames.lower() == "false" or detectRenames == "":
-                self.diffOpts = ""
+                self.diffOpts = []
             elif detectRenames.lower() == "true":
-                self.diffOpts = "-M"
+                self.diffOpts = ["-M"]
             else:
-                self.diffOpts = "-M%s" % detectRenames
+                self.diffOpts = ["-M{}".format(detectRenames)]
 
         # no command-line arg for -C or --find-copies-harder, just
         # config variables
@@ -2499,12 +2481,12 @@ class P4Submit(Command, P4UserMap):
         if detectCopies.lower() == "false" or detectCopies == "":
             pass
         elif detectCopies.lower() == "true":
-            self.diffOpts += " -C"
+            self.diffOpts.append("-C")
         else:
-            self.diffOpts += " -C%s" % detectCopies
+            self.diffOpts.append("-C{}".format(detectCopies))
 
         if gitConfigBool("git-p4.detectCopiesHarder"):
-            self.diffOpts += " --find-copies-harder"
+            self.diffOpts.append("--find-copies-harder")
 
         num_shelves = len(self.update_shelve)
         if num_shelves > 0 and num_shelves != len(commits):
@@ -3453,10 +3435,9 @@ class P4Sync(Command, P4UserMap):
         lostAndFoundBranches = set()
 
         user = gitConfig("git-p4.branchUser")
+        command = ["branches"]
         if len(user) > 0:
-            command = "branches -u %s" % user
-        else:
-            command = "branches"
+            command += ["-u", user]
 
         for info in p4CmdList(command):
             details = p4Cmd(["branch", "-o", info["branch"]])
@@ -3549,7 +3530,7 @@ class P4Sync(Command, P4UserMap):
         while True:
             if self.verbose:
                 print("trying: earliest %s latest %s" % (earliestCommit, latestCommit))
-            next = read_pipe("git rev-list --bisect %s %s" % (latestCommit, earliestCommit)).strip()
+            next = read_pipe(["git", "rev-list", "--bisect", latestCommit, earliestCommit]).strip()
             if len(next) == 0:
                 if self.verbose:
                     print("argh")
@@ -3704,7 +3685,7 @@ class P4Sync(Command, P4UserMap):
             if self.hasOrigin:
                 if not self.silent:
                     print('Syncing with origin first, using "git fetch origin"')
-                system("git fetch origin")
+                system(["git", "fetch", "origin"])
 
     def importHeadRevision(self, revision):
         print("Doing initial import of %s from revision %s into %s" % (' '.join(self.depotPaths), revision, self.branch))
@@ -3871,8 +3852,8 @@ class P4Sync(Command, P4UserMap):
         if len(self.branch) == 0:
             self.branch = self.refPrefix + "master"
             if gitBranchExists("refs/heads/p4") and self.importIntoRemotes:
-                system("git update-ref %s refs/heads/p4" % self.branch)
-                system("git branch -D p4")
+                system(["git", "update-ref", self.branch, "refs/heads/p4"])
+                system(["git", "branch", "-D", "p4"])
 
         # accept either the command-line option, or the configuration variable
         if self.useClientSpec:
@@ -4075,7 +4056,7 @@ class P4Sync(Command, P4UserMap):
         # Cleanup temporary branches created during import
         if self.tempBranches != []:
             for branch in self.tempBranches:
-                read_pipe("git update-ref -d %s" % branch)
+                read_pipe(["git", "update-ref", "-d", branch])
             os.rmdir(os.path.join(os.environ.get("GIT_DIR", ".git"), self.tempBranchLocation))
 
         # Create a symbolic ref p4/HEAD pointing to p4/<branch> to allow
@@ -4107,7 +4088,7 @@ class P4Rebase(Command):
     def rebase(self):
         if os.system("git update-index --refresh") != 0:
             die("Some files in your working directory are modified and different than what is in your index. You can use git update-index <filename> to bring the index up to date or stash away all your changes with git stash.");
-        if len(read_pipe("git diff-index HEAD --")) > 0:
+        if len(read_pipe(["git", "diff-index", "HEAD", "--"])) > 0:
             die("You have uncommitted changes. Please commit them before rebasing or stash them away with git stash.");
 
         [upstream, settings] = findUpstreamBranchPoint()
@@ -4118,9 +4099,9 @@ class P4Rebase(Command):
         upstream = re.sub("~[0-9]+$", "", upstream)
 
         print("Rebasing the current branch onto %s" % upstream)
-        oldHead = read_pipe("git rev-parse HEAD").strip()
-        system("git rebase %s" % upstream)
-        system("git diff-tree --stat --summary -M %s HEAD --" % oldHead)
+        oldHead = read_pipe(["git", "rev-parse", "HEAD"]).strip()
+        system(["git", "rebase", upstream])
+        system(["git", "diff-tree", "--stat", "--summary", "-M", oldHead, "HEAD", "--"])
         return True
 
 class P4Clone(P4Sync):
@@ -4197,7 +4178,7 @@ class P4Clone(P4Sync):
 
         # auto-set this variable if invoked with --use-client-spec
         if self.useClientSpec_from_options:
-            system("git config --bool git-p4.useclientspec true")
+            system(["git", "config", "--bool", "git-p4.useclientspec", "true"])
 
         return True
 
@@ -4328,10 +4309,7 @@ class P4Branches(Command):
         if originP4BranchesExist():
             createOrUpdateBranchesFromOrigin()
 
-        cmdline = "git rev-parse --symbolic "
-        cmdline += " --remotes"
-
-        for line in read_pipe_lines(cmdline):
+        for line in read_pipe_lines(["git", "rev-parse", "--symbolic", "--remotes"]):
             line = line.strip()
 
             if not line.startswith('p4/') or line == "p4/HEAD":
@@ -4416,9 +4394,9 @@ def main():
             cmd.gitdir = os.path.abspath(".git")
             if not isValidGitDir(cmd.gitdir):
                 # "rev-parse --git-dir" without arguments will try $PWD/.git
-                cmd.gitdir = read_pipe("git rev-parse --git-dir").strip()
+                cmd.gitdir = read_pipe(["git", "rev-parse", "--git-dir"]).strip()
                 if os.path.exists(cmd.gitdir):
-                    cdup = read_pipe("git rev-parse --show-cdup").strip()
+                    cdup = read_pipe(["git", "rev-parse", "--show-cdup"]).strip()
                     if len(cdup) > 0:
                         chdir(cdup);
 
