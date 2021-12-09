@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 #
 # git-p4.py -- A tool for bidirectional operation between a Perforce depot and git.
 #
@@ -16,8 +16,8 @@
 # pylint: disable=too-many-branches,too-many-nested-blocks
 #
 import sys
-if sys.version_info.major < 3 and sys.version_info.minor < 7:
-    sys.stderr.write("git-p4: requires Python 2.7 or later.\n")
+if sys.version_info.major < 3 or (sys.version_info.major == 3 and sys.version_info.minor < 7):
+    sys.stderr.write("git-p4: requires Python 3.7 or later.\n")
     sys.exit(1)
 import os
 import optparse
@@ -35,16 +35,6 @@ import zlib
 import ctypes
 import errno
 import glob
-
-# On python2.7 where raw_input() and input() are both availble,
-# we want raw_input's semantics, but aliased to input for python3
-# compatibility
-# support basestring in python3
-try:
-    if raw_input and input:
-        input = raw_input
-except:
-    pass
 
 verbose = False
 
@@ -173,35 +163,16 @@ def prompt(prompt_text):
         if response in choices:
             return response
 
-# We need different encoding/decoding strategies for text data being passed
-# around in pipes depending on python version
-if bytes is not str:
-    # For python3, always encode and decode as appropriate
-    def decode_text_stream(s):
-        return s.decode() if isinstance(s, bytes) else s
-    def encode_text_stream(s):
-        return s.encode() if isinstance(s, str) else s
-else:
-    # For python2.7, pass read strings as-is, but also allow writing unicode
-    def decode_text_stream(s):
-        return s
-    def encode_text_stream(s):
-        return s.encode('utf_8') if isinstance(s, unicode) else s
+def decode_text_stream(s):
+    return s.decode() if isinstance(s, bytes) else s
+def encode_text_stream(s):
+    return s.encode() if isinstance(s, str) else s
 
 def decode_path(path):
     """Decode a given string (bytes or otherwise) using configured path encoding options
     """
     encoding = gitConfig('git-p4.pathEncoding') or 'utf_8'
-    if bytes is not str:
-        return path.decode(encoding, errors='replace') if isinstance(path, bytes) else path
-    else:
-        try:
-            path.decode('ascii')
-        except:
-            path = path.decode(encoding, errors='replace')
-            if verbose:
-                print('Path with non-ASCII characters detected. Used {} to decode: {}'.format(encoding, path))
-        return path
+    return path.decode(encoding, errors='replace') if isinstance(path, bytes) else path
 
 def run_git_hook(cmd, param=[]):
     """Execute a hook if the hook exists."""
@@ -285,8 +256,8 @@ def write_pipe(c, stdin, *k, **kw):
 
 def p4_write_pipe(c, stdin):
     real_cmd = p4_build_cmd(c)
-    if bytes is not str and isinstance(stdin, str):
-        stdin = encode_text_stream(stdin)
+    if isinstance(stdin, str):
+        stdin = stdin.encode()
     return write_pipe(real_cmd, stdin)
 
 def read_pipe_full(c, *k, **kw):
@@ -745,21 +716,18 @@ def p4CmdList(cmd, stdin=None, stdin_mode='w+b', cb=None, skip_info=False,
     result = []
     try:
         while True:
-            entry = marshal.load(p4.stdout)
-            if bytes is not str:
-                # Decode unmarshalled dict to use str keys and values, except for:
-                #   - `data` which may contain arbitrary binary data
-                #   - `depotFile[0-9]*`, `path`, or `clientFile` which may contain non-UTF8 encoded text
-                decoded_entry = {}
-                for key, value in entry.items():
-                    key = key.decode()
-                    if isinstance(value, bytes) and not (key in ('data', 'path', 'clientFile') or key.startswith('depotFile')):
-                        value = value.decode()
-                    decoded_entry[key] = value
-                # Parse out data if it's an error response
-                if decoded_entry.get('code') == 'error' and 'data' in decoded_entry:
-                    decoded_entry['data'] = decoded_entry['data'].decode()
-                entry = decoded_entry
+            # Decode unmarshalled dict to use str keys and values, except for:
+            #   - `data` which may contain arbitrary binary data
+            #   - `depotFile[0-9]*`, `path`, or `clientFile` which may contain non-UTF8 encoded text
+            entry = {}
+            for key, value in marshal.load(p4.stdout).items():
+                key = key.decode()
+                if isinstance(value, bytes) and not (key in ('data', 'path', 'clientFile') or key.startswith('depotFile')):
+                    value = value.decode()
+                entry[key] = value
+            # Parse out data if it's an error response
+            if entry.get('code') == 'error' and 'data' in entry:
+                entry['data'] = entry['data'].decode()
             if skip_info:
                 if 'code' in entry and entry['code'] == 'info':
                     continue
@@ -3822,14 +3790,13 @@ class P4Sync(Command, P4UserMap):
         self.gitStream = self.importProcess.stdin
         self.gitError = self.importProcess.stderr
 
-        if bytes is not str:
-            # Wrap gitStream.write() so that it can be called using `str` arguments
-            def make_encoded_write(write):
-                def encoded_write(s):
-                    return write(s.encode() if isinstance(s, str) else s)
-                return encoded_write
+        # Wrap gitStream.write() so that it can be called using `str` arguments
+        def make_encoded_write(write):
+            def encoded_write(s):
+                return write(s.encode() if isinstance(s, str) else s)
+            return encoded_write
 
-            self.gitStream.write = make_encoded_write(self.gitStream.write)
+        self.gitStream.write = make_encoded_write(self.gitStream.write)
 
     def closeStreams(self):
         if self.gitStream is None:
