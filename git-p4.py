@@ -272,14 +272,14 @@ def run_hook_command(cmd, param):
 
 def write_pipe(c, stdin, *k, **kw):
     if verbose:
-        sys.stderr.write('Writing pipe: %s\n' % str(c))
+        sys.stderr.write('Writing pipe: {}\n'.format(' '.join(c)))
 
     p = subprocess.Popen(c, stdin=subprocess.PIPE, *k, **kw)
     pipe = p.stdin
     val = pipe.write(stdin)
     pipe.close()
     if p.wait():
-        die('Command failed: %s' % str(c))
+        die('Command failed: {}'.format(' '.join(c)))
 
     return val
 
@@ -295,7 +295,7 @@ def read_pipe_full(c, *k, **kw):
         text.
     """
     if verbose:
-        sys.stderr.write('Reading pipe: %s\n' % str(c))
+        sys.stderr.write('Reading pipe: {}\n'.format(' '.join(c)))
 
     p = subprocess.Popen(
         c, stdout=subprocess.PIPE, stderr=subprocess.PIPE, *k, **kw)
@@ -314,7 +314,7 @@ def read_pipe(c, ignore_error=False, raw=False):
         if ignore_error:
             out = ""
         else:
-            die('Command failed: %s\nError: %s' % (str(c), err))
+            die('Command failed: {}\nError: {}'.format(' '.join(c), err))
     if not raw:
         out = decode_text_stream(out)
     return out
@@ -335,13 +335,13 @@ def p4_read_pipe(c, ignore_error=False, raw=False):
 
 def read_pipe_lines(c, *k, **kw):
     if verbose:
-        sys.stderr.write('Reading pipe: %s\n' % str(c))
+        sys.stderr.write('Reading pipe: {}\n'.format(' '.join(c)))
 
     p = subprocess.Popen(c, stdout=subprocess.PIPE, *k, **kw)
     pipe = p.stdout
     val = [decode_text_stream(line) for line in pipe.readlines()]
     if pipe.close() or p.wait():
-        die('Command failed: %s' % str(c))
+        die('Command failed: {}'.format(' '.join(c)))
     return val
 
 def p4_read_pipe_lines(c):
@@ -380,7 +380,8 @@ def p4_has_move_command():
 
 def system(cmd, ignore_error=False, *k, **kw):
     if verbose:
-        sys.stderr.write("executing %s\n" % str(cmd))
+        sys.stderr.write("executing {}\n".format(
+            ' '.join(cmd) if isinstance(cmd, list) else cmd))
     retcode = subprocess.call(cmd, *k, **kw)
     if retcode and not ignore_error:
         raise CalledProcessError(retcode, cmd)
@@ -723,7 +724,7 @@ def p4CmdList(cmd, stdin=None, stdin_mode='w+b', cb=None, skip_info=False,
 
     cmd = p4_build_cmd(["-G"] + cmd)
     if verbose:
-        sys.stderr.write("Opening pipe: %s\n" % str(cmd))
+        sys.stderr.write("Opening pipe: {}\n".format(' '.join(cmd)))
 
     # Use a temporary file to avoid deadlocks without
     # subprocess.communicate(), which would put another copy
