@@ -2917,7 +2917,8 @@ class P4Sync(Command, P4UserMap):
                 size = int(self.stream_file['fileSize'])
             else:
                 size = 0 # deleted files don't get a fileSize apparently
-            sys.stdout.write('\r%s --> %s (%i MB)\n' % (file_path, relPath, size/1024/1024))
+            sys.stdout.write('\r{} --> {} ({} MB)\n'.format(
+                file_path.decode(), relPath, size/1024/1024))
             sys.stdout.flush()
 
         (type_base, type_mods) = split_p4_type(file["type"])
@@ -3061,7 +3062,8 @@ class P4Sync(Command, P4UserMap):
             size = int(self.stream_file["fileSize"])
             if size > 0:
                 progress = 100*self.stream_file['streamContentSize']/size
-                sys.stdout.write('\r%s %d%% (%i MB)' % (self.stream_file['depotFile'], progress, int(size/1024/1024)))
+                sys.stdout.write('\r{} {}% ({} MB)'.format(
+                    self.stream_file['depotFile'].decode(), progress, int(size/1024/1024)))
                 sys.stdout.flush()
 
         self.stream_have_file_info = True
@@ -3803,7 +3805,7 @@ class P4Sync(Command, P4UserMap):
             return
         self.gitStream.close()
         if self.importProcess.wait() != 0:
-            die("fast-import failed: %s" % self.gitError.read())
+            die("fast-import failed: {}".format(self.gitError.read().decode()))
         self.gitOutput.close()
         self.gitError.close()
         self.gitStream = None
