@@ -2881,18 +2881,24 @@ test: all
 # Additional tests from places in contrib/ that are prepared to take
 # "make -C $there test", but expects that the primary build is done
 # already.
+TEST_EXTRA_DIRS =
+TEST_EXTRA_DIRS += contrib/credential/netrc
+TEST_EXTRA_DIRS += contrib/diff-highlight
+TEST_EXTRA_DIRS += contrib/mw-to-git
+TEST_EXTRA_DIRS += contrib/subtree
+
 test-extra: all
-	$(MAKE) -C contrib/credential/netrc test
-	$(MAKE) -C contrib/diff-highlight test
-	$(MAKE) -C contrib/mw-to-git test
-	$(MAKE) -C contrib/subtree test
+	$(foreach d,$(TEST_EXTRA_DIRS),$(MAKE) -C $d test;)
 
 test-all:: test test-extra
+
+test-extra-clean::
+	$(foreach d,$(TEST_EXTRA_DIRS),$(MAKE) -C $d clean;)
 
 perf: all
 	$(MAKE) -C t/perf/ all
 
-.PHONY: test test-extra test-all perf
+.PHONY: test test-extra test-extra-clean test-all perf t
 
 .PRECIOUS: $(TEST_OBJS)
 
@@ -3233,7 +3239,7 @@ profile-clean:
 cocciclean:
 	$(RM) contrib/coccinelle/*.cocci.patch*
 
-clean: profile-clean coverage-clean cocciclean
+clean: profile-clean coverage-clean cocciclean test-extra-clean
 	$(RM) *.res
 	$(RM) $(OBJECTS)
 	$(RM) $(LIB_FILE) $(XDIFF_LIB)
