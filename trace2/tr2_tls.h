@@ -9,6 +9,7 @@
 #define TR2_MAX_THREAD_NAME (24)
 
 struct tr2tls_thread_ctx {
+	struct tr2tls_thread_ctx *next_ctx;
 	char *thread_name;
 	uint64_t *array_us_start;
 	size_t alloc;
@@ -45,7 +46,7 @@ struct tr2tls_thread_ctx *tr2tls_get_self(void);
 int tr2tls_is_main_thread(void);
 
 /*
- * Free our TLS data.
+ * Disassociate thread's TLS CTX data from the thread.
  */
 void tr2tls_unset_self(void);
 
