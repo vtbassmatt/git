@@ -64,9 +64,14 @@ static void perf_fmt_prepare(const char *event_name,
 			     int line, const struct repository *repo,
 			     uint64_t *p_us_elapsed_absolute,
 			     uint64_t *p_us_elapsed_relative,
-			     const char *category, struct strbuf *buf)
+			     const char *category, struct strbuf *buf,
+			     const char *thread_name_override)
 {
 	int len;
+	const char *thread_name =
+		((thread_name_override && *thread_name_override)
+		 ? thread_name_override
+		 : ctx->thread_name);
 
 	strbuf_setlen(buf, 0);
 
@@ -106,7 +111,7 @@ static void perf_fmt_prepare(const char *event_name,
 
 	strbuf_addf(buf, "d%d | ", tr2_sid_depth());
 	strbuf_addf(buf, "%-*s | %-*s | ", TR2_MAX_THREAD_NAME,
-		    ctx->thread_name, TR2FMT_PERF_MAX_EVENT_NAME,
+		    thread_name, TR2FMT_PERF_MAX_EVENT_NAME,
 		    event_name);
 
 	len = buf->len + TR2FMT_PERF_REPO_WIDTH;
@@ -140,14 +145,15 @@ static void perf_io_write_fl(const char *file, int line, const char *event_name,
 			     uint64_t *p_us_elapsed_absolute,
 			     uint64_t *p_us_elapsed_relative,
 			     const char *category,
-			     const struct strbuf *buf_payload)
+			     const struct strbuf *buf_payload,
+			     const char *thread_name_override)
 {
 	struct tr2tls_thread_ctx *ctx = tr2tls_get_self();
 	struct strbuf buf_line = STRBUF_INIT;
 
 	perf_fmt_prepare(event_name, ctx, file, line, repo,
 			 p_us_elapsed_absolute, p_us_elapsed_relative, category,
-			 &buf_line);
+			 &buf_line, thread_name_override);
 	strbuf_addbuf(&buf_line, buf_payload);
 	tr2_dst_write_line(&tr2dst_perf, &buf_line);
 	strbuf_release(&buf_line);
@@ -161,7 +167,7 @@ static void fn_version_fl(const char *file, int line)
 	strbuf_addstr(&buf_payload, git_version_string);
 
 	perf_io_write_fl(file, line, event_name, NULL, NULL, NULL, NULL,
-			 &buf_payload);
+			 &buf_payload, NULL);
 	strbuf_release(&buf_payload);
 }
 
@@ -174,7 +180,7 @@ static void fn_start_fl(const char *file, int line,
 	sq_append_quote_argv_pretty(&buf_payload, argv);
 
 	perf_io_write_fl(file, line, event_name, NULL, &us_elapsed_absolute,
-			 NULL, NULL, &buf_payload);
+			 NULL, NULL, &buf_payload, NULL);
 	strbuf_release(&buf_payload);
 }
 
@@ -187,7 +193,7 @@ static void fn_exit_fl(const char *file, int line, uint64_t us_elapsed_absolute,
 	strbuf_addf(&buf_payload, "code:%d", code);
 
 	perf_io_write_fl(file, line, event_name, NULL, &us_elapsed_absolute,
-			 NULL, NULL, &buf_payload);
+			 NULL, NULL, &buf_payload, NULL);
 	strbuf_release(&buf_payload);
 }
 
@@ -199,7 +205,7 @@ static void fn_signal(uint64_t us_elapsed_absolute, int signo)
 	strbuf_addf(&buf_payload, "signo:%d", signo);
 
 	perf_io_write_fl(__FILE__, __LINE__, event_name, NULL,
-			 &us_elapsed_absolute, NULL, NULL, &buf_payload);
+			 &us_elapsed_absolute, NULL, NULL, &buf_payload, NULL);
 	strbuf_release(&buf_payload);
 }
 
@@ -211,7 +217,7 @@ static void fn_atexit(uint64_t us_elapsed_absolute, int code)
 	strbuf_addf(&buf_payload, "code:%d", code);
 
 	perf_io_write_fl(__FILE__, __LINE__, event_name, NULL,
-			 &us_elapsed_absolute, NULL, NULL, &buf_payload);
+			 &us_elapsed_absolute, NULL, NULL, &buf_payload, NULL);
 	strbuf_release(&buf_payload);
 }
 
@@ -237,7 +243,7 @@ static void fn_error_va_fl(const char *file, int line, const char *fmt,
 	maybe_append_string_va(&buf_payload, fmt, ap);
 
 	perf_io_write_fl(file, line, event_name, NULL, NULL, NULL, NULL,
-			 &buf_payload);
+			 &buf_payload, NULL);
 	strbuf_release(&buf_payload);
 }
 
@@ -249,7 +255,7 @@ static void fn_command_path_fl(const char *file, int line, const char *pathname)
 	strbuf_addstr(&buf_payload, pathname);
 
 	perf_io_write_fl(file, line, event_name, NULL, NULL, NULL, NULL,
-			 &buf_payload);
+			 &buf_payload, NULL);
 	strbuf_release(&buf_payload);
 }
 
@@ -264,7 +270,7 @@ static void fn_command_ancestry_fl(const char *file, int line, const char **pare
 	strbuf_addch(&buf_payload, ']');
 
 	perf_io_write_fl(file, line, event_name, NULL, NULL, NULL, NULL,
-			 &buf_payload);
+			 &buf_payload, NULL);
 	strbuf_release(&buf_payload);
 }
 
@@ -279,7 +285,7 @@ static void fn_command_name_fl(const char *file, int line, const char *name,
 		strbuf_addf(&buf_payload, " (%s)", hierarchy);
 
 	perf_io_write_fl(file, line, event_name, NULL, NULL, NULL, NULL,
-			 &buf_payload);
+			 &buf_payload, NULL);
 	strbuf_release(&buf_payload);
 }
 
@@ -291,7 +297,7 @@ static void fn_command_mode_fl(const char *file, int line, const char *mode)
 	strbuf_addstr(&buf_payload, mode);
 
 	perf_io_write_fl(file, line, event_name, NULL, NULL, NULL, NULL,
-			 &buf_payload);
+			 &buf_payload, NULL);
 	strbuf_release(&buf_payload);
 }
 
@@ -306,7 +312,7 @@ static void fn_alias_fl(const char *file, int line, const char *alias,
 	strbuf_addch(&buf_payload, ']');
 
 	perf_io_write_fl(file, line, event_name, NULL, NULL, NULL, NULL,
-			 &buf_payload);
+			 &buf_payload, NULL);
 	strbuf_release(&buf_payload);
 }
 
@@ -342,7 +348,7 @@ static void fn_child_start_fl(const char *file, int line,
 	strbuf_addch(&buf_payload, ']');
 
 	perf_io_write_fl(file, line, event_name, NULL, &us_elapsed_absolute,
-			 NULL, NULL, &buf_payload);
+			 NULL, NULL, &buf_payload, NULL);
 	strbuf_release(&buf_payload);
 }
 
@@ -356,7 +362,7 @@ static void fn_child_exit_fl(const char *file, int line,
 	strbuf_addf(&buf_payload, "[ch%d] pid:%d code:%d", cid, pid, code);
 
 	perf_io_write_fl(file, line, event_name, NULL, &us_elapsed_absolute,
-			 &us_elapsed_child, NULL, &buf_payload);
+			 &us_elapsed_child, NULL, &buf_payload, NULL);
 	strbuf_release(&buf_payload);
 }
 
@@ -370,7 +376,7 @@ static void fn_child_ready_fl(const char *file, int line,
 	strbuf_addf(&buf_payload, "[ch%d] pid:%d ready:%s", cid, pid, ready);
 
 	perf_io_write_fl(file, line, event_name, NULL, &us_elapsed_absolute,
-			 &us_elapsed_child, NULL, &buf_payload);
+			 &us_elapsed_child, NULL, &buf_payload, NULL);
 	strbuf_release(&buf_payload);
 }
 
@@ -381,7 +387,7 @@ static void fn_thread_start_fl(const char *file, int line,
 	struct strbuf buf_payload = STRBUF_INIT;
 
 	perf_io_write_fl(file, line, event_name, NULL, &us_elapsed_absolute,
-			 NULL, NULL, &buf_payload);
+			 NULL, NULL, &buf_payload, NULL);
 	strbuf_release(&buf_payload);
 }
 
@@ -393,7 +399,7 @@ static void fn_thread_exit_fl(const char *file, int line,
 	struct strbuf buf_payload = STRBUF_INIT;
 
 	perf_io_write_fl(file, line, event_name, NULL, &us_elapsed_absolute,
-			 &us_elapsed_thread, NULL, &buf_payload);
+			 &us_elapsed_thread, NULL, &buf_payload, NULL);
 	strbuf_release(&buf_payload);
 }
 
@@ -414,7 +420,7 @@ static void fn_exec_fl(const char *file, int line, uint64_t us_elapsed_absolute,
 	strbuf_addch(&buf_payload, ']');
 
 	perf_io_write_fl(file, line, event_name, NULL, &us_elapsed_absolute,
-			 NULL, NULL, &buf_payload);
+			 NULL, NULL, &buf_payload, NULL);
 	strbuf_release(&buf_payload);
 }
 
@@ -430,7 +436,7 @@ static void fn_exec_result_fl(const char *file, int line,
 		strbuf_addf(&buf_payload, " err:%s", strerror(code));
 
 	perf_io_write_fl(file, line, event_name, NULL, &us_elapsed_absolute,
-			 NULL, NULL, &buf_payload);
+			 NULL, NULL, &buf_payload, NULL);
 	strbuf_release(&buf_payload);
 }
 
@@ -443,7 +449,7 @@ static void fn_param_fl(const char *file, int line, const char *param,
 	strbuf_addf(&buf_payload, "%s:%s", param, value);
 
 	perf_io_write_fl(file, line, event_name, NULL, NULL, NULL, NULL,
-			 &buf_payload);
+			 &buf_payload, NULL);
 	strbuf_release(&buf_payload);
 }
 
@@ -457,7 +463,7 @@ static void fn_repo_fl(const char *file, int line,
 	sq_quote_buf_pretty(&buf_payload, repo->worktree);
 
 	perf_io_write_fl(file, line, event_name, repo, NULL, NULL, NULL,
-			 &buf_payload);
+			 &buf_payload, NULL);
 	strbuf_release(&buf_payload);
 }
 
@@ -479,7 +485,7 @@ static void fn_region_enter_printf_va_fl(const char *file, int line,
 	}
 
 	perf_io_write_fl(file, line, event_name, repo, &us_elapsed_absolute,
-			 NULL, category, &buf_payload);
+			 NULL, category, &buf_payload, NULL);
 	strbuf_release(&buf_payload);
 }
 
@@ -499,7 +505,7 @@ static void fn_region_leave_printf_va_fl(
 	}
 
 	perf_io_write_fl(file, line, event_name, repo, &us_elapsed_absolute,
-			 &us_elapsed_region, category, &buf_payload);
+			 &us_elapsed_region, category, &buf_payload, NULL);
 	strbuf_release(&buf_payload);
 }
 
@@ -514,7 +520,7 @@ static void fn_data_fl(const char *file, int line, uint64_t us_elapsed_absolute,
 	strbuf_addf(&buf_payload, "%s:%s", key, value);
 
 	perf_io_write_fl(file, line, event_name, repo, &us_elapsed_absolute,
-			 &us_elapsed_region, category, &buf_payload);
+			 &us_elapsed_region, category, &buf_payload, NULL);
 	strbuf_release(&buf_payload);
 }
 
@@ -530,7 +536,7 @@ static void fn_data_json_fl(const char *file, int line,
 	strbuf_addf(&buf_payload, "%s:%s", key, value->json.buf);
 
 	perf_io_write_fl(file, line, event_name, repo, &us_elapsed_absolute,
-			 &us_elapsed_region, category, &buf_payload);
+			 &us_elapsed_region, category, &buf_payload, NULL);
 	strbuf_release(&buf_payload);
 }
 
@@ -544,7 +550,7 @@ static void fn_printf_va_fl(const char *file, int line,
 	maybe_append_string_va(&buf_payload, fmt, ap);
 
 	perf_io_write_fl(file, line, event_name, NULL, &us_elapsed_absolute,
-			 NULL, NULL, &buf_payload);
+			 NULL, NULL, &buf_payload, NULL);
 	strbuf_release(&buf_payload);
 }
 
