@@ -207,6 +207,101 @@ static int ut_007bug(int argc, const char **argv)
 }
 
 /*
+ * Single-threaded timer test.  Create several intervals using the
+ * TEST1 timer.  The test script can verify that an aggregate Trace2
+ * "timer" event is emitted indicating that we started+stopped the
+ * timer the requested number of times.
+ */
+static int ut_008timer(int argc, const char **argv)
+{
+	const char *usage_error =
+		"expect <count> <ms_delay>";
+
+	int count = 0;
+	int delay = 0;
+	int k;
+
+	if (argc != 2)
+		die("%s", usage_error);
+	if (get_i(&count, argv[0]))
+		die("%s", usage_error);
+	if (get_i(&delay, argv[1]))
+		die("%s", usage_error);
+
+	for (k = 0; k < count; k++) {
+		trace2_timer_start(TRACE2_TIMER_ID_TEST1);
+		sleep_millisec(delay);
+		trace2_timer_stop(TRACE2_TIMER_ID_TEST1);
+	}
+
+	return 0;
+}
+
+struct ut_009_data {
+	int count;
+	int delay;
+};
+
+static void *ut_009timer_thread_proc(void *_ut_009_data)
+{
+	struct ut_009_data *data = _ut_009_data;
+	int k;
+
+	trace2_thread_start("ut_009");
+
+	for (k = 0; k < data->count; k++) {
+		trace2_timer_start(TRACE2_TIMER_ID_TEST2);
+		sleep_millisec(data->delay);
+		trace2_timer_stop(TRACE2_TIMER_ID_TEST2);
+	}
+
+	trace2_thread_exit();
+	return NULL;
+}
+
+/*
+ * Multi-threaded timer test.  Create several threads that each create
+ * several intervals using the TEST2 timer.  The test script can verify
+ * that an individual Trace2 "timer" event for each thread and an
+ * aggregate "timer" event are generated.
+ */
+static int ut_009timer(int argc, const char **argv)
+{
+	const char *usage_error =
+		"expect <count> <ms_delay> <threads>";
+
+	struct ut_009_data data = { 0, 0 };
+	int nr_threads = 0;
+	int k;
+	pthread_t *pids = NULL;
+
+	if (argc != 3)
+		die("%s", usage_error);
+	if (get_i(&data.count, argv[0]))
+		die("%s", usage_error);
+	if (get_i(&data.delay, argv[1]))
+		die("%s", usage_error);
+	if (get_i(&nr_threads, argv[2]))
+		die("%s", usage_error);
+
+	CALLOC_ARRAY(pids, nr_threads);
+
+	for (k = 0; k < nr_threads; k++) {
+		if (pthread_create(&pids[k], NULL, ut_009timer_thread_proc, &data))
+			die("failed to create thread[%d]", k);
+	}
+
+	for (k = 0; k < nr_threads; k++) {
+		if (pthread_join(pids[k], NULL))
+			die("failed to join thread[%d]", k);
+	}
+
+	free(pids);
+
+	return 0;
+}
+
+/*
  * Usage:
  *     test-tool trace2 <ut_name_1> <ut_usage_1>
  *     test-tool trace2 <ut_name_2> <ut_usage_2>
@@ -223,6 +318,8 @@ static struct unit_test ut_table[] = {
 	{ ut_005exec,     "005exec",   "<git_command_args>" },
 	{ ut_006data,     "006data",   "[<category> <key> <value>]+" },
 	{ ut_007bug,      "007bug",    "" },
+	{ ut_008timer,    "008timer",  "<count> <ms_delay>" },
+	{ ut_009timer,    "009timer",  "<count> <ms_delay> <threads>" },
 };
 /* clang-format on */
 
