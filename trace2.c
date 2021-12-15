@@ -13,6 +13,7 @@
 #include "trace2/tr2_sysenv.h"
 #include "trace2/tr2_tgt.h"
 #include "trace2/tr2_tls.h"
+#include "trace2/tr2_tmr.h"
 
 static int trace2_enabled;
 
@@ -83,6 +84,42 @@ static void tr2_tgt_disable_builtins(void)
 		tgt_j->pfn_term();
 }
 
+static void tr2main_emit_summary_timers(uint64_t us_elapsed_absolute)
+{
+	struct tr2_tgt *tgt_j;
+	int j;
+	struct tr2tmr_block merged;
+
+	memset(&merged, 0, sizeof(merged));
+
+	/*
+	 * Sum across all of the per-thread stopwatch timer data into
+	 * a single composite block of timer values.
+	 */
+	tr2tls_aggregate_timer_blocks(&merged);
+
+	/*
+	 * Emit "summary" timer events for each composite timer value
+	 * that had activity.
+	 */
+	for_each_wanted_builtin (j, tgt_j)
+		if (tgt_j->pfn_timer)
+			tr2tmr_emit_block(tgt_j->pfn_timer,
+					  us_elapsed_absolute,
+					  &merged, "summary");
+}
+
+static void tr2main_emit_thread_timers(uint64_t us_elapsed_absolute)
+{
+	struct tr2_tgt *tgt_j;
+	int j;
+
+	for_each_wanted_builtin (j, tgt_j)
+		if (tgt_j->pfn_timer)
+			tr2tls_emit_timer_blocks_by_thread(tgt_j->pfn_timer,
+							   us_elapsed_absolute);
+}
+
 static int tr2main_exit_code;
 
 /*
@@ -109,6 +146,9 @@ static void tr2main_atexit_handler(void)
 	 * the trace output if someone calls die(), for example.
 	 */
 	tr2tls_pop_unwind_self();
+
+	tr2main_emit_thread_timers(us_elapsed_absolute);
+	tr2main_emit_summary_timers(us_elapsed_absolute);
 
 	for_each_wanted_builtin (j, tgt_j)
 		if (tgt_j->pfn_atexit)
@@ -840,4 +880,26 @@ void trace2_printf(const char *fmt, ...)
 const char *trace2_session_id(void)
 {
 	return tr2_sid_get();
+}
+
+void trace2_timer_start(enum trace2_timer_id tid)
+{
+	if (!trace2_enabled)
+		return;
+
+	if (tid < 0 || tid >= TRACE2_NUMBER_OF_TIMERS)
+		BUG("invalid timer id: %d", tid);
+
+	tr2tmr_start(tid);
+}
+
+void trace2_timer_stop(enum trace2_timer_id tid)
+{
+	if (!trace2_enabled)
+		return;
+
+	if (tid < 0 || tid >= TRACE2_NUMBER_OF_TIMERS)
+		BUG("invalid timer id: %d", tid);
+
+	tr2tmr_stop(tid);
 }

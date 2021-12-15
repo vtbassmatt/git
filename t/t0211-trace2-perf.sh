@@ -173,4 +173,29 @@ test_expect_success 'using global config, perf stream, return code 0' '
 	test_cmp expect actual
 '
 
+# Exercise the stopwatch timer "test" in a loop and confirm that it was
+# we have as many start/stop intervals as expected.  We cannot really test
+# the (elapsed, min, max) timer values, so we assume they are good.
+#
+test_expect_success 'test stopwatch timers - summary only' '
+	test_when_finished "rm trace.perf actual" &&
+	test_config_global trace2.perfBrief 1 &&
+	test_config_global trace2.perfTarget "$(pwd)/trace.perf" &&
+	test-tool trace2 008timer 5 10 &&
+	perl "$TEST_DIRECTORY/t0211/scrub_perf.perl" <trace.perf >actual &&
+	grep "d0|summary|timer||_T_ABS_||test|name:test1 count:5" actual
+'
+
+test_expect_success 'test stopwatch timers - summary and threads' '
+	test_when_finished "rm trace.perf actual" &&
+	test_config_global trace2.perfBrief 1 &&
+	test_config_global trace2.perfTarget "$(pwd)/trace.perf" &&
+	test-tool trace2 009timer 5 10 3 &&
+	perl "$TEST_DIRECTORY/t0211/scrub_perf.perl" <trace.perf >actual &&
+	grep "d0|th01:ut_009|timer||_T_ABS_||test|name:test2 count:5" actual &&
+	grep "d0|th02:ut_009|timer||_T_ABS_||test|name:test2 count:5" actual &&
+	grep "d0|th02:ut_009|timer||_T_ABS_||test|name:test2 count:5" actual &&
+	grep "d0|summary|timer||_T_ABS_||test|name:test2 count:15" actual
+'
+
 test_done

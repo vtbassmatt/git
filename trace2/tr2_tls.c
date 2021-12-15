@@ -1,6 +1,7 @@
 #include "cache.h"
 #include "thread-utils.h"
 #include "trace2/tr2_tls.h"
+#include "trace2/tr2_tmr.h"
 
 /*
  * Initialize size of the thread stack for nested regions.
@@ -198,4 +199,32 @@ int tr2tls_locked_increment(int *p)
 	pthread_mutex_unlock(&tr2tls_mutex);
 
 	return current_value;
+}
+
+void tr2tls_aggregate_timer_blocks(struct tr2tmr_block *merged)
+{
+	struct tr2tls_thread_ctx *ctx = tr2tls_ctx_list;
+
+	while (ctx) {
+		struct tr2tls_thread_ctx *next = ctx->next_ctx;
+
+		tr2tmr_aggregate_timers(merged, &ctx->timers);
+
+		ctx = next;
+	}
+}
+
+void tr2tls_emit_timer_blocks_by_thread(tr2_tgt_evt_timer_t *pfn,
+					uint64_t us_elapsed_absolute)
+{
+	struct tr2tls_thread_ctx *ctx = tr2tls_ctx_list;
+
+	while (ctx) {
+		struct tr2tls_thread_ctx *next = ctx->next_ctx;
+
+		tr2tmr_emit_block(pfn, us_elapsed_absolute, &ctx->timers,
+				  ctx->thread_name);
+
+		ctx = next;
+	}
 }
