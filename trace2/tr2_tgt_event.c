@@ -81,14 +81,17 @@ static void fn_term(void)
  */
 static void event_fmt_prepare(const char *event_name, const char *file,
 			      int line, const struct repository *repo,
-			      struct json_writer *jw)
+			      struct json_writer *jw,
+			      const char *thread_name_override)
 {
-	struct tr2tls_thread_ctx *ctx = tr2tls_get_self();
 	struct tr2_tbuf tb_now;
 
 	jw_object_string(jw, "event", event_name);
 	jw_object_string(jw, "sid", tr2_sid_get());
-	jw_object_string(jw, "thread", ctx->thread_name);
+	jw_object_string(jw, "thread",
+			 ((thread_name_override && *thread_name_override)
+			  ? thread_name_override
+			  : tr2tls_get_self()->thread_name));
 
 	/*
 	 * In brief mode, only emit <time> on these 2 event types.
@@ -114,7 +117,7 @@ static void fn_too_many_files_fl(const char *file, int line)
 	struct json_writer jw = JSON_WRITER_INIT;
 
 	jw_object_begin(&jw, 0);
-	event_fmt_prepare(event_name, file, line, NULL, &jw);
+	event_fmt_prepare(event_name, file, line, NULL, &jw, NULL);
 	jw_end(&jw);
 
 	tr2_dst_write_line(&tr2dst_event, &jw.json);
@@ -127,7 +130,7 @@ static void fn_version_fl(const char *file, int line)
 	struct json_writer jw = JSON_WRITER_INIT;
 
 	jw_object_begin(&jw, 0);
-	event_fmt_prepare(event_name, file, line, NULL, &jw);
+	event_fmt_prepare(event_name, file, line, NULL, &jw, NULL);
 	jw_object_string(&jw, "evt", TR2_EVENT_VERSION);
 	jw_object_string(&jw, "exe", git_version_string);
 	jw_end(&jw);
@@ -147,7 +150,7 @@ static void fn_start_fl(const char *file, int line,
 	double t_abs = (double)us_elapsed_absolute / 1000000.0;
 
 	jw_object_begin(&jw, 0);
-	event_fmt_prepare(event_name, file, line, NULL, &jw);
+	event_fmt_prepare(event_name, file, line, NULL, &jw, NULL);
 	jw_object_double(&jw, "t_abs", 6, t_abs);
 	jw_object_inline_begin_array(&jw, "argv");
 	jw_array_argv(&jw, argv);
@@ -166,7 +169,7 @@ static void fn_exit_fl(const char *file, int line, uint64_t us_elapsed_absolute,
 	double t_abs = (double)us_elapsed_absolute / 1000000.0;
 
 	jw_object_begin(&jw, 0);
-	event_fmt_prepare(event_name, file, line, NULL, &jw);
+	event_fmt_prepare(event_name, file, line, NULL, &jw, NULL);
 	jw_object_double(&jw, "t_abs", 6, t_abs);
 	jw_object_intmax(&jw, "code", code);
 	jw_end(&jw);
@@ -182,7 +185,7 @@ static void fn_signal(uint64_t us_elapsed_absolute, int signo)
 	double t_abs = (double)us_elapsed_absolute / 1000000.0;
 
 	jw_object_begin(&jw, 0);
-	event_fmt_prepare(event_name, __FILE__, __LINE__, NULL, &jw);
+	event_fmt_prepare(event_name, __FILE__, __LINE__, NULL, &jw, NULL);
 	jw_object_double(&jw, "t_abs", 6, t_abs);
 	jw_object_intmax(&jw, "signo", signo);
 	jw_end(&jw);
@@ -198,7 +201,7 @@ static void fn_atexit(uint64_t us_elapsed_absolute, int code)
 	double t_abs = (double)us_elapsed_absolute / 1000000.0;
 
 	jw_object_begin(&jw, 0);
-	event_fmt_prepare(event_name, __FILE__, __LINE__, NULL, &jw);
+	event_fmt_prepare(event_name, __FILE__, __LINE__, NULL, &jw, NULL);
 	jw_object_double(&jw, "t_abs", 6, t_abs);
 	jw_object_intmax(&jw, "code", code);
 	jw_end(&jw);
@@ -231,7 +234,7 @@ static void fn_error_va_fl(const char *file, int line, const char *fmt,
 	struct json_writer jw = JSON_WRITER_INIT;
 
 	jw_object_begin(&jw, 0);
-	event_fmt_prepare(event_name, file, line, NULL, &jw);
+	event_fmt_prepare(event_name, file, line, NULL, &jw, NULL);
 	maybe_add_string_va(&jw, "msg", fmt, ap);
 	/*
 	 * Also emit the format string as a field in case
@@ -253,7 +256,7 @@ static void fn_command_path_fl(const char *file, int line, const char *pathname)
 	struct json_writer jw = JSON_WRITER_INIT;
 
 	jw_object_begin(&jw, 0);
-	event_fmt_prepare(event_name, file, line, NULL, &jw);
+	event_fmt_prepare(event_name, file, line, NULL, &jw, NULL);
 	jw_object_string(&jw, "path", pathname);
 	jw_end(&jw);
 
@@ -268,7 +271,7 @@ static void fn_command_ancestry_fl(const char *file, int line, const char **pare
 	struct json_writer jw = JSON_WRITER_INIT;
 
 	jw_object_begin(&jw, 0);
-	event_fmt_prepare(event_name, file, line, NULL, &jw);
+	event_fmt_prepare(event_name, file, line, NULL, &jw, NULL);
 	jw_object_inline_begin_array(&jw, "ancestry");
 
 	while ((parent_name = *parent_names++))
@@ -288,7 +291,7 @@ static void fn_command_name_fl(const char *file, int line, const char *name,
 	struct json_writer jw = JSON_WRITER_INIT;
 
 	jw_object_begin(&jw, 0);
-	event_fmt_prepare(event_name, file, line, NULL, &jw);
+	event_fmt_prepare(event_name, file, line, NULL, &jw, NULL);
 	jw_object_string(&jw, "name", name);
 	if (hierarchy && *hierarchy)
 		jw_object_string(&jw, "hierarchy", hierarchy);
@@ -304,7 +307,7 @@ static void fn_command_mode_fl(const char *file, int line, const char *mode)
 	struct json_writer jw = JSON_WRITER_INIT;
 
 	jw_object_begin(&jw, 0);
-	event_fmt_prepare(event_name, file, line, NULL, &jw);
+	event_fmt_prepare(event_name, file, line, NULL, &jw, NULL);
 	jw_object_string(&jw, "name", mode);
 	jw_end(&jw);
 
@@ -319,7 +322,7 @@ static void fn_alias_fl(const char *file, int line, const char *alias,
 	struct json_writer jw = JSON_WRITER_INIT;
 
 	jw_object_begin(&jw, 0);
-	event_fmt_prepare(event_name, file, line, NULL, &jw);
+	event_fmt_prepare(event_name, file, line, NULL, &jw, NULL);
 	jw_object_string(&jw, "alias", alias);
 	jw_object_inline_begin_array(&jw, "argv");
 	jw_array_argv(&jw, argv);
@@ -338,7 +341,7 @@ static void fn_child_start_fl(const char *file, int line,
 	struct json_writer jw = JSON_WRITER_INIT;
 
 	jw_object_begin(&jw, 0);
-	event_fmt_prepare(event_name, file, line, NULL, &jw);
+	event_fmt_prepare(event_name, file, line, NULL, &jw, NULL);
 	jw_object_intmax(&jw, "child_id", cmd->trace2_child_id);
 	if (cmd->trace2_hook_name) {
 		jw_object_string(&jw, "child_class", "hook");
@@ -371,7 +374,7 @@ static void fn_child_exit_fl(const char *file, int line,
 	double t_rel = (double)us_elapsed_child / 1000000.0;
 
 	jw_object_begin(&jw, 0);
-	event_fmt_prepare(event_name, file, line, NULL, &jw);
+	event_fmt_prepare(event_name, file, line, NULL, &jw, NULL);
 	jw_object_intmax(&jw, "child_id", cid);
 	jw_object_intmax(&jw, "pid", pid);
 	jw_object_intmax(&jw, "code", code);
@@ -392,7 +395,7 @@ static void fn_child_ready_fl(const char *file, int line,
 	double t_rel = (double)us_elapsed_child / 1000000.0;
 
 	jw_object_begin(&jw, 0);
-	event_fmt_prepare(event_name, file, line, NULL, &jw);
+	event_fmt_prepare(event_name, file, line, NULL, &jw, NULL);
 	jw_object_intmax(&jw, "child_id", cid);
 	jw_object_intmax(&jw, "pid", pid);
 	jw_object_string(&jw, "ready", ready);
@@ -411,7 +414,7 @@ static void fn_thread_start_fl(const char *file, int line,
 	struct json_writer jw = JSON_WRITER_INIT;
 
 	jw_object_begin(&jw, 0);
-	event_fmt_prepare(event_name, file, line, NULL, &jw);
+	event_fmt_prepare(event_name, file, line, NULL, &jw, NULL);
 	jw_end(&jw);
 
 	tr2_dst_write_line(&tr2dst_event, &jw.json);
@@ -427,7 +430,7 @@ static void fn_thread_exit_fl(const char *file, int line,
 	double t_rel = (double)us_elapsed_thread / 1000000.0;
 
 	jw_object_begin(&jw, 0);
-	event_fmt_prepare(event_name, file, line, NULL, &jw);
+	event_fmt_prepare(event_name, file, line, NULL, &jw, NULL);
 	jw_object_double(&jw, "t_rel", 6, t_rel);
 	jw_end(&jw);
 
@@ -442,7 +445,7 @@ static void fn_exec_fl(const char *file, int line, uint64_t us_elapsed_absolute,
 	struct json_writer jw = JSON_WRITER_INIT;
 
 	jw_object_begin(&jw, 0);
-	event_fmt_prepare(event_name, file, line, NULL, &jw);
+	event_fmt_prepare(event_name, file, line, NULL, &jw, NULL);
 	jw_object_intmax(&jw, "exec_id", exec_id);
 	if (exe)
 		jw_object_string(&jw, "exe", exe);
@@ -463,7 +466,7 @@ static void fn_exec_result_fl(const char *file, int line,
 	struct json_writer jw = JSON_WRITER_INIT;
 
 	jw_object_begin(&jw, 0);
-	event_fmt_prepare(event_name, file, line, NULL, &jw);
+	event_fmt_prepare(event_name, file, line, NULL, &jw, NULL);
 	jw_object_intmax(&jw, "exec_id", exec_id);
 	jw_object_intmax(&jw, "code", code);
 	jw_end(&jw);
@@ -479,7 +482,7 @@ static void fn_param_fl(const char *file, int line, const char *param,
 	struct json_writer jw = JSON_WRITER_INIT;
 
 	jw_object_begin(&jw, 0);
-	event_fmt_prepare(event_name, file, line, NULL, &jw);
+	event_fmt_prepare(event_name, file, line, NULL, &jw, NULL);
 	jw_object_string(&jw, "param", param);
 	jw_object_string(&jw, "value", value);
 	jw_end(&jw);
@@ -495,7 +498,7 @@ static void fn_repo_fl(const char *file, int line,
 	struct json_writer jw = JSON_WRITER_INIT;
 
 	jw_object_begin(&jw, 0);
-	event_fmt_prepare(event_name, file, line, repo, &jw);
+	event_fmt_prepare(event_name, file, line, repo, &jw, NULL);
 	jw_object_string(&jw, "worktree", repo->worktree);
 	jw_end(&jw);
 
@@ -516,7 +519,7 @@ static void fn_region_enter_printf_va_fl(const char *file, int line,
 		struct json_writer jw = JSON_WRITER_INIT;
 
 		jw_object_begin(&jw, 0);
-		event_fmt_prepare(event_name, file, line, repo, &jw);
+		event_fmt_prepare(event_name, file, line, repo, &jw, NULL);
 		jw_object_intmax(&jw, "nesting", ctx->nr_open_regions);
 		if (category)
 			jw_object_string(&jw, "category", category);
@@ -542,7 +545,7 @@ static void fn_region_leave_printf_va_fl(
 		double t_rel = (double)us_elapsed_region / 1000000.0;
 
 		jw_object_begin(&jw, 0);
-		event_fmt_prepare(event_name, file, line, repo, &jw);
+		event_fmt_prepare(event_name, file, line, repo, &jw, NULL);
 		jw_object_double(&jw, "t_rel", 6, t_rel);
 		jw_object_intmax(&jw, "nesting", ctx->nr_open_regions);
 		if (category)
@@ -570,7 +573,7 @@ static void fn_data_fl(const char *file, int line, uint64_t us_elapsed_absolute,
 		double t_rel = (double)us_elapsed_region / 1000000.0;
 
 		jw_object_begin(&jw, 0);
-		event_fmt_prepare(event_name, file, line, repo, &jw);
+		event_fmt_prepare(event_name, file, line, repo, &jw, NULL);
 		jw_object_double(&jw, "t_abs", 6, t_abs);
 		jw_object_double(&jw, "t_rel", 6, t_rel);
 		jw_object_intmax(&jw, "nesting", ctx->nr_open_regions);
@@ -598,7 +601,7 @@ static void fn_data_json_fl(const char *file, int line,
 		double t_rel = (double)us_elapsed_region / 1000000.0;
 
 		jw_object_begin(&jw, 0);
-		event_fmt_prepare(event_name, file, line, repo, &jw);
+		event_fmt_prepare(event_name, file, line, repo, &jw, NULL);
 		jw_object_double(&jw, "t_abs", 6, t_abs);
 		jw_object_double(&jw, "t_rel", 6, t_rel);
 		jw_object_intmax(&jw, "nesting", ctx->nr_open_regions);
