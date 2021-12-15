@@ -554,6 +554,34 @@ static void fn_printf_va_fl(const char *file, int line,
 	strbuf_release(&buf_payload);
 }
 
+static void fn_timer(uint64_t us_elapsed_absolute,
+		     const char *thread_name,
+		     const char *category,
+		     const char *timer_name,
+		     uint64_t interval_count,
+		     uint64_t us_total_time,
+		     uint64_t us_min_time,
+		     uint64_t us_max_time)
+{
+	const char *event_name = "timer";
+	struct strbuf buf_payload = STRBUF_INIT;
+
+	double t_total = (double)us_total_time / 1000000.0;
+	double t_min   = (double)us_min_time   / 1000000.0;
+	double t_max   = (double)us_max_time   / 1000000.0;
+
+	strbuf_addf(&buf_payload, "name:%s", timer_name);
+	strbuf_addf(&buf_payload, " count:%"PRIu64, interval_count);
+	strbuf_addf(&buf_payload, " total:%9.6f", t_total);
+	strbuf_addf(&buf_payload, " min:%9.6f", t_min);
+	strbuf_addf(&buf_payload, " max:%9.6f", t_max);
+
+	perf_io_write_fl(__FILE__, __LINE__, event_name, NULL,
+			 &us_elapsed_absolute, NULL,
+			 category, &buf_payload, thread_name);
+	strbuf_release(&buf_payload);
+}
+
 struct tr2_tgt tr2_tgt_perf = {
 	&tr2dst_perf,
 
@@ -585,4 +613,5 @@ struct tr2_tgt tr2_tgt_perf = {
 	fn_data_fl,
 	fn_data_json_fl,
 	fn_printf_va_fl,
+	fn_timer,
 };

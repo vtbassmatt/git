@@ -19,8 +19,13 @@ static struct tr2_dst tr2dst_event = { TR2_SYSENV_EVENT, 0, 0, 0, 0 };
  * interpretation of existing events or fields. Smaller changes, such as adding
  * a new field to an existing event, do not require an increment to the EVENT
  * format version.
+ *
+ * Verison 1: original version
+ * Version 2: added "too_many_files" event
+ * Version 3: added "child_ready" event
+ * Version 4: added "timer" event
  */
-#define TR2_EVENT_VERSION "3"
+#define TR2_EVENT_VERSION "4"
 
 /*
  * Region nesting limit for messages written to the event target.
@@ -615,6 +620,38 @@ static void fn_data_json_fl(const char *file, int line,
 	}
 }
 
+static void fn_timer(uint64_t us_elapsed_absolute,
+		     const char *thread_name,
+		     const char *category,
+		     const char *timer_name,
+		     uint64_t interval_count,
+		     uint64_t us_total_time,
+		     uint64_t us_min_time,
+		     uint64_t us_max_time)
+{
+	const char *event_name = "timer";
+	struct json_writer jw = JSON_WRITER_INIT;
+	double t_abs = (double)us_elapsed_absolute / 1000000.0;
+
+	double t_total = (double)us_total_time / 1000000.0;
+	double t_min   = (double)us_min_time   / 1000000.0;
+	double t_max   = (double)us_max_time   / 1000000.0;
+
+	jw_object_begin(&jw, 0);
+	event_fmt_prepare(event_name, __FILE__, __LINE__, NULL, &jw, thread_name);
+	jw_object_double(&jw, "t_abs", 6, t_abs);
+	jw_object_string(&jw, "name", timer_name);
+	jw_object_intmax(&jw, "count", interval_count);
+	jw_object_double(&jw, "t_total", 6, t_total);
+	jw_object_double(&jw, "t_min", 6, t_min);
+	jw_object_double(&jw, "t_max", 6, t_max);
+
+	jw_end(&jw);
+
+	tr2_dst_write_line(&tr2dst_event, &jw.json);
+	jw_release(&jw);
+}
+
 struct tr2_tgt tr2_tgt_event = {
 	&tr2dst_event,
 
@@ -646,4 +683,5 @@ struct tr2_tgt tr2_tgt_event = {
 	fn_data_fl,
 	fn_data_json_fl,
 	NULL, /* printf */
+	fn_timer,
 };
