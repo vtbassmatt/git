@@ -2,6 +2,7 @@
 #define TR2_TLS_H
 
 #include "strbuf.h"
+#include "trace2/tr2_ctr.h"
 #include "trace2/tr2_tmr.h"
 
 /*
@@ -17,8 +18,23 @@ struct tr2tls_thread_ctx {
 	size_t nr_open_regions; /* plays role of "nr" in ALLOC_GROW */
 	int thread_id;
 
+	struct tr2ctr_block counters;
 	struct tr2tmr_block timers;
 };
+
+/*
+ * Iterate over the global list of TLS CTX data and aggregate the
+ * counter data into the given counter block.
+ */
+void tr2tls_aggregate_counter_blocks(struct tr2ctr_block *merged);
+
+/*
+ * Iterate over the global list of TLS CTX data (the complete set of
+ * threads that have used Trace2 resources) data and emit "per-thread"
+ * counter data for each.
+ */
+void tr2tls_emit_counter_blocks_by_thread(tr2_tgt_evt_counter_t *pfn,
+					  uint64_t us_elapsed_absolute);
 
 /*
  * Iterate over the global list of TLS CTX data and aggregate the timer

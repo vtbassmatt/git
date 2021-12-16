@@ -198,4 +198,28 @@ test_expect_success 'test stopwatch timers - summary and threads' '
 	grep "d0|summary|timer||_T_ABS_||test|name:test2 count:15" actual
 '
 
+# Exercise the global counter "test" in a loop and confirm that we get an
+# event with the sum.
+#
+test_expect_success 'test global counters - global, single-thead' '
+	test_when_finished "rm trace.perf actual" &&
+	test_config_global trace2.perfBrief 1 &&
+	test_config_global trace2.perfTarget "$(pwd)/trace.perf" &&
+	test-tool trace2 010counter 2 3 5 7 11 13  &&
+	perl "$TEST_DIRECTORY/t0211/scrub_perf.perl" <trace.perf >actual &&
+	grep "d0|summary|counter||_T_ABS_||test|name:test1 value:41" actual
+'
+
+test_expect_success 'test global counters - global+threads' '
+	test_when_finished "rm trace.perf actual" &&
+	test_config_global trace2.perfBrief 1 &&
+	test_config_global trace2.perfTarget "$(pwd)/trace.perf" &&
+	test-tool trace2 011counter 5 10 3 &&
+	perl "$TEST_DIRECTORY/t0211/scrub_perf.perl" <trace.perf >actual &&
+	grep "d0|th01:ut_011|counter||_T_ABS_||test|name:test2 value:15" actual &&
+	grep "d0|th02:ut_011|counter||_T_ABS_||test|name:test2 value:15" actual &&
+	grep "d0|th02:ut_011|counter||_T_ABS_||test|name:test2 value:15" actual &&
+	grep "d0|summary|counter||_T_ABS_||test|name:test2 value:45" actual
+'
+
 test_done
