@@ -23,7 +23,7 @@ static struct tr2_dst tr2dst_event = { TR2_SYSENV_EVENT, 0, 0, 0, 0 };
  * Verison 1: original version
  * Version 2: added "too_many_files" event
  * Version 3: added "child_ready" event
- * Version 4: added "timer" event
+ * Version 4: added "timer" and "counter" events
  */
 #define TR2_EVENT_VERSION "4"
 
@@ -652,6 +652,28 @@ static void fn_timer(uint64_t us_elapsed_absolute,
 	jw_release(&jw);
 }
 
+static void fn_counter(uint64_t us_elapsed_absolute,
+		       const char *thread_name,
+		       const char *category,
+		       const char *counter_name,
+		       uint64_t value)
+{
+	const char *event_name = "counter";
+	struct json_writer jw = JSON_WRITER_INIT;
+	double t_abs = (double)us_elapsed_absolute / 1000000.0;
+
+	jw_object_begin(&jw, 0);
+	event_fmt_prepare(event_name, __FILE__, __LINE__, NULL, &jw, thread_name);
+	jw_object_double(&jw, "t_abs", 6, t_abs);
+	jw_object_string(&jw, "name", counter_name);
+	jw_object_intmax(&jw, "value", value);
+
+	jw_end(&jw);
+
+	tr2_dst_write_line(&tr2dst_event, &jw.json);
+	jw_release(&jw);
+}
+
 struct tr2_tgt tr2_tgt_event = {
 	&tr2dst_event,
 
@@ -684,4 +706,5 @@ struct tr2_tgt tr2_tgt_event = {
 	fn_data_json_fl,
 	NULL, /* printf */
 	fn_timer,
+	fn_counter,
 };

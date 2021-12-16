@@ -582,6 +582,24 @@ static void fn_timer(uint64_t us_elapsed_absolute,
 	strbuf_release(&buf_payload);
 }
 
+static void fn_counter(uint64_t us_elapsed_absolute,
+		       const char *thread_name,
+		       const char *category,
+		       const char *counter_name,
+		       uint64_t value)
+{
+	const char *event_name = "counter";
+	struct strbuf buf_payload = STRBUF_INIT;
+
+	strbuf_addf(&buf_payload, "name:%s", counter_name);
+	strbuf_addf(&buf_payload, " value:%"PRIu64, value);
+
+	perf_io_write_fl(__FILE__, __LINE__, event_name, NULL,
+			 &us_elapsed_absolute, NULL,
+			 category, &buf_payload, thread_name);
+	strbuf_release(&buf_payload);
+}
+
 struct tr2_tgt tr2_tgt_perf = {
 	&tr2dst_perf,
 
@@ -614,4 +632,5 @@ struct tr2_tgt tr2_tgt_perf = {
 	fn_data_json_fl,
 	fn_printf_va_fl,
 	fn_timer,
+	fn_counter,
 };
