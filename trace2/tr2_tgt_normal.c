@@ -356,4 +356,5 @@ struct tr2_tgt tr2_tgt_normal = {
 	NULL, /* data_json */
 	fn_printf_va_fl,
 	NULL, /* timer */
+	NULL, /* counter */
 };
