@@ -372,4 +372,19 @@ test_expect_success '--write-midx with preferred bitmap tips' '
 	)
 '
 
+test_expect_success '--write-midx -b packs non-kept objects' '
+	git init midx-kept &&
+	test_when_finished "rm -fr midx-kept" &&
+	(
+		cd midx-kept &&
+		test_commit_bulk 100 &&
+		GIT_TRACE2_EVENT="$(pwd)/trace.txt" \
+			git repack --write-midx -a -b &&
+		cat trace.txt | \
+			grep \"event\":\"start\" | \
+			grep pack-objects | \
+			grep \"--honor-pack-keep\"
+	)
+'
+
 test_done
