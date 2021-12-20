@@ -358,7 +358,7 @@ static int set_config(enum sparse_checkout_mode mode)
 {
 	const char *config_path;
 
-	if (upgrade_repository_format(1) < 0)
+	if (upgrade_repository_format(the_repository, 1) < 0)
 		die(_("unable to upgrade repository format to enable worktreeConfig"));
 	if (git_config_set_gently("extensions.worktreeConfig", "true")) {
 		error(_("failed to set extensions.worktreeConfig setting"));
