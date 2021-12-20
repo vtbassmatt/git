@@ -254,6 +254,12 @@ void git_config_set_in_file(const char *, const char *, const char *);
 int git_config_set_gently(const char *, const char *);
 
 /**
+ * Write a config value into the config.worktree file for the current
+ * worktree. This will initialize extensions.worktreeConfig if necessary.
+ */
+int repo_config_set_worktree_gently(struct repository *, const char *, const char *);
+
+/**
  * write config values to `.git/config`, takes a key/value pair as parameter.
  */
 void git_config_set(const char *, const char *);

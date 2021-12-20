@@ -2880,6 +2880,33 @@ int git_config_set_gently(const char *key, const char *value)
 	return git_config_set_multivar_gently(key, value, NULL, 0);
 }
 
+int repo_config_set_worktree_gently(struct repository *r,
+				    const char *key, const char *value)
+{
+	int res;
+	const char *config_filename = repo_git_path(r, "config.worktree");
+
+	/*
+	 * Ensure that core.bare reflects the current worktree, since the
+	 * logic for is_bare_repository() changes if extensions.worktreeConfig
+	 * is disabled.
+	 */
+	if ((res = git_config_set_multivar_in_file_gently(config_filename, "core.bare",
+							  r->worktree ? "false" : "true",
+							  NULL, 0))) {
+		error(_("unable to set core.bare setting in worktree config"));
+		return res;
+	}
+	if (upgrade_repository_format(r, 1) < 0)
+		return error(_("unable to upgrade repository format to enable worktreeConfig"));
+	if ((res = git_config_set_gently("extensions.worktreeConfig", "true"))) {
+		error(_("failed to set extensions.worktreeConfig setting"));
+		return res;
+	}
+
+	return git_config_set_multivar_in_file_gently(config_filename, key, value, NULL, 0);
+}
+
 void git_config_set(const char *key, const char *value)
 {
 	repo_config_set(the_repository, key, value);
