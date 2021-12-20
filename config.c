@@ -21,6 +21,7 @@
 #include "dir.h"
 #include "color.h"
 #include "refs.h"
+#include "worktree.h"
 
 struct config_source {
 	struct config_source *prev;
@@ -2880,6 +2881,20 @@ int git_config_set_gently(const char *key, const char *value)
 	return git_config_set_multivar_gently(key, value, NULL, 0);
 }
 
+int repo_config_set_worktree_gently(struct repository *r,
+				    const char *key, const char *value)
+{
+	/* Only use worktree-specific config if it is is already enabled. */
+	if (repository_format_worktree_config) {
+		char *file = repo_git_path(r, "config.worktree");
+		int ret = git_config_set_multivar_in_file_gently(
+					file, key, value, NULL, 0);
+		free(file);
+		return ret;
+	}
+	return repo_config_set_gently(r, key, value);
+}
+
 void git_config_set(const char *key, const char *value)
 {
 	repo_config_set(the_repository, key, value);
@@ -3193,6 +3208,12 @@ int repo_config_set_multivar_gently(struct repository *r, const char *key,
 	return git_config_set_multivar_in_file_gently(repo_git_path(r, "config"),
 						      key, value, value_pattern,
 						      flags);
+}
+
+int repo_config_set_gently(struct repository *r,
+			   const char *key, const char *value)
+{
+	return repo_config_set_multivar_gently(r, key, value, NULL, 0);
 }
 
 void git_config_set_multivar(const char *key, const char *value,
