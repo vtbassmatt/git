@@ -215,6 +215,6 @@ void prepare_repo_settings(struct repository *r);
  * Return 1 if upgrade repository format to target_version succeeded,
  * 0 if no upgrade is necessary, and -1 when upgrade is not possible.
  */
-int upgrade_repository_format(int target_version);
+int upgrade_repository_format(struct repository *, int target_version);
 
 #endif /* REPOSITORY_H */
