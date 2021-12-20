@@ -71,6 +71,20 @@ test_expect_success 'git sparse-checkout init' '
 	check_files repo a
 '
 
+test_expect_success 'init in a worktree of a bare repo' '
+	test_when_finished rm -rf bare worktree &&
+	git clone --bare repo bare &&
+	git -C bare worktree add ../worktree &&
+	(
+		cd worktree &&
+		git sparse-checkout init &&
+		test_must_fail git config core.bare &&
+		git sparse-checkout set /*
+	) &&
+	git -C bare config --list --show-origin >actual &&
+	grep "file:config.worktree	core.bare=true" actual
+'
+
 test_expect_success 'git sparse-checkout list after init' '
 	git -C repo sparse-checkout list >actual &&
 	cat >expect <<-\EOF &&
@@ -219,7 +233,7 @@ test_expect_success 'sparse-index enabled and disabled' '
 		test-tool -C repo read-cache --table >cache &&
 		! grep " tree " cache &&
 		git -C repo config --list >config &&
-		! grep index.sparse config
+		test_cmp_config -C repo false index.sparse
 	)
 '
 
