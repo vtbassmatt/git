@@ -182,4 +182,16 @@ void strbuf_worktree_ref(const struct worktree *wt,
 			 struct strbuf *sb,
 			 const char *refname);
 
+/**
+ * Upgrade the config of the current repository and its base (if different
+ * from this repository) to use worktree-config. This might adjust config
+ * in both repositories, including:
+ *
+ * 1. Upgrading the repository format version to 1.
+ * 2. Adding extensions.worktreeConfig to the base config file.
+ * 3. Moving core.bare=true from the base config file to the base
+ *    repository's config.worktree file.
+ */
+int upgrade_to_worktree_config(struct repository *r);
+
 #endif

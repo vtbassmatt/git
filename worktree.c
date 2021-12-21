@@ -5,6 +5,7 @@
 #include "worktree.h"
 #include "dir.h"
 #include "wt-status.h"
+#include "config.h"
 
 void free_worktrees(struct worktree **worktrees)
 {
@@ -829,4 +830,50 @@ int should_prune_worktree(const char *id, struct strbuf *reason, char **wtpath, 
 	}
 	*wtpath = path;
 	return 0;
+}
+
+int upgrade_to_worktree_config(struct repository *r)
+{
+	int res;
+	int bare = 0;
+	struct config_set cs = { 0 };
+	char *base_config_file = xstrfmt("%s/config", r->commondir);
+	char *base_worktree_file = xstrfmt("%s/config.worktree", r->commondir);
+
+	git_configset_init(&cs);
+	git_configset_add_file(&cs, base_config_file);
+
+	/*
+	 * If the base repository is bare, then we need to move core.bare=true
+	 * out of the base config file and into the base repository's
+	 * config.worktree file.
+	 */
+	if (!git_configset_get_bool(&cs, "core.bare", &bare) && bare) {
+		if ((res = git_config_set_in_file_gently(base_worktree_file,
+							"core.bare", "true"))) {
+			error(_("unable to set core.bare=true in '%s'"), base_worktree_file);
+			goto cleanup;
+		}
+
+		if ((res = git_config_set_in_file_gently(base_config_file,
+							"core.bare", NULL))) {
+			error(_("unable to unset core.bare=true in '%s'"), base_config_file);
+			goto cleanup;
+		}
+	}
+	if (upgrade_repository_format(r, 1) < 0) {
+		res = error(_("unable to upgrade repository format to enable worktreeConfig"));
+		goto cleanup;
+	}
+	if ((res = git_config_set_gently("extensions.worktreeConfig", "true"))) {
+		error(_("failed to set extensions.worktreeConfig setting"));
+		goto cleanup;
+	}
+
+cleanup:
+	git_configset_clear(&cs);
+	free(base_config_file);
+	free(base_worktree_file);
+	trace2_printf("returning %d", res);
+	return res;
 }
