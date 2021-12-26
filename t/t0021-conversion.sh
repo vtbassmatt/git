@@ -124,7 +124,7 @@ test_expect_success check '
 	test_cmp test.r test.t
 '
 
-gen_expanded_keywords() {
+gen_expanded_keywords () {
 	local id="${1}"
 	echo "File with expanded keywords"
 	echo "\$$id\$"
@@ -138,7 +138,7 @@ gen_expanded_keywords() {
 	printf "\$$id: NoTerminatingSymbolAtEOF"
 }
 
-gen_expected_output_0() {
+gen_expected_output_0 () {
 	local id="${1}"
 	local hid="${2}"
 	echo "File with expanded keywords"
@@ -152,13 +152,13 @@ gen_expected_output_0() {
 	echo "\$$id: Foreign Commit With Spaces \$"
 }
 
-gen_expected_output() {
+gen_expected_output () {
 	local id="${1}"
 	gen_expected_output_0 "${@}"
 	printf "\$$id: NoTerminatingSymbolAtEOF"
 }
 
-gen_expected_output_crlf() {
+gen_expected_output_crlf () {
 	local id="${1}"
 	gen_expected_output_0 "${@}" | append_cr
 	printf "\$$id: NoTerminatingSymbolAtEOF"
