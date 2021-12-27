@@ -681,7 +681,7 @@ int cmd_init_db(int argc, const char **argv, const char *prefix)
 	}
 	else {
 		if (real_git_dir)
-			die(_("--separate-git-dir incompatible with bare repository"));
+			die(_("'--separate-git-dir' and bare repository cannot be used together"));
 		if (work_tree)
 			set_git_work_tree(work_tree);
 	}

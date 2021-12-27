@@ -4639,16 +4639,16 @@ void diff_setup_done(struct diff_options *options)
 		options->set_default(options);
 
 	if (HAS_MULTI_BITS(options->output_format & check_mask))
-		die(_("--name-only, --name-status, --check and -s are mutually exclusive"));
+		die(_("options '--name-only', '--name-status', '--check' and '-s' cannot be used together"));
 
 	if (HAS_MULTI_BITS(options->pickaxe_opts & DIFF_PICKAXE_KINDS_MASK))
 		die(_("options '%s', '%s' and '%s' cannot be used together"), "-G", "-S", "--find-object");
 
 	if (HAS_MULTI_BITS(options->pickaxe_opts & DIFF_PICKAXE_KINDS_G_REGEX_MASK))
-		die(_("-G and --pickaxe-regex are mutually exclusive, use --pickaxe-regex with -S"));
+		die(_("-G and --pickaxe-regex cannot be used together, use --pickaxe-regex with -S"));
 
 	if (HAS_MULTI_BITS(options->pickaxe_opts & DIFF_PICKAXE_KINDS_ALL_OBJFIND_MASK))
-		die(_("--pickaxe-all and --find-object are mutually exclusive, use --pickaxe-all with -G and -S"));
+		die(_("--pickaxe-all and --find-object cannot be used together, use --pickaxe-all with -G and -S"));
 
 	/*
 	 * Most of the time we can say "there are changes"

@@ -339,7 +339,7 @@ test_expect_success 'implicit bare & --separate-git-dir incompatible' '
 	mkdir -p bare.git &&
 	test_must_fail env GIT_DIR=. \
 		git -C bare.git init --separate-git-dir goop.git 2>err &&
-	test_i18ngrep "incompatible" err
+	test_i18ngrep "cannot be used together" err
 '
 
 test_expect_success 'bare & --separate-git-dir incompatible within worktree' '
@@ -348,7 +348,7 @@ test_expect_success 'bare & --separate-git-dir incompatible within worktree' '
 	git clone --bare . bare.git &&
 	git -C bare.git worktree add --detach ../linkwt &&
 	test_must_fail git -C linkwt init --separate-git-dir seprepo 2>err &&
-	test_i18ngrep "incompatible" err
+	test_i18ngrep "cannot be used together" err
 '
 
 test_lazy_prereq GETCWD_IGNORES_PERMS '

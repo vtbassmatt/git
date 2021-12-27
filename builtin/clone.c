@@ -900,7 +900,7 @@ int cmd_clone(int argc, const char **argv, const char *prefix)
 
 	if (option_bare) {
 		if (option_origin)
-			die(_("--bare and --origin %s options are incompatible."),
+			die(_("options '--bare' and '--origin %s' cannot be used together"),
 			    option_origin);
 		if (real_git_dir)
 			die(_("options '%s' and '%s' cannot be used together"), "--bare", "--separate-git-dir");
