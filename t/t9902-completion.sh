@@ -441,7 +441,6 @@ test_expect_success '__git_dequote - open double quote' '
 	verbose test "open double quote" = "$dequoted_word"
 '
 
-
 test_expect_success '__gitcomp_direct - puts everything into COMPREPLY as-is' '
 	sed -e "s/Z$//g" >expected <<-EOF &&
 	with-trailing-space Z
@@ -1442,6 +1441,80 @@ test_expect_success 'git checkout - with --detach, complete only references' '
 	other/branch-in-other Z
 	other/main-in-other Z
 	EOF
+'
+
+test_expect_failure 'sparse-checkout completes subcommands' '
+	test_completion "git sparse-checkout " <<-\EOF
+	list Z
+	init Z
+	set Z
+	add Z
+	reapply Z
+	disable Z
+	EOF
+'
+
+test_expect_failure 'sparse-checkout completes options' '
+	test_completion "git sparse-checkout --" <<-\EOF
+	--help Z
+	EOF
+'
+
+test_expect_failure 'sparse-checkout completes subcommand options' '
+	test_completion "git sparse-checkout init --" <<-\EOF &&
+	--cone Z
+	--sparse-index Z
+	--no-sparse-index Z
+	EOF
+
+	test_completion "git sparse-checkout set --" <<-\EOF &&
+	--stdin Z
+	EOF
+
+	test_completion "git sparse-checkout add --" <<-\EOF
+	--stdin Z
+	EOF
+'
+
+test_expect_failure 'sparse-checkout completes directory names' '
+	# set up sparse-checkout repo
+	git init sparse-checkout &&
+	(
+		cd sparse-checkout &&
+		mkdir -p folder1/0/1 folder2/0 folder3 &&
+		touch folder1/0/1/t.txt &&
+		touch folder2/0/t.txt &&
+		touch folder3/t.txt &&
+		git add . &&
+		git commit -am "Initial commit"
+	) &&
+
+	# initialize sparse-checkout definitions
+	git -C sparse-checkout config index.sparse false &&
+	git -C sparse-checkout sparse-checkout init --cone &&
+	git -C sparse-checkout sparse-checkout set folder1/0 folder3 &&
+
+	# test tab completion
+	(
+		cd sparse-checkout &&
+		test_completion "git sparse-checkout set f" <<-\EOF
+		folder1 Z
+		folder1/0 Z
+		folder1/0/1 Z
+		folder2 Z
+		folder2/0 Z
+		folder3 Z
+		EOF
+	) &&
+
+	(
+		cd sparse-checkout/folder1 &&
+		test_completion "git sparse-checkout add " <<-\EOF
+		./ Z
+		0 Z
+		0/1 Z
+		EOF
+	)
 '
 
 test_expect_success 'git switch - with -d, complete all references' '
