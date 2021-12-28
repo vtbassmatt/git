@@ -336,6 +336,47 @@ static int add_worktree(const char *path, const char *refname,
 	strbuf_addf(&sb, "%s/commondir", sb_repo.buf);
 	write_file(sb.buf, "../..");
 
+	/*
+	 * If the current worktree has sparse-checkout enabled, then copy
+	 * the sparse-checkout patterns from the current worktree.
+	 */
+	if (core_apply_sparse_checkout) {
+		char *from_file = git_pathdup("info/sparse-checkout");
+		char *to_file = xstrfmt("%s/worktrees/%s/info/sparse-checkout",
+					realpath.buf, name);
+
+		if (file_exists(from_file)) {
+			if (safe_create_leading_directories(to_file) ||
+			    copy_file(to_file, from_file, 0666))
+				error(_("failed to copy '%s' to '%s'; sparse-checkout may not work correctly"),
+				      from_file, to_file);
+		}
+
+		free(from_file);
+		free(to_file);
+	}
+
+	/*
+	 * If we are using worktree config, then copy all currenct config
+	 * values from the current worktree into the new one, that way the
+	 * new worktree behaves the same as this one.
+	 */
+	if (repository_format_worktree_config) {
+		char *from_file = git_pathdup("config.worktree");
+		char *to_file = xstrfmt("%s/worktrees/%s/config.worktree",
+					realpath.buf, name);
+
+		if (file_exists(from_file)) {
+			if (safe_create_leading_directories(to_file) ||
+			    copy_file(to_file, from_file, 0666))
+				error(_("failed to copy worktree config from '%s' to '%s'"),
+				      from_file, to_file);
+		}
+
+		free(from_file);
+		free(to_file);
+	}
+
 	strvec_pushf(&child_env, "%s=%s", GIT_DIR_ENVIRONMENT, sb_git.buf);
 	strvec_pushf(&child_env, "%s=%s", GIT_WORK_TREE_ENVIRONMENT, path);
 	cp.git_cmd = 1;

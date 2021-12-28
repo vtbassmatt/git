@@ -180,6 +180,53 @@ test_expect_success 'set enables config' '
 '
 
 test_expect_success 'set enables worktree config, if enabled' '
+	git init worktree-patterns &&
+	(
+		cd worktree-patterns &&
+		test_commit test file &&
+		mkdir dir dir2 &&
+		test_commit dir dir/file &&
+		test_commit dir2 dir2/file &&
+
+		# By initializing the worktree config here...
+		git worktree init-worktree-config &&
+
+		# This set command places config values in worktree-
+		# specific config...
+		git sparse-checkout set --cone dir &&
+
+		# Which must be copied, along with the sparse-checkout
+		# patterns, here.
+		git worktree add --detach ../worktree-patterns2
+	) &&
+	test_cmp_config -C worktree-patterns true core.sparseCheckout &&
+	test_cmp_config -C worktree-patterns2 true core.sparseCheckout &&
+	test_cmp_config -C worktree-patterns true core.sparseCheckoutCone &&
+	test_cmp_config -C worktree-patterns2 true core.sparseCheckoutCone &&
+	test_cmp worktree-patterns/.git/info/sparse-checkout \
+		 worktree-patterns/.git/worktrees/worktree-patterns2/info/sparse-checkout &&
+
+	ls worktree-patterns >expect &&
+	ls worktree-patterns2 >actual &&
+	test_cmp expect actual &&
+
+	# Double check that the copy works from a non-main worktree.
+	(
+		cd worktree-patterns2 &&
+		git sparse-checkout set dir2 &&
+		git worktree add --detach ../worktree-patterns3
+	) &&
+	test_cmp_config -C worktree-patterns3 true core.sparseCheckout &&
+	test_cmp_config -C worktree-patterns3 true core.sparseCheckoutCone &&
+	test_cmp worktree-patterns/.git/worktrees/worktree-patterns2/info/sparse-checkout \
+		 worktree-patterns/.git/worktrees/worktree-patterns3/info/sparse-checkout &&
+
+	ls worktree-patterns2 >expect &&
+	ls worktree-patterns3 >actual &&
+	test_cmp expect actual
+'
+
+test_expect_success 'worktree add copies sparse-checkout patterns' '
 	git init worktree-config &&
 	(
 		cd worktree-config &&
@@ -547,11 +594,11 @@ test_expect_success 'interaction with submodules' '
 
 test_expect_success 'different sparse-checkouts with worktrees' '
 	git -C repo worktree add --detach ../worktree &&
-	check_files worktree "a deep folder1 folder2" &&
+	check_files worktree "a folder1" &&
 	git -C worktree sparse-checkout init --cone &&
-	git -C repo sparse-checkout set folder1 &&
+	git -C repo sparse-checkout set folder1 folder2 &&
 	git -C worktree sparse-checkout set deep/deeper1 &&
-	check_files repo a folder1 &&
+	check_files repo a folder1 folder2 &&
 	check_files worktree a deep
 '
 
