@@ -2986,24 +2986,32 @@ _git_show_branch ()
 	__git_complete_revlist
 }
 
+__git_sparse_checkout_init_opts="--cone --sparse-index --no-sparse-index"
+
 _git_sparse_checkout ()
 {
-	local subcommands="list init set disable"
+	local subcommands='init list set add reapply disable'
 	local subcommand="$(__git_find_on_cmdline "$subcommands")"
+
 	if [ -z "$subcommand" ]; then
-		__gitcomp "$subcommands"
-		return
+		case "$cur" in
+			--*)
+				__gitcomp "--help"
+				;;
+			*)
+				__gitcomp "$subcommands"
+				;;
+		esac
 	fi
 
-	case "$subcommand,$cur" in
-	init,--*)
-		__gitcomp "--cone"
-		;;
-	set,--*)
-		__gitcomp "--stdin"
-		;;
-	*)
-		;;
+	case "$prev" in
+		init)
+			__gitcomp "$__git_sparse_checkout_init_opts"
+			;;
+		add|set)
+			__gitcomp "--stdin"
+			__gitcomp "$(git ls-tree -d -r HEAD --name-only)"
+			;;
 	esac
 }
 
