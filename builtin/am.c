@@ -2230,8 +2230,8 @@ static int parse_opt_show_current_patch(const struct option *opt, const char *ar
 	}
 
 	if (resume->mode == RESUME_SHOW_PATCH && new_value != resume->sub_mode)
-		return error(_("--show-current-patch=%s is incompatible with "
-			       "--show-current-patch=%s"),
+		return error(_("options '--show-current-patch=%s' and '--show-current-patch=%s' "
+					   "cannot be used together"),
 			     arg, valid_modes[resume->sub_mode]);
 
 	resume->mode = RESUME_SHOW_PATCH;
