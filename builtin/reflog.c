@@ -11,11 +11,7 @@
 #include "revision.h"
 #include "reachable.h"
 #include "worktree.h"
-#include "parse-options.h"
 
-static const char reflog_delete_usage[] =
-N_("git reflog delete [--rewrite] [--updateref] "
-   "[--dry-run | -n] [--verbose] <refs>...");
 static const char reflog_exists_usage[] =
 N_("git reflog exists <ref>");
 
@@ -641,7 +637,7 @@ static int cmd_reflog_expire(int argc, const char **argv, const char *prefix)
 		free(collected.e);
 	}
 
-	for (; i < argc; i++) {
+	for (i = 0; i < argc; i++) {
 		char *ref;
 		if (!dwim_log(argv[i], strlen(argv[i]), NULL, &ref)) {
 			status |= error(_("%s points nowhere!"), argv[i]);
@@ -668,38 +664,40 @@ static int count_reflog_ent(struct object_id *ooid, struct object_id *noid,
 	return 0;
 }
 
+static const char * reflog_delete_usage[] = {
+	N_("git reflog delete [--rewrite] [--updateref] "
+   "[--dry-run | -n] [--verbose] <refs>..."),
+	NULL
+};
+
 static int cmd_reflog_delete(int argc, const char **argv, const char *prefix)
 {
 	struct expire_reflog_policy_cb cb;
-	int i, status = 0;
+	int status = 0;
 	unsigned int flags = 0;
+
+	const struct option options[] = {
+		OPT_BIT(0, "dry-run", &flags, N_("do not actually prune any entries"),
+				EXPIRE_REFLOGS_DRY_RUN),
+		OPT_BIT(0, "rewrite", &flags,
+				N_("rewrite the old SHA1 with the new SHA1 of the entry that now precedes it"),
+				EXPIRE_REFLOGS_REWRITE),
+		OPT_BIT(0, "updateref", &flags,
+				N_("update the reference to the value of the top reflog entry"),
+				EXPIRE_REFLOGS_UPDATE_REF),
+		OPT_BIT(0, "verbose", &flags, N_("print extra information on screen."),
+				EXPIRE_REFLOGS_VERBOSE),
+		OPT_END()
+	};
 
 	memset(&cb, 0, sizeof(cb));
 
-	for (i = 1; i < argc; i++) {
-		const char *arg = argv[i];
-		if (!strcmp(arg, "--dry-run") || !strcmp(arg, "-n"))
-			flags |= EXPIRE_REFLOGS_DRY_RUN;
-		else if (!strcmp(arg, "--rewrite"))
-			flags |= EXPIRE_REFLOGS_REWRITE;
-		else if (!strcmp(arg, "--updateref"))
-			flags |= EXPIRE_REFLOGS_UPDATE_REF;
-		else if (!strcmp(arg, "--verbose"))
-			flags |= EXPIRE_REFLOGS_VERBOSE;
-		else if (!strcmp(arg, "--")) {
-			i++;
-			break;
-		}
-		else if (arg[0] == '-')
-			usage(_(reflog_delete_usage));
-		else
-			break;
-	}
+	argc = parse_options(argc, argv, prefix, options, reflog_delete_usage, 0);
 
-	if (argc - i < 1)
+	if (argc < 1)
 		return error(_("no reflog specified to delete"));
 
-	for ( ; i < argc; i++) {
+	for (int i = 0; i < argc; i++) {
 		const char *spec = strstr(argv[i], "@{");
 		char *ep, *ref;
 		int recno;
