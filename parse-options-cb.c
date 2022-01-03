@@ -35,9 +35,14 @@ int parse_opt_abbrev_cb(const struct option *opt, const char *arg, int unset)
 int parse_opt_expiry_date_cb(const struct option *opt, const char *arg,
 			     int unset)
 {
+	return parse_opt_expiry_date((timestamp_t *)opt->value, arg, unset);
+}
+
+int parse_opt_expiry_date(timestamp_t *t, const char *arg, int unset)
+{
 	if (unset)
 		arg = "never";
-	if (parse_expiry_date(arg, (timestamp_t *)opt->value))
+	if (parse_expiry_date(arg, t))
 		die(_("malformed expiration date '%s'"), arg);
 	return 0;
 }
