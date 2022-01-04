@@ -1656,4 +1656,32 @@ test_expect_success '--no-optional-locks prevents index update' '
 	! grep ^1234567890 out
 '
 
+test_expect_success 'racy timestamps will be fixed for clean worktree' '
+	echo content >racy-dirty &&
+	echo content >racy-racy &&
+	git add racy* &&
+	git commit -m "racy test files" &&
+	# let status rewrite the index, if necessary; after that we expect
+	# no more index writes unless caused by racy timestamps; note that
+	# timestamps may already be racy now (depending on previous tests)
+	git status &&
+	test-tool chmtime =1234567890 .git/index &&
+	test-tool chmtime --get .git/index >out &&
+	grep ^1234567890 out &&
+	git status &&
+	test-tool chmtime --get .git/index >out &&
+	! grep ^1234567890 out
+'
+
+test_expect_success 'racy timestamps will be fixed for dirty worktree' '
+	echo content2 >racy-dirty &&
+	git status &&
+	test-tool chmtime =1234567890 .git/index &&
+	test-tool chmtime --get .git/index >out &&
+	grep ^1234567890 out &&
+	git status &&
+	test-tool chmtime --get .git/index >out &&
+	! grep ^1234567890 out
+'
+
 test_done
