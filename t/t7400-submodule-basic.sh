@@ -1416,4 +1416,22 @@ test_expect_success 'recursive clone respects -q' '
 	test_must_be_empty actual
 '
 
+test_expect_success 'submodule update --remote respects clone.defaultRemoteName' '
+	test_when_finished "rm -rf multisuper_clone" &&
+
+	# expect is intentionally empty.
+	# no output expected, since submodule "sub0" will be up to date
+	> expect &&
+
+	git clone multisuper multisuper_clone &&
+	git -C multisuper_clone submodule update --init -- sub0 &&
+	git -C multisuper_clone/sub0 remote rename origin upstream &&
+	git \
+		-C multisuper_clone \
+		-c clone.defaultRemoteName=upstream \
+		submodule update --remote -- sub0 \
+		2>&1 >actual &&
+	test_cmp expect actual
+'
+
 test_done

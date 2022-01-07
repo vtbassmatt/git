@@ -38,18 +38,33 @@ static char *get_default_remote(void)
 	if (!refname)
 		die(_("No such ref: %s"), "HEAD");
 
-	/* detached HEAD */
-	if (!strcmp(refname, "HEAD"))
-		return xstrdup("origin");
+	/* detached HEAD should use the configured default remote name or fall back to "origin" */
+	if (!strcmp(refname, "HEAD")) {
+		strbuf_addstr(&sb, "clone.defaultRemoteName");
 
-	if (!skip_prefix(refname, "refs/heads/", &refname))
-		die(_("Expecting a full ref name, got %s"), refname);
+		if (!git_config_get_string(sb.buf, &dest))
+			ret = dest;
+		else
+			ret = xstrdup("origin");
+	} else {
+		if (!skip_prefix(refname, "refs/heads/", &refname))
+			die(_("Expecting a full ref name, got %s"), refname);
 
-	strbuf_addf(&sb, "branch.%s.remote", refname);
-	if (git_config_get_string(sb.buf, &dest))
-		ret = xstrdup("origin");
-	else
-		ret = dest;
+		strbuf_addf(&sb, "branch.%s.remote", refname);
+		if (!git_config_get_string(sb.buf, &dest))
+			/* use configured remote name if one is present */
+			ret = dest;
+		else {
+			/* otherwise use configured *default* remote name, falling back to "origin" */
+			strbuf_reset(&sb);
+			strbuf_addstr(&sb, "clone.defaultRemoteName");
+
+			if (!git_config_get_string(sb.buf, &dest))
+				ret = dest;
+			else
+				ret = xstrdup("origin");
+		}
+	}
 
 	strbuf_release(&sb);
 	return ret;
