@@ -21,99 +21,91 @@ export GIT_TEST_DEFAULT_INITIAL_BRANCH_NAME
 
 D=$(pwd)
 
-mk_empty () {
+mk_empty() {
 	repo_name="$1"
 	rm -fr "$repo_name" &&
-	mkdir "$repo_name" &&
-	(
-		cd "$repo_name" &&
-		git init &&
-		git config receive.denyCurrentBranch warn &&
-		mv .git/hooks .git/hooks-disabled
-	)
+		mkdir "$repo_name" &&
+		(
+			cd "$repo_name" &&
+				git init &&
+				git config receive.denyCurrentBranch warn &&
+				mv .git/hooks .git/hooks-disabled
+		)
 }
 
-mk_test () {
+mk_test() {
 	repo_name="$1"
 	shift
 
 	mk_empty "$repo_name" &&
-	(
-		for ref in "$@"
-		do
-			git push "$repo_name" $the_first_commit:refs/$ref ||
-			exit
-		done &&
-		cd "$repo_name" &&
-		for ref in "$@"
-		do
-			echo "$the_first_commit" >expect &&
-			git show-ref -s --verify refs/$ref >actual &&
-			test_cmp expect actual ||
-			exit
-		done &&
-		git fsck --full
-	)
+		(
+			for ref in "$@"; do
+				git push "$repo_name" $the_first_commit:refs/$ref ||
+					exit
+			done &&
+				cd "$repo_name" &&
+				for ref in "$@"; do
+					echo "$the_first_commit" >expect &&
+						git show-ref -s --verify refs/$ref >actual &&
+						test_cmp expect actual ||
+						exit
+				done &&
+				git fsck --full
+		)
 }
 
 mk_test_with_hooks() {
 	repo_name=$1
 	mk_test "$@" &&
-	(
-		cd "$repo_name" &&
-		mkdir .git/hooks &&
-		cd .git/hooks &&
-
-		cat >pre-receive <<-'EOF' &&
-		#!/bin/sh
-		cat - >>pre-receive.actual
-		EOF
-
-		cat >update <<-'EOF' &&
-		#!/bin/sh
-		printf "%s %s %s\n" "$@" >>update.actual
-		EOF
-
-		cat >post-receive <<-'EOF' &&
-		#!/bin/sh
-		cat - >>post-receive.actual
-		EOF
-
-		cat >post-update <<-'EOF' &&
-		#!/bin/sh
-		for ref in "$@"
-		do
-			printf "%s\n" "$ref" >>post-update.actual
-		done
-		EOF
-
-		chmod +x pre-receive update post-receive post-update
-	)
+		(
+			cd "$repo_name" &&
+				mkdir .git/hooks &&
+				cd .git/hooks &&
+				cat >pre-receive <<-'EOF' &&
+					#!/bin/sh
+					cat - >>pre-receive.actual
+				EOF
+				cat >update <<-'EOF' &&
+					#!/bin/sh
+					printf "%s %s %s\n" "$@" >>update.actual
+				EOF
+				cat >post-receive <<-'EOF' &&
+					#!/bin/sh
+					cat - >>post-receive.actual
+				EOF
+				cat >post-update <<-'EOF' &&
+					#!/bin/sh
+					for ref in "$@"
+					do
+						printf "%s\n" "$ref" >>post-update.actual
+					done
+				EOF
+				chmod +x pre-receive update post-receive post-update
+		)
 }
 
 mk_child() {
 	rm -rf "$2" &&
-	git clone "$1" "$2"
+		git clone "$1" "$2"
 }
 
-check_push_result () {
+check_push_result() {
 	test $# -ge 3 ||
-	BUG "check_push_result requires at least 3 parameters"
+		BUG "check_push_result requires at least 3 parameters"
 
 	repo_name="$1"
 	shift
 
 	(
 		cd "$repo_name" &&
-		echo "$1" >expect &&
-		shift &&
-		for ref in "$@"
-		do
-			git show-ref -s --verify refs/$ref >actual &&
-			test_cmp expect actual ||
-			exit
-		done &&
-		git fsck --full
+			echo "$1" >expect &&
+			shift &&
+			for ref in "$@"; do
+				git show-ref -s --verify refs/$ref >actual &&
+					test_cmp expect actual ||
+					exit
+			done &&
+			git fsck --full
 	)
 }
 
@@ -191,7 +183,7 @@ test_expect_success 'fetch with pushInsteadOf (should not rewrite)' '
 	)
 '
 
-grep_wrote () {
+grep_wrote() {
 	object_count=$1
 	file_name=$2
 	grep 'write_pack_file/wrote.*"value":"'$1'"' $2
@@ -477,8 +469,7 @@ test_expect_success 'push ref expression with non-existent, incomplete dest' '
 
 '
 
-for head in HEAD @
-do
+for head in HEAD @; do
 
 	test_expect_success "push with $head" '
 		mk_test testrepo heads/main &&
@@ -1020,7 +1011,7 @@ test_expect_success 'push into aliased refs (inconsistent)' '
 	)
 '
 
-test_force_push_tag () {
+test_force_push_tag() {
 	tag_type_description=$1
 	tag_args=$2
 
@@ -1066,7 +1057,7 @@ test_force_push_tag () {
 test_force_push_tag "lightweight tag" "-f"
 test_force_push_tag "annotated tag" "-f -a -m'tag message'"
 
-test_force_fetch_tag () {
+test_force_fetch_tag() {
 	tag_type_description=$1
 	tag_args=$2
 
@@ -1158,8 +1149,7 @@ test_expect_success 'push --prune refspec' '
 	! check_push_result testrepo $the_first_commit tmp/foo tmp/bar
 '
 
-for configsection in transfer receive
-do
+for configsection in transfer receive; do
 	test_expect_success "push to update a ref hidden by $configsection.hiderefs" '
 		mk_test testrepo heads/main hidden/one hidden/two hidden/three &&
 		(
@@ -1250,8 +1240,7 @@ test_expect_success 'fetch exact SHA1 in protocol v2' '
 	git -C child fetch -v ../testrepo $the_commit:refs/heads/copy
 '
 
-for configallowtipsha1inwant in true false
-do
+for configallowtipsha1inwant in true false; do
 	test_expect_success "shallow fetch reachable SHA1 (but not a ref), allowtipsha1inwant=$configallowtipsha1inwant" '
 		mk_empty testrepo &&
 		(
@@ -1807,6 +1796,14 @@ test_expect_success 'refuse fetch to current branch of bare repository worktree'
 	test_commit banana &&
 	test_must_fail git -C bare.git fetch .. HEAD:wt &&
 	git -C bare.git fetch -u .. HEAD:wt
+'
+
+test_expect_success 'refuse to push a hidden ref, and make sure do not pollute the repository' '
+	mk_empty testrepo &&
+	git -C testrepo config receive.hiderefs refs/hidden &&
+	git -C testrepo config receive.unpackLimit 1 &&
+	test_must_fail git push testrepo HEAD:refs/hidden/foo &&
+	test_dir_is_empty testrepo/.git/objects/pack
 '
 
 test_done
