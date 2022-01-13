@@ -3596,7 +3596,6 @@ class P4Sync(Command, P4UserMap):
                 if source not in self.knownBranches:
                     lostAndFoundBranches.add(source)
 
-
         for branch in lostAndFoundBranches:
             self.knownBranches[branch] = branch
 
@@ -3818,7 +3817,6 @@ class P4Sync(Command, P4UserMap):
             if 'p4ExitCode' in info:
                 sys.stderr.write("p4 exitcode: %s\n" % info['p4ExitCode'])
                 sys.exit(1)
-
 
             change = int(info["change"])
             if change > newestRevision:
