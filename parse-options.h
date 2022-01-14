@@ -225,6 +225,22 @@ NORETURN void usage_msg_opt(const char *msg,
 			    const char * const *usagestr,
 			    const struct option *options);
 
+void die_for_incompatible_opt4(int opt1, const char *opt1_name,
+			       int opt2, const char *opt2_name,
+			       int opt3, const char *opt3_name,
+			       int opt4, const char *opt4_name);
+
+
+inline void die_for_incompatible_opt3(int opt1, const char *opt1_name,
+				      int opt2, const char *opt2_name,
+				      int opt3, const char *opt3_name)
+{
+	die_for_incompatible_opt4(opt1, opt1_name,
+				  opt2, opt2_name,
+				  opt3, opt3_name,
+				  0, "");
+}
+
 /*
  * Use these assertions for callbacks that expect to be called with NONEG and
  * NOARG respectively, and do not otherwise handle the "unset" and "arg"
@@ -338,5 +354,6 @@ int parse_opt_tracking_mode(const struct option *, const char *, int);
 #define OPT_PATHSPEC_FROM_FILE(v) OPT_FILENAME(0, "pathspec-from-file", v, N_("read pathspec from file"))
 #define OPT_PATHSPEC_FILE_NUL(v)  OPT_BOOL(0, "pathspec-file-nul", v, N_("with --pathspec-from-file, pathspec elements are separated with NUL character"))
 #define OPT_AUTOSTASH(v) OPT_BOOL(0, "autostash", v, N_("automatically stash/stash pop before and after"))
+
 
 #endif
