@@ -339,4 +339,13 @@ int parse_opt_tracking_mode(const struct option *, const char *, int);
 #define OPT_PATHSPEC_FILE_NUL(v)  OPT_BOOL(0, "pathspec-file-nul", v, N_("with --pathspec-from-file, pathspec elements are separated with NUL character"))
 #define OPT_AUTOSTASH(v) OPT_BOOL(0, "autostash", v, N_("automatically stash/stash pop before and after"))
 
+void die_if_incompatible_opt3(int opt1, const char *opt1_name,
+							  int opt2, const char *opt2_name,
+							  int opt3, const char *opt3_name);
+
+void die_if_incompatible_opt4(int opt1, const char *opt1_name,
+							  int opt2, const char *opt2_name,
+							  int opt3, const char *opt3_name,
+							  int opt4, const char *opt4_name);
+
 #endif
