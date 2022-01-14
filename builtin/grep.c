@@ -1168,10 +1168,10 @@ int cmd_grep(int argc, const char **argv, const char *prefix)
 		setup_pager();
 
 	if (!use_index && (untracked || cached))
-		die(_("--cached or --untracked cannot be used with --no-index"));
+		die(_("options '%s' and '%s' cannot be used together"),"--cached/--untracked", "--no-index");
 
 	if (untracked && cached)
-		die(_("--untracked cannot be used with --cached"));
+		die(_("options '%s' and '%s' cannot be used together"), "--untracked", "--cached");
 
 	if (!use_index || untracked) {
 		int use_exclude = (opt_exclude < 0) ? use_index : !!opt_exclude;

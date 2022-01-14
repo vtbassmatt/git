@@ -685,6 +685,8 @@ int cmd_difftool(int argc, const char **argv, const char *prefix)
 	int use_gui_tool = 0, dir_diff = 0, prompt = -1, symlinks = 0,
 	    tool_help = 0, no_index = 0;
 	static char *difftool_cmd = NULL, *extcmd = NULL;
+	int f = 0;
+	char *f_options[3];
 	struct option builtin_difftool_options[] = {
 		OPT_BOOL('g', "gui", &use_gui_tool,
 			 N_("use `diff.guitool` instead of `diff.tool`")),
@@ -732,8 +734,20 @@ int cmd_difftool(int argc, const char **argv, const char *prefix)
 	} else if (dir_diff)
 		die(_("options '%s' and '%s' cannot be used together"), "--dir-diff", "--no-index");
 
-	if (use_gui_tool + !!difftool_cmd + !!extcmd > 1)
-		die(_("options '%s', '%s', and '%s' cannot be used together"), "--gui", "--tool", "--extcmd");
+	if (use_gui_tool) {
+		f_options[f] = "--gui";
+		f++;
+	}
+	if (difftool_cmd) {
+		f_options[f] = "--tool";
+		f++;
+	}
+	if (extcmd) {
+		f_options[f] = "--extcmd";
+		f++;
+	}
+	if (f > 1)
+		die(_("options '%s' and '%s' cannot be used together"), f_options[0], f_options[1]);
 
 	if (use_gui_tool)
 		setenv("GIT_MERGETOOL_GUI", "true", 1);

@@ -1759,6 +1759,9 @@ int cmd_format_patch(int argc, const char **argv, const char *prefix)
 	struct strbuf rdiff_title = STRBUF_INIT;
 	int creation_factor = -1;
 
+	int f = 0;
+	char * f_options[4];
+
 	const struct option builtin_format_patch_options[] = {
 		OPT_CALLBACK_F('n', "numbered", &numbered, NULL,
 			    N_("use [PATCH n/m] even with a single patch"),
@@ -1978,8 +1981,21 @@ int cmd_format_patch(int argc, const char **argv, const char *prefix)
 	if (rev.show_notes)
 		load_display_notes(&rev.notes_opt);
 
-	if (use_stdout + rev.diffopt.close_file + !!output_directory > 1)
-		die(_("options '%s', '%s', and '%s' cannot be used together"), "--stdout", "--output", "--output-directory");
+	if (use_stdout) {
+		f_options[f] = "--stdout";
+		f++;
+	}
+	if (rev.diffopt.close_file) {
+		f_options[f] = "--output";
+		f++;
+	}
+	if (output_directory) {
+		f_options[f] = "--output-directory";
+		f++;
+	}
+
+	if (f > 1)
+		die(_("options '%s'and '%s' cannot be used together"), f_options[0], f_options[1]);
 
 	if (use_stdout) {
 		setup_pager();

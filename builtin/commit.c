@@ -1243,6 +1243,7 @@ static int parse_and_validate_options(int argc, const char *argv[],
 				      struct wt_status *s)
 {
 	int f = 0;
+	char * f_options[4];
 
 	argc = parse_options(argc, argv, prefix, options, usage, 0);
 	finalize_deferred_config(s);
@@ -1251,7 +1252,7 @@ static int parse_and_validate_options(int argc, const char *argv[],
 		force_author = find_author_by_nickname(force_author);
 
 	if (force_author && renew_authorship)
-		die(_("Using both --reset-author and --author does not make sense"));
+		die(_("options '%s' and '%s' cannot be used together"), "--reset-author", "--author");
 
 	if (logfile || have_option_m || use_message)
 		use_editor = 0;
@@ -1268,19 +1269,19 @@ static int parse_and_validate_options(int argc, const char *argv[],
 			die(_("You are in the middle of a rebase -- cannot amend."));
 	}
 	if (fixup_message && squash_message)
-		die(_("Options --squash and --fixup cannot be used together"));
-	if (use_message)
-		f++;
-	if (edit_message)
-		f++;
-	if (fixup_message)
-		f++;
-	if (logfile)
-		f++;
+		die(_("options '%s' and '%s' cannot be used together"), "--squash", "--fixup");
+	f_options[f] = "-C";
+	f+=	!!use_message;
+	f_options[f] = "-c";
+	f+=!!edit_message;
+	f_options[f] = "-F";
+	f+=!!logfile;
+	f_options[f] = "--fixup";
+	f+=!!fixup_message;
 	if (f > 1)
-		die(_("Only one of -c/-C/-F/--fixup can be used."));
+		die(_("options '%s' and '%s' cannot be used together"), f_options[0], f_options[1]);
 	if (have_option_m && (edit_message || use_message || logfile))
-		die((_("Option -m cannot be combined with -c/-C/-F.")));
+		die(_("options '%s' and '%s' cannot be used together"), "-m", f_options[0]);
 	if (f || have_option_m)
 		template_file = NULL;
 	if (edit_message)
@@ -1305,9 +1306,17 @@ static int parse_and_validate_options(int argc, const char *argv[],
 
 	if (patch_interactive)
 		interactive = 1;
-
-	if (also + only + all + interactive > 1)
-		die(_("Only one of --include/--only/--all/--interactive/--patch can be used."));
+	f = 0;
+	f_options[f] = "-i/--include";
+	f += also;
+	f_options[f] = "-o/--only";
+	f += only;
+	f_options[f] = "-a/--all";
+	f += all;
+	f_options[f] = "--interactive/-p/--patch";
+	f += interactive;
+	if (f > 1)
+		die(_("options '%s' and '%s' cannot be used together"), f_options[0], f_options[1]);
 
 	if (fixup_message) {
 		/*
