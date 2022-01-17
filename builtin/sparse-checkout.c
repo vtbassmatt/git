@@ -710,6 +710,11 @@ static void sanitize_paths(int argc, const char **argv,
 	if (skip_checks)
 		return;
 
+	if (!core_sparse_checkout_cone)
+		for (i = 0; i < argc; i++)
+			if (argv[i][0] == '#')
+				die(_("paths beginning with a '#' must be preceeded by a backslash"));
+
 	for (i = 0; i < argc; i++) {
 		struct cache_entry *ce;
 		struct index_state *index = the_repository->index;
