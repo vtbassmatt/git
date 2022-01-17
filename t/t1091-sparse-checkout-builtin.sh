@@ -857,4 +857,10 @@ test_expect_success 'by default, non-cone mode will warn on individual files' '
 	grep "passing directories or less specific patterns is recommended" warning
 '
 
+test_expect_success 'paths starting with hash must be escaped in non-cone mode' '
+	test_must_fail git -C repo sparse-checkout set --no-cone "#funny-path" 2>error &&
+
+	grep "paths beginning.*#.*must be preceeded by a backslash" error
+'
+
 test_done
