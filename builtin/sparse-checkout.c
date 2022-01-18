@@ -704,10 +704,22 @@ static void sanitize_paths(int argc, const char **argv,
 	if (skip_checks)
 		return;
 
-	if (!core_sparse_checkout_cone)
-		for (i = 0; i < argc; i++)
+	for (i = 0; i < argc; i++) {
+		if (core_sparse_checkout_cone) {
+			if (argv[i][0] == '/')
+				die(_("specify directories rather than patterns (no leading slash)"));
+			if (argv[i][0] == '!')
+				die(_("specify directories rather than patterns.  If your directory starts with a '!', pass --skip-checks"));
+			if (strchr(argv[i], '*') ||
+			    strchr(argv[i], '?') ||
+			    strchr(argv[i], '[') ||
+			    strchr(argv[i], ']'))
+				die(_("specify directories rather than patterns.  If your directory really has any of '*?[]' in it, pass --skip-checks"));
+		} else {
 			if (argv[i][0] == '#')
 				die(_("paths beginning with a '#' must be preceeded by a backslash"));
+		}
+	}
 
 	for (i = 0; i < argc; i++) {
 		struct cache_entry *ce;
