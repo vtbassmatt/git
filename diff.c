@@ -4821,17 +4821,15 @@ static int diff_opt_diff_filter(const struct option *option,
 	prepare_filter_bits();
 
 	/*
-	 * If there is a negation e.g. 'd' in the input, and we haven't
+	 * If the input starts with a negation e.g. 'd', and we haven't
 	 * initialized the filter field with another --diff-filter, start
 	 * from full set of bits, except for AON.
 	 */
 	if (!opt->filter) {
-		for (i = 0; (optch = optarg[i]) != '\0'; i++) {
-			if (optch < 'a' || 'z' < optch)
-				continue;
+		optch = optarg[0];
+		if (optch >= 'a' && 'z' >= optch) {
 			opt->filter = (1 << (ARRAY_SIZE(diff_status_letters) - 1)) - 1;
 			opt->filter &= ~filter_bit[DIFF_STATUS_FILTER_AON];
-			break;
 		}
 	}
 

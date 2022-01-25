@@ -142,6 +142,14 @@ test_expect_success 'diff-filter=R' '
 
 '
 
+test_expect_success 'diff-filter=Ra' '
+
+	git log -M --pretty="format:%s" --diff-filter=R HEAD >expect &&
+	git log -M --pretty="format:%s" --diff-filter=Ra HEAD >actual &&
+	test_cmp expect actual
+
+'
+
 test_expect_success 'diff-filter=C' '
 
 	git log -C -C --pretty="format:%s" --diff-filter=C HEAD >actual &&
