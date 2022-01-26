@@ -17,6 +17,7 @@
 #include "diffcore.h"
 #include "exec-cmd.h"
 #include "entry.h"
+#include "reflog.h"
 
 #define INCLUDE_ALL_FILES 2
 
@@ -635,18 +636,9 @@ static int reflog_is_empty(const char *refname)
 static int do_drop_stash(struct stash_info *info, int quiet)
 {
 	int ret;
-	struct child_process cp_reflog = CHILD_PROCESS_INIT;
-
-	/*
-	 * reflog does not provide a simple function for deleting refs. One will
-	 * need to be added to avoid implementing too much reflog code here
-	 */
-
-	cp_reflog.git_cmd = 1;
-	strvec_pushl(&cp_reflog.args, "reflog", "delete", "--updateref",
-		     "--rewrite", NULL);
-	strvec_push(&cp_reflog.args, info->revision.buf);
-	ret = run_command(&cp_reflog);
+	ret = reflog_delete(info->revision.buf,
+			    EXPIRE_REFLOGS_REWRITE | EXPIRE_REFLOGS_REWRITE,
+			    0);
 	if (!ret) {
 		if (!quiet)
 			printf_ln(_("Dropped %s (%s)"), info->revision.buf,
