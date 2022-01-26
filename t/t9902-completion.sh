@@ -1447,7 +1447,7 @@ test_expect_success 'git checkout - with --detach, complete only references' '
 	EOF
 '
 
-test_expect_failure 'sparse-checkout completes subcommands' '
+test_expect_success 'sparse-checkout completes subcommands' '
 	test_completion "git sparse-checkout " <<-\EOF
 	list Z
 	init Z
@@ -1458,7 +1458,7 @@ test_expect_failure 'sparse-checkout completes subcommands' '
 	EOF
 '
 
-test_expect_failure 'cone mode sparse-checkout completes directory names' '
+test_expect_success 'cone mode sparse-checkout completes directory names' '
 	# set up sparse-checkout repo
 	git init sparse-checkout &&
 	(
