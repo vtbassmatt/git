@@ -1478,30 +1478,30 @@ test_expect_success 'cone mode sparse-checkout completes directory names' '
 	(
 		cd sparse-checkout &&
 		test_completion "git sparse-checkout set f" <<-\EOF
-		folder1
-		folder2
-		folder3
+		folder1/
+		folder2/
+		folder3/
 		EOF
 	) &&
 
 	(
 		cd sparse-checkout &&
 		test_completion "git sparse-checkout set folder1/" <<-\EOF
-		folder1/0
+		folder1/0/
 		EOF
 	) &&
 
 	(
 		cd sparse-checkout &&
 		test_completion "git sparse-checkout set folder1/0/" <<-\EOF
-		folder1/0/1
+		folder1/0/1/
 		EOF
 	) &&
 
 	(
 		cd sparse-checkout/folder1 &&
 		test_completion "git sparse-checkout add 0" <<-\EOF
-		0
+		0/
 		EOF
 	)
 '
