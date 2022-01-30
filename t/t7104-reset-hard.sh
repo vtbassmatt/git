@@ -44,4 +44,22 @@ test_expect_success 'reset --hard did not corrupt index or cache-tree' '
 
 '
 
+test_expect_success 'reset --hard on empty repo without staged changes works fine' '
+	git reset --hard
+'
+
+test_expect_success 'reset --hard on empty repo with staged changes results in an error' '
+	touch n &&
+	git add n &&
+	test_must_fail git reet --hard
+'
+
+test_expect_success 'reset --hard after a commit works fine' '
+	touch new &&
+	git add new &&
+	git commit -m "initial" &&
+	git reset --hard 2> error &&
+	test_must_be_empty error
+'
+
 test_done

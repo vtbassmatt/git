@@ -53,15 +53,4 @@ test_expect_success 'reset --soft is a no-op' '
 	test_cmp expect actual
 '
 
-test_expect_success 'reset --hard' '
-	rm .git/index &&
-	git add a &&
-	test_when_finished "echo a >a" &&
-	git reset --hard &&
-
-	git ls-files >actual &&
-	test_must_be_empty actual &&
-	test_path_is_missing a
-'
-
 test_done

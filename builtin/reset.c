@@ -301,6 +301,11 @@ static void die_if_unmerged_cache(int reset_type)
 
 }
 
+static int check_commit_exists(const char *refname, const struct object_id *oid, int f, void *d)
+{
+	return is_branch(refname);
+}
+
 static void parse_args(struct pathspec *pathspec,
 		       const char **argv, const char *prefix,
 		       int patch_mode,
@@ -474,6 +479,15 @@ int cmd_reset(int argc, const char **argv, const char *prefix)
 			die(_("Cannot do %s reset with paths."),
 					_(reset_type_names[reset_type]));
 	}
+
+	if (reset_type == HARD) {
+		int commits_exist = for_each_fullref_in("refs/heads", check_commit_exists, NULL);
+		if(!commits_exist) {
+			if(read_cache() == 1)
+				die(_("Hard reset isn`t allowed before the first commit."));
+		}
+	}
+
 	if (reset_type == NONE)
 		reset_type = MIXED; /* by default */
 
