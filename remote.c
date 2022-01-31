@@ -500,7 +500,7 @@ static void alias_all_urls(struct remote_state *remote_state)
 
 static void read_config(struct repository *repo)
 {
-	int flag;
+	unsigned int flags;
 
 	if (repo->remote_state->initialized)
 		return;
@@ -510,8 +510,9 @@ static void read_config(struct repository *repo)
 	if (startup_info->have_repository) {
 		int ignore_errno;
 		const char *head_ref = refs_resolve_ref_unsafe(
-			get_main_ref_store(repo), "HEAD", 0, NULL, &flag, &ignore_errno);
-		if (head_ref && (flag & REF_ISSYMREF) &&
+			get_main_ref_store(repo), "HEAD", 0, NULL, &flags,
+			&ignore_errno);
+		if (head_ref && (flags & REF_ISSYMREF) &&
 		    skip_prefix(head_ref, "refs/heads/", &head_ref)) {
 			repo->remote_state->current_branch = make_branch(
 				repo->remote_state, head_ref, strlen(head_ref));
@@ -1272,14 +1273,12 @@ static int match_explicit(struct ref *src, struct ref *dst,
 		return -1;
 
 	if (!dst_value) {
-		int flag;
+		unsigned int flags;
 
-		dst_value = resolve_ref_unsafe(matched_src->name,
-					       RESOLVE_REF_READING,
-					       NULL, &flag);
-		if (!dst_value ||
-		    ((flag & REF_ISSYMREF) &&
-		     !starts_with(dst_value, "refs/heads/")))
+		dst_value = resolve_ref_unsafe(
+			matched_src->name, RESOLVE_REF_READING, NULL, &flags);
+		if (!dst_value || ((flags & REF_ISSYMREF) &&
+				   !starts_with(dst_value, "refs/heads/")))
 			die(_("%s cannot be resolved to branch"),
 			    matched_src->name);
 	}
@@ -1948,11 +1947,11 @@ const char *branch_get_push(struct branch *branch, struct strbuf *err)
 
 static int ignore_symref_update(const char *refname)
 {
-	int flag;
+	unsigned int flags;
 
-	if (!resolve_ref_unsafe(refname, 0, NULL, &flag))
+	if (!resolve_ref_unsafe(refname, 0, NULL, &flags))
 		return 0; /* non-existing refs are OK */
-	return (flag & REF_ISSYMREF);
+	return (flags & REF_ISSYMREF);
 }
 
 /*
@@ -2288,7 +2287,7 @@ int format_tracking_info(struct branch *branch, struct strbuf *sb,
 }
 
 static int one_local_ref(const char *refname, const struct object_id *oid,
-			 int flag, void *cb_data)
+			 unsigned int flag, void *cb_data)
 {
 	struct ref ***local_tail = cb_data;
 	struct ref *ref;
@@ -2369,7 +2368,7 @@ struct stale_heads_info {
 };
 
 static int get_stale_heads_cb(const char *refname, const struct object_id *oid,
-			      int flags, void *cb_data)
+			      unsigned int flags, void *cb_data)
 {
 	struct stale_heads_info *info = cb_data;
 	struct string_list matches = STRING_LIST_INIT_DUP;

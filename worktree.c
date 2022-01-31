@@ -26,7 +26,7 @@ void free_worktrees(struct worktree **worktrees)
  */
 static void add_head_info(struct worktree *wt)
 {
-	int flags;
+	unsigned int flags;
 	const char *target;
 	int ignore_errno;
 
@@ -415,7 +415,7 @@ const struct worktree *find_shared_symref(struct worktree **worktrees,
 		struct worktree *wt = worktrees[i];
 		const char *symref_target;
 		struct ref_store *refs;
-		int flags;
+		unsigned int flags;
 		int ignore_errno;
 
 		if (wt->is_bare)
@@ -562,7 +562,7 @@ int other_head_refs(each_ref_fn fn, void *cb_data)
 	for (p = worktrees; *p; p++) {
 		struct worktree *wt = *p;
 		struct object_id oid;
-		int flag;
+		unsigned int flags;
 		int ignore_errno;
 
 		if (wt->is_current)
@@ -571,10 +571,9 @@ int other_head_refs(each_ref_fn fn, void *cb_data)
 		strbuf_reset(&refname);
 		strbuf_worktree_ref(wt, &refname, "HEAD");
 		if (refs_resolve_ref_unsafe(get_main_ref_store(the_repository),
-					    refname.buf,
-					    RESOLVE_REF_READING,
-					    &oid, &flag, &ignore_errno))
-			ret = fn(refname.buf, &oid, flag, cb_data);
+					    refname.buf, RESOLVE_REF_READING,
+					    &oid, &flags, &ignore_errno))
+			ret = fn(refname.buf, &oid, flags, cb_data);
 		if (ret)
 			break;
 	}
