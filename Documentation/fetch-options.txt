@@ -162,6 +162,15 @@ endif::git-pull[]
 	behavior for a remote may be specified with the remote.<name>.tagOpt
 	setting. See linkgit:git-config[1].
 
+ifndef::git-pull[]
+--refilter::
+	Reapply a partial clone filter from configuration or `--filter=`, such
+	as when the filter definition has changed. Instead of negotiating with
+	the server to avoid transferring commits and associated objects that are
+	already present locally, this option fetches all objects that match the
+	filter.
+endif::git-pull[]
+
 --refmap=<refspec>::
 	When fetching refs listed on the command line, use the
 	specified refspec (can be given more than once) to map the
