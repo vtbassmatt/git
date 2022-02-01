@@ -24,7 +24,7 @@ struct batch_options {
 	int buffer_output;
 	int all_objects;
 	int unordered;
-	int cmdmode; /* may be 'w' or 'c' for --filters or --textconv */
+	int mode; /* may be 'w' or 'c' for --filters or --textconv */
 	const char *format;
 };
 
@@ -306,19 +306,19 @@ static void print_object_or_die(struct batch_options *opt, struct expand_data *d
 	if (data->type == OBJ_BLOB) {
 		if (opt->buffer_output)
 			fflush(stdout);
-		if (opt->cmdmode) {
+		if (opt->mode) {
 			char *contents;
 			unsigned long size;
 
 			if (!data->rest)
 				die("missing path for '%s'", oid_to_hex(oid));
 
-			if (opt->cmdmode == 'w') {
+			if (opt->mode == 'w') {
 				if (filter_object(data->rest, 0100644, oid,
 						  &contents, &size))
 					die("could not convert '%s' %s",
 					    oid_to_hex(oid), data->rest);
-			} else if (opt->cmdmode == 'c') {
+			} else if (opt->mode == 'c') {
 				enum object_type type;
 				if (!textconv_object(the_repository,
 						     data->rest, 0100644, oid,
@@ -330,7 +330,7 @@ static void print_object_or_die(struct batch_options *opt, struct expand_data *d
 					die("could not convert '%s' %s",
 					    oid_to_hex(oid), data->rest);
 			} else
-				BUG("invalid cmdmode: %c", opt->cmdmode);
+				BUG("invalid mode: %c", opt->mode);
 			batch_write(opt, contents, size);
 			free(contents);
 		} else {
@@ -533,7 +533,7 @@ static int batch_objects(struct batch_options *opt)
 	strbuf_expand(&output, opt->format, expand_format, &data);
 	data.mark_query = 0;
 	strbuf_release(&output);
-	if (opt->cmdmode)
+	if (opt->mode)
 		data.split_on_whitespace = 1;
 
 	/*
@@ -695,10 +695,9 @@ int cmd_cat_file(int argc, const char **argv, const char *prefix)
 
 	batch.buffer_output = -1;
 	argc = parse_options(argc, argv, prefix, options, cat_file_usage, 0);
-
 	if (opt) {
 		if (batch.enabled && (opt == 'c' || opt == 'w'))
-			batch.cmdmode = opt;
+			batch.mode = opt;
 		else if (argc == 1)
 			obj_name = argv[0];
 		else
@@ -712,9 +711,9 @@ int cmd_cat_file(int argc, const char **argv, const char *prefix)
 			usage_with_options(cat_file_usage, options);
 	}
 	if (batch.enabled) {
-		if (batch.cmdmode != opt || argc)
+		if (batch.mode != opt || argc)
 			usage_with_options(cat_file_usage, options);
-		if (batch.cmdmode && batch.all_objects)
+		if (batch.mode && batch.all_objects)
 			die("--batch-all-objects cannot be combined with "
 			    "--textconv nor with --filters");
 	}
