@@ -85,6 +85,34 @@ $content"
 	test_cmp expect actual
     '
 
+    test -z "$content" ||
+    test_expect_success "--batch-command output of $type content is correct" '
+	maybe_remove_timestamp "$batch_output" $no_ts >expect &&
+	maybe_remove_timestamp "$(echo contents $sha1 | git cat-file --batch-command)" $no_ts >actual &&
+	test_cmp expect actual
+    '
+
+    test -z "$content" ||
+    test_expect_success "--batch-command session for $type content is correct" '
+	maybe_remove_timestamp "$batch_output" $no_ts >expect &&
+	maybe_remove_timestamp \
+		"$(test_write_lines "begin" "$sha1" "get contents" | git cat-file --batch-command)" \
+		$no_ts >actual &&
+	test_cmp expect actual
+    '
+
+    test_expect_success "--batch-command output of $type info is correct" '
+	echo "$sha1 $type $size" >expect &&
+	echo "info $sha1" | git cat-file --batch-command >actual &&
+	test_cmp expect actual
+    '
+
+    test_expect_success "--batch-command session for $type info is correct" '
+	echo "$sha1 $type $size" >expect &&
+	test_write_lines "begin" "$sha1" "get info" | git cat-file --batch-command >actual &&
+	test_cmp expect actual
+    '
+
     test_expect_success "custom --batch-check format" '
 	echo "$type $sha1" >expect &&
 	echo $sha1 | git cat-file --batch-check="%(objecttype) %(objectname)" >actual &&
@@ -141,6 +169,7 @@ test_expect_success '--batch-check without %(rest) considers whole line' '
 '
 
 tree_sha1=$(git write-tree)
+
 tree_size=$(($(test_oid rawsz) + 13))
 tree_pretty_content="100644 blob $hello_sha1	hello"
 
@@ -175,7 +204,7 @@ test_expect_success \
     "Reach a blob from a tag pointing to it" \
     "test '$hello_content' = \"\$(git cat-file blob $tag_sha1)\""
 
-for batch in batch batch-check
+for batch in batch batch-check batch-command
 do
     for opt in t s e p
     do
@@ -279,6 +308,15 @@ deadbeef missing
 test_expect_success "--batch-check with multiple sha1s gives correct format" '
     test "$batch_check_output" = \
     "$(echo_without_newline "$batch_check_input" | git cat-file --batch-check)"
+'
+
+test_expect_success "--batch-command with multiple sha1s gives correct format" '
+    echo "$batch_check_output" >expect &&
+    echo begin >input &&
+    echo_without_newline "$batch_check_input" >>input &&
+    echo "get info" >>input &&
+    git cat-file --batch-command <input >actual &&
+    test_cmp expect actual
 '
 
 test_expect_success 'setup blobs which are likely to delta' '
@@ -870,6 +908,12 @@ test_expect_success 'cat-file --batch-all-objects --batch-check ignores replace'
 	grep ^$orig actual.raw >actual &&
 	echo "$orig commit $orig_size" >expect &&
 	test_cmp expect actual
+'
+
+test_expect_success 'batch-command unknown command' '
+	echo unknown_command >cmd &&
+	test_expect_code 128 git cat-file --batch-command < cmd 2>err &&
+	grep -E "^fatal:.*unknown command.*" err
 '
 
 test_done

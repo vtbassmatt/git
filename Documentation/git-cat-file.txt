@@ -90,6 +90,33 @@ OPTIONS
 	need to specify the path, separated by whitespace.  See the
 	section `BATCH OUTPUT` below for details.
 
+--batch-command::
+	Enter a command mode that reads commands and arguments from stdin.
+	May not be combined with any other options or arguments except
+	`--textconv` or `--filters`, in which case the input lines also need to
+	specify the path, separated by whitespace.  See the section
+	`BATCH OUTPUT` below for details.
+
+contents <object>::
+	Print object contents for object reference <object>
+
+info <object>::
+	Print object info for object reference <object>
+
+begin::
+	Begins a session to read object names off of stdin. A session can be
+	terminated with `get contents` or `get info`.
+
+get contents::
+	After a read session is begun with the `begin` command, and object
+	names have been fed into stdin, end the session and retrieve contents of
+	all the objects requested.
+
+get info::
+	After a read session is begun with the `begin` command, and object
+	names have been fed into stdin, end the session and retrieve info of
+	all the objects requested.
+
 --batch-all-objects::
 	Instead of reading a list of objects on stdin, perform the
 	requested batch operation on all objects in the repository and
