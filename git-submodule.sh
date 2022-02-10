@@ -50,15 +50,6 @@ single_branch=
 jobs=
 recommend_shallow=
 
-# NEEDSWORK this is now unused
-die_if_unmatched ()
-{
-	if test "$1" = "#unmatched"
-	then
-		exit ${2:-1}
-	fi
-}
-
 isnumber()
 {
 	n=$(($1 + 0)) 2>/dev/null && test "$n" = "$1"
@@ -348,9 +339,7 @@ cmd_update()
 		shift
 	done
 
-	# NEEDSWORK --super-prefix isn't actually supported by this
-	# command - we just pass the $prefix to --recursive-prefix.
-	git ${wt_prefix:+-C "$wt_prefix"} ${prefix:+--super-prefix "$prefix"} submodule--helper update \
+	git ${wt_prefix:+-C "$wt_prefix"} submodule--helper update \
 		${GIT_QUIET:+--quiet} \
 		${force:+--force} \
 		${progress:+--progress} \

@@ -2807,12 +2807,6 @@ static void update_data_to_args(struct update_data *update_data, struct strvec *
 {
 	strvec_pushl(args, "submodule--helper", "update", "--recursive", NULL);
 	strvec_pushf(args, "--jobs=%d", update_data->max_jobs);
-	/*
-	 * NEEDSWORK: the equivalent code in git-submodule.sh does not
-	 * pass --prefix, so this shouldn't either
-	*/
-	if (update_data->prefix)
-		strvec_pushl(args, "--prefix", update_data->prefix, NULL);
 	if (update_data->recursive_prefix)
 		strvec_pushl(args, "--recursive-prefix",
 			     update_data->recursive_prefix, NULL);
@@ -2980,8 +2974,7 @@ static int module_update(int argc, const char **argv, const char *prefix)
 	struct pathspec pathspec;
 	struct update_data opt = UPDATE_DATA_INIT;
 
-	/* NEEDSWORK: update names and strings */
-	struct option module_update_clone_options[] = {
+	struct option module_update_options[] = {
 		OPT__FORCE(&opt.force, N_("force checkout updates"), 0),
 		OPT_BOOL(0, "init", &opt.init,
 			 N_("initialize uninitialized submodules before update")),
@@ -3023,14 +3016,14 @@ static int module_update(int argc, const char **argv, const char *prefix)
 	};
 
 	const char *const git_submodule_helper_usage[] = {
-		N_("git submodule--helper update-clone [--prefix=<path>] [<path>...]"),
+		N_("git submodule--helper update [--prefix=<path>] [<path>...]"),
 		NULL
 	};
 
 	update_clone_config_from_gitmodules(&opt.max_jobs);
 	git_config(git_update_clone_config, &opt.max_jobs);
 
-	argc = parse_options(argc, argv, prefix, module_update_clone_options,
+	argc = parse_options(argc, argv, prefix, module_update_options,
 			     git_submodule_helper_usage, 0);
 	oidcpy(&opt.oid, null_oid());
 	oidcpy(&opt.suboid, null_oid());
