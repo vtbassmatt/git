@@ -2886,14 +2886,11 @@ static int update_submodule(struct update_data *update_data)
 					    update_data->sm_path, update_data->update_default,
 					    &update_data->update_strategy);
 
-	/* NEEDSWORK: fix the style issues e.g. braces */
-	if (update_data->just_cloned) {
+	if (update_data->just_cloned)
 		oidcpy(&update_data->suboid, null_oid());
-	} else {
-		if (resolve_gitlink_ref(update_data->sm_path, "HEAD", &update_data->suboid))
-			die(_("Unable to find current revision in submodule path '%s'"),
-			    update_data->displaypath);
-	}
+	else if (resolve_gitlink_ref(update_data->sm_path, "HEAD", &update_data->suboid))
+		die(_("Unable to find current revision in submodule path '%s'"),
+			update_data->displaypath);
 
 	if (update_data->remote) {
 		char *remote_name = get_default_remote_submodule(update_data->sm_path);
