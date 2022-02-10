@@ -2516,23 +2516,6 @@ static const char *remote_submodule_branch(const char *path)
 	return branch;
 }
 
-static int resolve_remote_submodule_branch(int argc, const char **argv,
-		const char *prefix)
-{
-	const char *ret;
-	struct strbuf sb = STRBUF_INIT;
-	if (argc != 2)
-		die("submodule--helper remote-branch takes exactly one arguments, got %d", argc);
-
-	ret = remote_submodule_branch(argv[1]);
-	if (!ret)
-		die("submodule %s doesn't exist", argv[1]);
-
-	printf("%s", ret);
-	strbuf_release(&sb);
-	return 0;
-}
-
 static int push_check(int argc, const char **argv, const char *prefix)
 {
 	struct remote *remote;
@@ -3484,8 +3467,6 @@ static struct cmd_struct commands[] = {
 	{"sync", module_sync, SUPPORT_SUPER_PREFIX},
 	{"deinit", module_deinit, 0},
 	{"summary", module_summary, SUPPORT_SUPER_PREFIX},
-	/* NEEDSWORK: remote-branch is also obsolete */
-	{"remote-branch", resolve_remote_submodule_branch, 0},
 	{"push-check", push_check, 0},
 	{"absorb-git-dirs", absorb_git_dirs, SUPPORT_SUPER_PREFIX},
 	{"is-active", is_active, 0},
