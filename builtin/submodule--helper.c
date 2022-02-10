@@ -2001,9 +2001,11 @@ struct submodule_update_clone {
 }
 
 struct update_data {
+	const char *prefix;
 	const char *recursive_prefix;
 	const char *sm_path;
 	const char *displaypath;
+	const char *update_default;
 	struct object_id oid;
 	struct object_id suboid;
 	struct submodule_update_strategy update_strategy;
@@ -2458,7 +2460,6 @@ static void update_submodule(struct update_clone_data *ucd)
 static int update_submodule2(struct update_data *update_data);
 static int run_update_procedure(int argc, const char **argv, const char *prefix)
 {
-	char *prefixed_path, *update = NULL;
 	struct update_data opt = UPDATE_DATA_INIT;
 
 	struct option options[] = {
@@ -2471,10 +2472,10 @@ static int run_update_procedure(int argc, const char **argv, const char *prefix)
 		OPT_BOOL(0, "just-cloned", &opt.just_cloned,
 			 N_("overrides update mode in case the repository is a fresh clone")),
 		OPT_INTEGER(0, "depth", &opt.depth, N_("depth for shallow fetch")),
-		OPT_STRING(0, "prefix", &prefix,
+		OPT_STRING(0, "prefix", &opt.prefix,
 			   N_("path"),
 			   N_("path into the working tree")),
-		OPT_STRING(0, "update", &update,
+		OPT_STRING(0, "update", &opt.update_default,
 			   N_("string"),
 			   N_("rebase, merge, checkout or none")),
 		OPT_STRING(0, "recursive-prefix", &opt.recursive_prefix, N_("path"),
@@ -2500,18 +2501,6 @@ static int run_update_procedure(int argc, const char **argv, const char *prefix)
 
 	opt.sm_path = argv[0];
 
-	if (opt.recursive_prefix)
-		prefixed_path = xstrfmt("%s%s", opt.recursive_prefix, opt.sm_path);
-	else
-		prefixed_path = xstrdup(opt.sm_path);
-
-	opt.displaypath = get_submodule_displaypath(prefixed_path, prefix);
-
-	determine_submodule_update_strategy(the_repository, opt.just_cloned,
-					    opt.sm_path, update,
-					    &opt.update_strategy);
-
-	free(prefixed_path);
 	return update_submodule2(&opt);
 }
 
@@ -2871,7 +2860,23 @@ static int module_set_branch(int argc, const char **argv, const char *prefix)
 /* NEEDSWORK: this is a temporary name until we delete update_submodule() */
 static int update_submodule2(struct update_data *update_data)
 {
+	char *prefixed_path;
+
 	ensure_core_worktree(update_data->sm_path);
+
+	if (update_data->recursive_prefix)
+		prefixed_path = xstrfmt("%s%s", update_data->recursive_prefix,
+					update_data->sm_path);
+	else
+		prefixed_path = xstrdup(update_data->sm_path);
+
+	update_data->displaypath = get_submodule_displaypath(prefixed_path,
+							     update_data->prefix);
+	free(prefixed_path);
+
+	determine_submodule_update_strategy(the_repository, update_data->just_cloned,
+					    update_data->sm_path, update_data->update_default,
+					    &update_data->update_strategy);
 
 	/* NEEDSWORK: fix the style issues e.g. braces */
 	if (update_data->just_cloned) {
