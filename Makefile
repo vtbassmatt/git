@@ -3416,6 +3416,11 @@ check-docs::
 check-builtins::
 	./check-builtins.sh
 
+### Make sure all the usage strings follow usage string style guide
+#
+check-usage-strings::
+	./check-usage-strings.sh
+
 ### Test suite coverage testing
 #
 .PHONY: coverage coverage-clean coverage-compile coverage-test coverage-report

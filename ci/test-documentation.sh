@@ -15,6 +15,7 @@ filter_log () {
 }
 
 make check-builtins
+make check-usage-strings
 make check-docs
 
 # Build docs with AsciiDoc
