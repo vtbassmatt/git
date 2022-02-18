@@ -390,10 +390,9 @@ test_expect_success SYMLINKS 'stash file to symlink' '
 	rm file &&
 	ln -s file2 file &&
 	git stash save "file to symlink" &&
-	test -f file &&
+	test_path_is_file_not_symlink file &&
 	test bar = "$(cat file)" &&
-	git stash apply &&
-	case "$(ls -l file)" in *" file -> file2") :;; *) false;; esac
+	git stash apply
 '
 
 test_expect_success SYMLINKS 'stash file to symlink (stage rm)' '
@@ -401,10 +400,9 @@ test_expect_success SYMLINKS 'stash file to symlink (stage rm)' '
 	git rm file &&
 	ln -s file2 file &&
 	git stash save "file to symlink (stage rm)" &&
-	test -f file &&
+	test_path_is_file_not_symlink file &&
 	test bar = "$(cat file)" &&
-	git stash apply &&
-	case "$(ls -l file)" in *" file -> file2") :;; *) false;; esac
+	git stash apply
 '
 
 test_expect_success SYMLINKS 'stash file to symlink (full stage)' '
@@ -413,10 +411,9 @@ test_expect_success SYMLINKS 'stash file to symlink (full stage)' '
 	ln -s file2 file &&
 	git add file &&
 	git stash save "file to symlink (full stage)" &&
-	test -f file &&
+	test_path_is_file_not_symlink file &&
 	test bar = "$(cat file)" &&
-	git stash apply &&
-	case "$(ls -l file)" in *" file -> file2") :;; *) false;; esac
+	git stash apply
 '
 
 # This test creates a commit with a symlink used for the following tests
