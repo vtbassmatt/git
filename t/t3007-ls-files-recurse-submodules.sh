@@ -34,6 +34,25 @@ test_expect_success 'ls-files correctly outputs files in submodule' '
 	test_cmp expect actual
 '
 
+test_expect_success '--stage' '
+	# In order to test hash abbreviation, write two objects that have the
+	# same first 4 hexadecimal characters in their (SHA-1) hashes.
+	echo brocdnra >submodule/c &&
+	git -C submodule commit -am "update c" &&
+	echo brigddsv >submodule/c &&
+	git -C submodule commit -am "update c again" &&
+
+	cat >expect <<-\EOF &&
+	100644 6da7 0	.gitmodules
+	100644 7898 0	a
+	100644 6178 0	b/b
+	100644 dead9 0	submodule/c
+	EOF
+
+	git ls-files --stage --recurse-submodules --abbrev=4 >actual &&
+	test_cmp expect actual
+'
+
 test_expect_success 'ls-files correctly outputs files in submodule with -z' '
 	lf_to_nul >expect <<-\EOF &&
 	.gitmodules
@@ -292,7 +311,6 @@ test_incompatible_with_recurse_submodules () {
 test_incompatible_with_recurse_submodules --deleted
 test_incompatible_with_recurse_submodules --modified
 test_incompatible_with_recurse_submodules --others
-test_incompatible_with_recurse_submodules --stage
 test_incompatible_with_recurse_submodules --killed
 test_incompatible_with_recurse_submodules --unmerged
 
