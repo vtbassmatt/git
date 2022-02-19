@@ -3175,7 +3175,7 @@ simple_cleanup:
 		free(renames->pairs[s].queue);
 		DIFF_QUEUE_CLEAR(&renames->pairs[s]);
 	}
-	if (combined.nr) {
+	if (combined.alloc) {
 		int i;
 		for (i = 0; i < combined.nr; i++)
 			pool_diff_free_filepair(&opt->priv->pool,
