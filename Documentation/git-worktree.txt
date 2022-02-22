@@ -54,7 +54,7 @@ its associated administrative files, which reside in the repository
 `git worktree prune` in the main or any linked worktree to clean up any
 stale administrative files.
 
-If the working tree for a a linked worktree is stored on a portable device
+If the working tree for a linked worktree is stored on a portable device
 or network share which is not always mounted, you can prevent its
 administrative files from being pruned by issuing the `git worktree lock`
 command, optionally specifying `--reason` to explain why the worktree is
