@@ -11,7 +11,7 @@
 static void restore_term_on_signal(int sig)
 {
 	restore_term();
-	sigchain_pop(sig);
+	/* restore_term calls sigchain_pop_common */
 	raise(sig);
 }
 
@@ -32,6 +32,7 @@ void restore_term(void)
 
 	close(term_fd);
 	term_fd = -1;
+	sigchain_pop_common();
 }
 
 static int is_controlling_terminal(int fd)
@@ -43,17 +44,18 @@ int save_term(int full_duplex)
 {
 	if (term_fd < 0)
 		term_fd = open("/dev/tty", O_RDWR);
-
 	if (term_fd < 0)
 		return -1;
-
 	if (full_duplex && !is_controlling_terminal(term_fd)) {
 		close(term_fd);
 		term_fd = -1;
 		return -1;
 	}
+	if (tcgetattr(term_fd, &old_term) < 0)
+		return -1;
+	sigchain_push_common(restore_term_on_signal);
 
-	return tcgetattr(term_fd, &old_term);
+	return 0;
 }
 
 static int disable_bits(tcflag_t bits)
@@ -64,12 +66,16 @@ static int disable_bits(tcflag_t bits)
 		goto error;
 
 	t = old_term;
-	sigchain_push_common(restore_term_on_signal);
 
 	t.c_lflag &= ~bits;
+	if (bits & ICANON) {
+		t.c_cc[VMIN] = 1;
+		t.c_cc[VTIME] = 0;
+	}
 	if (!tcsetattr(term_fd, TCSAFLUSH, &t))
 		return 0;
 
+	sigchain_pop_common();
 error:
 	close(term_fd);
 	term_fd = -1;
@@ -115,6 +121,8 @@ void restore_term(void)
 		return;
 	}
 
+	sigchain_pop_common();
+
 	if (hconin == INVALID_HANDLE_VALUE)
 		return;
 
@@ -149,6 +157,7 @@ int save_term(int full_duplex)
 
 	GetConsoleMode(hconin, &cmode_in);
 	use_stty = 0;
+	sigchain_push_common(restore_term_on_signal);
 	return 0;
 error:
 	CloseHandle(hconin);
@@ -165,7 +174,11 @@ static int disable_bits(DWORD bits)
 
 		if (bits & ENABLE_LINE_INPUT) {
 			string_list_append(&stty_restore, "icanon");
-			strvec_push(&cp.args, "-icanon");
+			/*
+			 * POSIX allows VMIN and VTIME to overlap with VEOF and
+			 * VEOL - let's hope that is not the case on windows.
+			 */
+			strvec_pushl(&cp.args, "-icanon", "min", "1", "time", "0", NULL);
 		}
 
 		if (bits & ENABLE_ECHO_INPUT) {
@@ -192,10 +205,10 @@ static int disable_bits(DWORD bits)
 	if (save_term(0) < 0)
 		return -1;
 
-	sigchain_push_common(restore_term_on_signal);
 	if (!SetConsoleMode(hconin, cmode_in & ~bits)) {
 		CloseHandle(hconin);
 		hconin = INVALID_HANDLE_VALUE;
+		sigchain_pop_common();
 		return -1;
 	}
 
