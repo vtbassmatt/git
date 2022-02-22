@@ -185,10 +185,33 @@ test_expect_success 'drop middle stash by index' '
 	test 1 = $(git show HEAD:file)
 '
 
+test_expect_success 'drop stash reflog updates refs/stash' '
+	git reset --hard &&
+	git rev-parse refs/stash >expect &&
+	echo 9 >file &&
+	git stash &&
+	git stash drop stash@{0} &&
+	git rev-parse refs/stash >actual &&
+	test_cmp expect actual
+'
+
+test_expect_success 'drop stash reflog updates refs/stash with rewrite' '
+	git reset --hard &&
+	echo 9 >file &&
+	git stash &&
+	oid="$(git rev-parse stash@{0})" &&
+	git stash drop stash@{1} &&
+	cut -d" " -f1-2 .git/logs/refs/stash >actual &&
+	cat >expect <<-EOF &&
+	$(test_oid zero) $oid
+	EOF
+	test_cmp expect actual
+'
+
 test_expect_success 'stash pop' '
 	git reset --hard &&
 	git stash pop &&
-	test 3 = $(cat file) &&
+	test 9 = $(cat file) &&
 	test 1 = $(git show :file) &&
 	test 1 = $(git show HEAD:file) &&
 	test 0 = $(git stash list | wc -l)
