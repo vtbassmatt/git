@@ -139,7 +139,7 @@ worktrees will be unable to locate it. Running `repair` in the main
 worktree will reestablish the connection from linked worktrees back to the
 main worktree.
 +
-Similarly, if the working directory for a linked worktree is moved without
+Similarly, if the working tree for a linked worktree is moved without
 using `git worktree move`, the main worktree (or bare repository) will be
 unable to locate it. Running `repair` within the recently-moved worktree
 will reestablish the connection. If multiple linked worktrees are moved,
