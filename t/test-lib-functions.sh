@@ -856,11 +856,31 @@ test_path_is_file () {
 	fi
 }
 
+test_path_is_file_not_symlink () {
+	test "$#" -ne 1 && BUG "1 param"
+	test_path_is_file "$1" &&
+	if ! test ! -h "$1"
+	then
+		echo "$1 is a symbolic link"
+		false
+	fi
+}
+
 test_path_is_dir () {
 	test "$#" -ne 1 && BUG "1 param"
 	if ! test -d "$1"
 	then
 		echo "Directory $1 doesn't exist"
+		false
+	fi
+}
+
+test_path_is_dir_not_symlink () {
+	test "$#" -ne 1 && BUG "1 param"
+	test_path_is_dir "$1" &&
+	if ! test ! -h "$1"
+	then
+		echo "$1 is a symbolic link"
 		false
 	fi
 }
